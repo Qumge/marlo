@@ -1329,6 +1329,38 @@ export function detectProvider(apiKey: string): string | null {
   return null;
 }
 
+// -- Qumge device sign-in (RFC 8628) ------------------------------------------
+// The key itself never rides through here — the server exchanges it and writes it straight
+// to the SecretStore (see manager.poll_qumge_device); these two calls only ever see the
+// user-facing code/URL and a bare status string.
+export interface QumgeDeviceStart {
+  user_code: string;
+  verification_uri: string;
+  verification_uri_complete: string;
+  interval: number;
+  expires_in: number;
+}
+
+export interface QumgeDevicePoll {
+  status: "pending" | "connected" | "denied" | "expired" | "error";
+  interval?: number; // present when the server widens the poll interval (slow_down)
+  error?: string;
+}
+
+export async function startQumgeDevice(deviceName?: string): Promise<QumgeDeviceStart> {
+  const res = await fetch(`${httpBase()}/v1/qumge/device/start`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(deviceName ? { device_name: deviceName } : {}),
+  });
+  return res.json();
+}
+
+export async function pollQumgeDevice(): Promise<QumgeDevicePoll> {
+  const res = await fetch(`${httpBase()}/v1/qumge/device/poll`);
+  return res.json();
+}
+
 // -- super-agent --------------------------------------------------------------
 export interface RecentSender {
   user_id: string;
