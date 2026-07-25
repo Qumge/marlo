@@ -333,6 +333,14 @@ DESCRIPTORS: list[ProviderDescriptor] = [
         recommended_model="accounts/fireworks/models/glm-5p2",
         env_key="FIREWORKS_API_KEY",
     ),
+    _compat(
+        "qumge",
+        "Qumge",
+        base_url="https://qumge.com/v1",
+        recommended_model="anthropic/claude-sonnet-4.6",
+        env_key="QUMGE_API_KEY",
+        endpoint_help="One key for every model. Sign in from the app rather than pasting a key.",
+    ),
     ProviderDescriptor(
         name="ollama",
         title="Ollama (local models)",

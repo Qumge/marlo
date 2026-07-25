@@ -110,7 +110,7 @@ def build_engine(
     *,
     agent: Agent,
     workspace: Optional[str | Path] = None,
-    model: str = "gpt-5.6-sol",
+    model: str = "qumge:anthropic/claude-sonnet-4.6",
     mode: Mode = Mode.INTERACTIVE,
     approver: Optional[Approver] = None,
     provider: Optional[ProviderClient] = None,

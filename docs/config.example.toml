@@ -4,7 +4,7 @@
 #
 # All keys are optional; unset keys fall back to built-in defaults.
 
-model = "gpt-5.5"            # default model id (override per session in the UI/CLI)
+model = "qumge:anthropic/claude-sonnet-4.6"  # default model id (override per session in the UI/CLI)
 mode = "interactive"         # plan | interactive | auto | custom
 max_iterations = 12          # max model<->tool iterations per turn before stopping
 

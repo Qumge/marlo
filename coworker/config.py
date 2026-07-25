@@ -26,7 +26,7 @@ DEFAULT_ALLOWED_COMMANDS: list[str] = []
 
 @dataclass
 class Config:
-    model: str = "gpt-5.6-sol"
+    model: str = "qumge:anthropic/claude-sonnet-4.6"
     mode: str = "interactive"
     max_iterations: int = 150
     allowed_commands: list[str] = field(

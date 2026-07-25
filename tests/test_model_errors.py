@@ -24,7 +24,9 @@ def test_new_flagships_in_matrix_with_labels():
 
 
 def test_flagships_are_the_defaults():
-    assert Config().model == "gpt-5.6-sol"
+    # The app-wide default routes through Qumge (Marlo's one-key gateway); the per-vendor
+    # descriptors below still recommend their own native flagships for direct-key setups.
+    assert Config().model == "qumge:anthropic/claude-sonnet-4.6"
     assert get_descriptor("openai").recommended_model == "gpt-5.6-sol"
     assert get_descriptor("anthropic").recommended_model == "claude-fable-5"
 

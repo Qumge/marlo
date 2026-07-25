@@ -1,0 +1,41 @@
+"""Qumge provider descriptor — the gateway that stands in for the thirteen
+per-vendor providers in Marlo (sign in once, no API key to paste).
+"""
+
+from __future__ import annotations
+
+
+def test_qumge_descriptor_exists_and_targets_the_gateway():
+    from coworker.providers.registry import get_descriptor
+
+    d = get_descriptor("qumge")
+    assert d is not None
+    assert d.needs_key is True
+    base = next(f for f in d.fields if f.key == "base_url")
+    assert base.default == "https://qumge.com/v1"
+
+
+def test_qumge_models_route_to_qumge_not_the_default_provider():
+    # ProviderRouter splits on a colon. A bare "anthropic/..." would fall through to the
+    # default (OpenAI) client and be sent to api.openai.com — the exact silent misroute
+    # this prefix exists to prevent.
+    from coworker.providers.router import ProviderRouter
+
+    r = ProviderRouter(secrets=None)
+    assert r._provider_name("qumge:anthropic/claude-sonnet-4.6") == "qumge"
+    assert r._provider_name("anthropic/claude-sonnet-4.6") == "openai"
+
+
+def test_qumge_recommended_model_is_bare_and_in_lockstep_with_compat_models():
+    """`recommended_model` must be BARE (no `qumge:` prefix) — `set_provider` prefixes it
+    itself, so a prefixed value here would double up as `qumge:qumge:anthropic/...`.
+    Separately, `set_provider` only auto-adds the recommended model when it's a member of
+    `_suggested_models`, which for a brand-new provider is exactly `COMPAT_MODELS["qumge"]`
+    (the curated matrix has nothing for "qumge"). If the two disagree, the model is
+    silently never offered — no error, just missing from the composer."""
+    from coworker.providers.registry import get_descriptor
+    from coworker.server.manager import SessionManager
+
+    d = get_descriptor("qumge")
+    assert not d.recommended_model.startswith("qumge:")
+    assert d.recommended_model in SessionManager.COMPAT_MODELS["qumge"]
