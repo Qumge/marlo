@@ -1568,6 +1568,63 @@ class SessionManager:
         self._refresh_provider(name)
         return {"ok": True, "provider": name}
 
+    # -- Qumge device sign-in ---------------------------------------------------
+    # One flow at a time. Starting another abandons the previous one rather than tracking
+    # both: two pending sign-ins on one machine is a user who clicked twice, and the one
+    # they are looking at is the one that should win.
+    _qumge_flow: Optional["qumge_device.Flow"] = None
+
+    def start_qumge_device(self, device_name: Optional[str] = None) -> dict[str, Any]:
+        from ..qumge import device_flow as qumge_device
+
+        flow = qumge_device.start(device_name)
+        self._qumge_flow = flow
+        # device_code is deliberately absent: the GUI has no use for it and every value we
+        # hand the webview is a value that can leak from it.
+        return {
+            "user_code": flow.user_code,
+            "verification_uri": flow.verification_uri,
+            "verification_uri_complete": flow.verification_uri_complete,
+            "interval": flow.interval,
+            "expires_in": max(0, int(flow.expires_at - time.time())),
+        }
+
+    def poll_qumge_device(self) -> dict[str, Any]:
+        from ..qumge import device_flow as qumge_device
+
+        flow = self._qumge_flow
+        if flow is None:
+            return {"status": "error", "error": "no sign-in in progress"}
+        if time.time() >= flow.expires_at:
+            self._qumge_flow = None
+            return {"status": "expired"}
+
+        state, token = qumge_device.exchange(flow.device_code)
+
+        if state == "slow_down":
+            flow.interval += 5
+            return {"status": "pending", "interval": flow.interval}
+        if state == "pending":
+            return {"status": "pending", "interval": flow.interval}
+        if state in ("denied", "expired"):
+            self._qumge_flow = None
+            return {"status": state}
+        if state == "connected" and token:
+            # Go through set_provider rather than writing the SecretStore directly, so the
+            # cached client is rebuilt and the recommended model is offered exactly the way
+            # it would be for a key typed in by hand.
+            res = self.set_provider(
+                "qumge",
+                {"api_key": token, "base_url": f"{qumge_device.base_url()}/v1"},
+            )
+            self._qumge_flow = None
+            if not res.get("ok"):
+                return {"status": "error", "error": res.get("error")}
+            return {"status": "connected"}
+
+        self._qumge_flow = None
+        return {"status": "error", "error": state}
+
     def verify_provider(
         self, name: str, fields: Optional[dict[str, Any]]
     ) -> dict[str, Any]:

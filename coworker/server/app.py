@@ -1320,6 +1320,15 @@ def create_app(manager: SessionManager) -> FastAPI:
             manager.verify_provider, name, (body or {}).get("fields")
         )
 
+    # -- Qumge device sign-in (RFC 8628) ----------------------------------------
+    @app.post("/v1/qumge/device/start")
+    def qumge_device_start(body: dict | None = None) -> dict[str, Any]:
+        return manager.start_qumge_device((body or {}).get("device_name"))
+
+    @app.get("/v1/qumge/device/poll")
+    def qumge_device_poll() -> dict[str, Any]:
+        return manager.poll_qumge_device()
+
     # -- settings (model API key) -----------------------------------------------
     @app.get("/v1/settings")
     def settings_get() -> dict[str, Any]:
