@@ -1,17 +1,17 @@
-# Desk
+# Marlo
 
 > ### Derived from [OpenWorker](https://github.com/andrewyng/openworker)
 >
-> Desk is a [Qumge](https://qumge.com) distribution of **OpenWorker** by Andrew Ng,
+> Marlo is a [Qumge](https://qumge.com) distribution of **OpenWorker** by Andrew Ng,
 > used under the MIT License. Copyright (c) 2024 Andrew Ng — see [LICENSE](LICENSE).
 >
 > Upstream is the real project and where the engine is built. If you want the
 > unmodified original, go there: **https://github.com/andrewyng/openworker**
 >
-> **What Desk changes.** OpenWorker asks you to pick a model provider and paste an
+> **What Marlo changes.** OpenWorker asks you to pick a model provider and paste an
 > API key before you can start. That is the right default for developers and the
-> wrong one for the people Desk is for — marketers, operators, founders without an
-> engineer. Desk replaces that first screen with a Qumge sign-in, and ships with
+> wrong one for the people Marlo is for — marketers, operators, founders without an
+> engineer. Marlo replaces that first screen with a Qumge sign-in, and ships with
 > its digital employees already configured.
 >
 > Everything else is upstream's work. Fixes that aren't Qumge-specific go back to
