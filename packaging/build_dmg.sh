@@ -155,15 +155,25 @@ if [ -z "${TAURI_SIGNING_PRIVATE_KEY:-}" ] && [ -f "$UPDATER_ENV" ]; then
   # shellcheck disable=SC1090
   source "$UPDATER_ENV"
 fi
-UPDATER_OVERLAY=()
+# The asset catalog rides in through the same overlay mechanism rather than
+# tauri.conf.json, because gen/Assets.car only exists on macOS — actool is an
+# Xcode tool. Listing it in the committed config broke the Windows build
+# outright ("resource path gen\Assets.car doesn't exist", v0.2.7). The sidecar
+# entry is repeated because --config replaces the resources object rather than
+# merging into it.
+ICON_RES='"resources":{"binaries/sidecar":"sidecar","gen/Assets.car":"Assets.car"}'
+if [ ! -f "$GUI/src-tauri/gen/Assets.car" ]; then
+  ICON_RES='"resources":{"binaries/sidecar":"sidecar"}'
+fi
+
 if [ -n "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
-  UPDATER_OVERLAY=(--config '{"bundle":{"createUpdaterArtifacts":true}}')
+  BUILD_OVERLAY="{\"bundle\":{\"createUpdaterArtifacts\":true,$ICON_RES}}"
 else
   echo "    WARNING: no updater signing key — building WITHOUT auto-update artifacts (not releasable)."
+  # The icon still rides along: a keyless dev build should look like the real one.
+  BUILD_OVERLAY="{\"bundle\":{$ICON_RES}}"
 fi
-# ${arr[@]+…} guard: plain "${arr[@]}" on an EMPTY array is an "unbound variable"
-# under set -u on macOS's stock bash 3.2 — hit by keyless (fresh-clone) builds.
-( cd "$GUI" && npm run tauri build -- --bundles app ${UPDATER_OVERLAY[@]+"${UPDATER_OVERLAY[@]}"} )
+( cd "$GUI" && npm run tauri build -- --bundles app --config "$BUILD_OVERLAY" )
 
 echo "==> [4/5] hdiutil: wrapping into .dmg"
 BUNDLE="$GUI/src-tauri/target/release/bundle"
