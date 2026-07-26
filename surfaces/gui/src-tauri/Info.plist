@@ -3,18 +3,31 @@
 <!-- Merged into the bundle's Info.plist by Tauri. These usage strings appear inside the macOS
      permission prompts (Desktop/Documents/Downloads/Photos), so a prompt the user didn't expect
      at least explains itself — the agent's tool runs are what touch these folders, and only when
-     a task needs them. -->
+     a task needs them.
+
+     They carried the old product name until 0.2.7. A system dialog that asks for your Documents
+     folder on behalf of a product you did not install is what malware looks like; nothing in the
+     branding check reached .plist files, so it went unnoticed through five releases. -->
 <plist version="1.0">
 <dict>
   <key>NSMicrophoneUsageDescription</key>
-  <string>OpenWorker records only while you use the composer microphone to turn your spoken prompt into editable text. Audio is transcribed locally and is not uploaded.</string>
+  <string>Marlo records only while you use the composer microphone to turn your spoken prompt into editable text. Audio is transcribed locally and is not uploaded.</string>
   <key>NSDesktopFolderUsageDescription</key>
-  <string>A task you run may need to read or save files on your Desktop. OpenWorker never scans this folder on its own.</string>
+  <string>A task you run may need to read or save files on your Desktop. Marlo never scans this folder on its own.</string>
   <key>NSDocumentsFolderUsageDescription</key>
-  <string>A task you run may need to read or save files in Documents. OpenWorker never scans this folder on its own.</string>
+  <string>A task you run may need to read or save files in Documents. Marlo never scans this folder on its own.</string>
   <key>NSDownloadsFolderUsageDescription</key>
-  <string>A task you run may need to read or save files in Downloads. OpenWorker never scans this folder on its own.</string>
+  <string>A task you run may need to read or save files in Downloads. Marlo never scans this folder on its own.</string>
   <key>NSPhotoLibraryUsageDescription</key>
-  <string>A task you run may need to read an image from your photo library. OpenWorker never scans your photos on its own.</string>
+  <string>A task you run may need to read an image from your photo library. Marlo never scans your photos on its own.</string>
+
+  <!-- Opts the app into the modern icon treatment; without it macOS 26+ shrinks the legacy
+       .icns onto a pale rounded plate. The AppIcon it names lives in the Assets.car built
+       before `tauri build` and shipped through bundle.resources, so the bundle Tauri signs,
+       notarises and staples already contains it. 0.2.6 injected the catalog AFTER that and
+       invalidated the stapled ticket: `stapler validate` on the .app went from "worked" to
+       exit 65, and only the DMG stayed stapled. -->
+  <key>CFBundleIconName</key>
+  <string>AppIcon</string>
 </dict>
 </plist>

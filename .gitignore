@@ -6,3 +6,7 @@ __pycache__/
 build/
 dist/
 .coverage
+
+# actool output, rebuilt by packaging/make_asset_catalog.py on every macOS build
+surfaces/gui/src-tauri/gen/Assets.car
+surfaces/gui/src-tauri/gen/.iconset-build/

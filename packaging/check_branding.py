@@ -44,9 +44,15 @@ ROOT = Path(__file__).resolve().parent.parent
 ROOTS = [
     ROOT / "surfaces/gui/src",
     ROOT / "surfaces/gui/src-tauri/src",
+    ROOT / "surfaces/gui/src-tauri",  # Info.plist — see below
     ROOT / "coworker",
 ]
-SUFFIXES = {".ts", ".tsx", ".css", ".rs", ".py"}
+# .plist is here because src-tauri/Info.plist carries the NS*UsageDescription
+# strings macOS prints inside its own permission dialogs. Those named OpenWorker
+# through five releases: a system prompt asking for your Documents folder on
+# behalf of a product you never installed is what malware looks like, and no
+# check reached the file.
+SUFFIXES = {".ts", ".tsx", ".css", ".rs", ".py", ".plist"}
 EXEMPT_FILES = {"Sidebar.test.tsx"}  # persona fixture, not copy
 
 # Everything under components/connectors/ describes OpenWorker Cloud's brokered

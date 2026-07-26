@@ -135,6 +135,15 @@ if [ -n "${APPLE_SIGNING_IDENTITY:-}" ]; then
     --entitlements "$GUI/src-tauri/entitlements.plist" "$SIDECAR/openworker-server"
 fi
 
+# macOS 26+ frames a legacy CFBundleIconFile app on a pale plate; an asset catalog
+# plus CFBundleIconName (src-tauri/Info.plist) opts out. This MUST run before
+# `tauri build`: bundle.resources copies gen/Assets.car into the app, and Tauri
+# signs, notarises and staples what it built. 0.2.6 injected the catalog
+# afterwards and invalidated the ticket — `stapler validate` on the .app went
+# from "worked" to exit 65 while only the DMG stayed stapled.
+echo "==> [2.5/5] app icon: asset catalog"
+python3 "$HERE/make_asset_catalog.py"
+
 echo "==> [3/5] tauri build (.app)"
 # Auto-update artifacts (.app.tar.gz + minisign .sig): produced only when the updater
 # signing key is available — from the env (CI secret TAURI_SIGNING_PRIVATE_KEY), or from
@@ -156,25 +165,8 @@ fi
 # under set -u on macOS's stock bash 3.2 — hit by keyless (fresh-clone) builds.
 ( cd "$GUI" && npm run tauri build -- --bundles app ${UPDATER_OVERLAY[@]+"${UPDATER_OVERLAY[@]}"} )
 
-BUNDLE="$GUI/src-tauri/target/release/bundle"
-
-# macOS 26+ frames a legacy CFBundleIconFile app on a pale plate. Compiling an
-# asset catalog and setting CFBundleIconName opts out of that — see
-# make_asset_catalog.py. It edits Info.plist and Resources, which breaks the
-# signature `tauri build` just applied, so the bundle is re-signed here. That
-# re-sign has to keep the hardened runtime and entitlements or notarization
-# rejects it.
-echo "==> [3.5/5] app icon: asset catalog"
-python3 "$HERE/make_asset_catalog.py" "$BUNDLE/macos/$APP.app"
-if [ -n "${APPLE_SIGNING_IDENTITY:-}" ]; then
-  echo "    re-signing the bundle after the Info.plist edit"
-  codesign --force --sign "$APPLE_SIGNING_IDENTITY" --timestamp --options runtime \
-    --entitlements "$GUI/src-tauri/entitlements.plist" \
-    "$BUNDLE/macos/$APP.app"
-  codesign --verify --deep --strict "$BUNDLE/macos/$APP.app"
-fi
-
 echo "==> [4/5] hdiutil: wrapping into .dmg"
+BUNDLE="$GUI/src-tauri/target/release/bundle"
 STAGING="$(mktemp -d)"
 cp -R "$BUNDLE/macos/$APP.app" "$STAGING/"
 ln -s /Applications "$STAGING/Applications"
