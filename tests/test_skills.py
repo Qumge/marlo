@@ -76,7 +76,10 @@ def test_skill_loader_catalog_and_load(tmp_path):
     reg = ToolRegistry()
     reg.register_all(skill_tools(loader))
     loaded = reg.execute("load_skill", {"name": "pdf"})
-    assert "pdfplumber" in loaded["instructions"]
+    # `reference`, not `instructions`: since the Qumge catalog was wired in, this
+    # body is markdown fetched from the internet, and the key the model reads
+    # first is part of how it is framed. See test_skill_untrusted.py.
+    assert "pdfplumber" in loaded["reference"]
     assert reg.execute("load_skill", {"name": "missing"})["error"]
 
 
