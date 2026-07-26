@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { BalanceChip } from "./BalanceChip";
 import { useT } from "../i18n";
 import {
   announceCloudChanged,
@@ -1239,6 +1240,10 @@ export function Sidebar(props: Props) {
               />
             )}
             <span className="flex-1" />
+              {/* Credit, where someone already looks for account things.
+                  Renders nothing when it cannot be fetched — signed out,
+                  offline and server-down all read the same to a person. */}
+              <BalanceChip />
             {inboxUnlocked && (
               <span
                 className={

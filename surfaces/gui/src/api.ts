@@ -485,6 +485,28 @@ export async function setCloudTelemetry(
   return res.json();
 }
 
+/** Qumge credit. `null` when it cannot be known — signed out, offline, server
+ * down — because the UI does the same thing with all of them: shows nothing. An
+ * error banner in front of someone trying to work is worse than a missing
+ * number in a corner. */
+export interface QumgeBalance {
+  balance_micro_usd: number;
+  balance: number;
+  currency: string;
+  topup_url: string;
+  low: boolean;
+}
+
+export async function getQumgeBalance(): Promise<QumgeBalance | null> {
+  try {
+    const res = await fetch(`${httpBase()}/v1/qumge/balance`);
+    if (!res.ok) return null;
+    return (await res.json()).balance ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function getCloudStatus(): Promise<CloudStatus> {
   const res = await fetch(`${httpBase()}/v1/cloud/status`);
   return res.json();

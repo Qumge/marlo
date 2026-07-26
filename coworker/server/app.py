@@ -1301,6 +1301,15 @@ def create_app(manager: SessionManager) -> FastAPI:
     def providers_get() -> list[dict[str, Any]]:
         return manager.get_providers()
 
+    @app.get("/v1/qumge/balance")
+    def qumge_balance() -> dict[str, Any]:
+        """Credit left, and where to add more. `{"balance": null}` when it cannot
+        be known — not signed in, offline, server down. The GUI shows nothing in
+        that case rather than an error in front of someone trying to work."""
+        from ..qumge import balance as qumge_balance_mod
+
+        return {"balance": qumge_balance_mod.fetch(manager.secrets)}
+
     @app.post("/v1/providers")
     def providers_set(body: dict) -> dict[str, Any]:
         name = (body or {}).get("name", "")

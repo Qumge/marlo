@@ -111,6 +111,10 @@ export const en = {
   remove: "Remove",
 
   // -- settings: language ---------------------------------------------------
+  balanceTitle: "Qumge credit — click to add more",
+  balanceLowTitle: "Running low on credit — click to top up",
+  addCredit: "Add credit",
+
   language: "Language",
   languageSub: "Marlo's own text. What you write to it, and what it writes back, is up to you.",
   langEnglish: "English",

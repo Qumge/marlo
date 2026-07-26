@@ -94,6 +94,10 @@ export const zh: Strings = {
   sendApprovalsToInboxTitle: "把需要你点头的事发到收件箱",
   remove: "移除",
 
+  balanceTitle: "Qumge 余额 —— 点击充值",
+  balanceLowTitle: "余额不多了 —— 点击充值",
+  addCredit: "充值",
+
   language: "语言",
   languageSub: "只影响 Marlo 自己的界面文字。你怎么跟它说话、它怎么回你，不受这里影响。",
   langEnglish: "English",
