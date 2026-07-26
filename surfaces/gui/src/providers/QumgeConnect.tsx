@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { pollQumgeDevice, startQumgeDevice, type QumgeDeviceStart, type QumgeDevicePoll } from "../api";
 import { openExternal } from "../tauri";
 
-// Marlo's "sign in to Qumge" panel — replaces OpenWorker's thirteen-provider-picker first
+// Marlo's "sign in to Qumge" panel — replaces Marlo's thirteen-provider-picker first
 // screen with one device-flow sign-in. idle → waiting (code + URL, polling for the
 // browser-side approval) → onConnected, or denied/expired/error with a way back to idle.
 // The API key is NEVER handled here: the server exchanges it and writes it straight to the
