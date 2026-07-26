@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useT } from "../i18n";
 import type { Attachment } from "../types";
 import { isPdfFile, readFile } from "../attach";
 import { getSettings, inspectPdf } from "../api";
@@ -80,6 +81,7 @@ interface Props {
 }
 
 export function Composer(props: Props) {
+  const t = useT();
   const [text, setText] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [dragging, setDragging] = useState(false);
@@ -355,7 +357,7 @@ export function Composer(props: Props) {
           <button
             className="shrink-0 opacity-60 hover:opacity-100"
             onClick={() => setAttachNotice(null)}
-            title="Dismiss"
+            title={t("dismiss")}
           >
             ✕
           </button>
@@ -404,7 +406,7 @@ export function Composer(props: Props) {
           <div className="relative">
             <button
               className={iconBtn + (attachMenuOpen ? " bg-paper text-ink" : "")}
-              title="Attach"
+              title={t("attach")}
               aria-label="Attach"
               onClick={() => setAttachMenuOpen((v) => !v)}
             >
@@ -458,7 +460,7 @@ export function Composer(props: Props) {
             />
           ) : null}
 
-          {dictationBusy === "Transcribing…" && <span className="text-[11.5px] text-accent">Transcribing…</span>}
+          {dictationBusy === "Transcribing…" && <span className="text-[11.5px] text-accent">{t("transcribing")}</span>}
 
           <span className="ml-auto" />
 
@@ -469,10 +471,10 @@ export function Composer(props: Props) {
             <button
               className="pill model-warn chip"
               onClick={() => props.onConnectModel?.()}
-              title="Connect a model"
+              title={t("connectAModel")}
               aria-label="No model connected — connect a model"
             >
-              <span className="pill-label">No model</span>
+              <span className="pill-label">{t("noModel")}</span>
               <span className="model-warn-ico" aria-hidden>⚠</span>
             </button>
           ) : modelsLoaded ? (
@@ -482,9 +484,9 @@ export function Composer(props: Props) {
               className="pill chip text-faint cursor-default"
               disabled
               data-testid="models-loading"
-              title="Fetching the model list from the server"
+              title={t("fetchingModels")}
             >
-              <span className="pill-label">Loading models…</span>
+              <span className="pill-label">{t("loadingModels")}</span>
             </button>
           ))}
 
@@ -560,6 +562,7 @@ function ModeMenu({
   unattended?: boolean;
   onUnattendedChange?: (on: boolean) => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const current = PERMISSION_OPTIONS.find((o) => o.value === mode);
   return (
@@ -614,7 +617,7 @@ function ModeMenu({
                 <div className="my-1 border-t border-line" />
                 <div className="flex items-center gap-2 px-2.5 py-1.5">
                   <span className="flex-1 min-w-0">
-                    <span className="block text-[13px] text-ink">Send approvals to Inbox</span>
+                    <span className="block text-[13px] text-ink">{t("sendApprovalsToInbox")}</span>
                     <span className="block text-[11px] text-faint leading-snug">
                       Approvals &amp; questions go to the Inbox; the agent keeps working.
                     </span>
@@ -622,7 +625,7 @@ function ModeMenu({
                   <Toggle
                     checked={!!unattended}
                     onChange={onUnattendedChange}
-                    title="Send approvals to the Inbox"
+                    title={t("sendApprovalsToInbox")}
                   />
                 </div>
               </>
@@ -647,6 +650,7 @@ function attachItem(icon: "image" | "file" | "fileCode", label: string, onClick:
 }
 
 function AttachChip({ a, onRemove }: { a: Attachment; onRemove: () => void }) {
+  const t = useT();
   return (
     <div className={"attach-chip" + (a.kind === "image" ? " img" : "")}>
       {a.kind === "image" ? (
@@ -657,7 +661,7 @@ function AttachChip({ a, onRemove }: { a: Attachment; onRemove: () => void }) {
           <span className="attach-name">{a.name}</span>
         </>
       )}
-      <button className="attach-x" onClick={onRemove} title="Remove">
+      <button className="attach-x" onClick={onRemove} title={t("remove")}>
         ✕
       </button>
     </div>

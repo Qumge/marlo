@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { LanguagePicker } from "./LanguagePicker";
 import {
   getSettings,
   getTrustedWorkspaces,
@@ -410,6 +411,13 @@ function AppearanceSection() {
   return (
     <section>
       <PanelHead title="General" sub="How Marlo looks and behaves on this machine." />
+
+      {/* Language sits at the top of General: it is the setting most likely to be
+          wrong for a reader who arrived from a non-English page, and the one that
+          makes every other setting readable. */}
+      <div className={CARD + " p-4 mb-4"}>
+        <LanguagePicker />
+      </div>
 
       <div className={CARD + " p-4 mb-4"}>
         <div className={FIELD_LABEL}>Theme</div>

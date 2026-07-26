@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useT } from "../i18n";
 import type { Attachment } from "../types";
 import { useRoots } from "../useRoots";
 import { AddFolderForm } from "./AddFolderForm";
@@ -15,11 +16,9 @@ import { AddFolderForm } from "./AddFolderForm";
 // and GitHub→Slack, whose "Configure ›" led to the connector sign-in — brokered by
 // OpenWorker Cloud, a service this project does not run. That page is hidden now,
 // so those rows were an invitation into a door that no longer opens.
-const FOLDER_PROMPT = "Analyze the files in this folder and summarize what matters.";
-const WRITE_PROMPT =
-  "Read the files in this folder and write me one document that pulls the important parts together. Save it in the folder.";
-const TIDY_PROMPT =
-  "Look through this folder, tell me how you'd rename and organise the files so they make sense, and do it once I say yes.";
+//
+// The prompts live in the string catalog with the labels: a card that reads
+// Chinese and drops English into the composer gets an English answer back.
 
 export function SessionIntro({
   sessionId,
@@ -28,6 +27,7 @@ export function SessionIntro({
   sessionId: string;
   onPrefill: (text: string, attachments?: Attachment[]) => void;
 }) {
+  const t = useT();
   const { roots, busy, error, addRoot } = useRoots(sessionId);
   const [addingFolder, setAddingFolder] = useState(false);
 
@@ -35,27 +35,24 @@ export function SessionIntro({
 
   const pickFolder = () => {
     // A shared folder already exists → straight to the prompt; otherwise share one first.
-    if (shared.length > 0) onPrefill(FOLDER_PROMPT);
+    if (shared.length > 0) onPrefill(t("promptAnalyze"));
     else setAddingFolder((v) => !v);
   };
 
   return (
     <div className="intro">
       <h1 className="greeting">
-        <span className="mark">✦</span> What should we produce?
+        <span className="mark">✦</span> {t("introGreeting")}
       </h1>
-      <p className="intro-lede">
-        Pick a task to start — I'll do the work and save the result. Or just type what you need
-        below.
-      </p>
+      <p className="intro-lede">{t("introLede")}</p>
 
       <div className="intro-tasks">
         <button className="task-card" data-testid="intro-task-folder" onClick={pickFolder}>
           <span className="task-card-body">
-            <span className="task-card-title">Analyze the files in a directory</span>
-            <span className="task-card-sub">I'll read them and summarize what matters</span>
+            <span className="task-card-title">{t("taskAnalyzeTitle")}</span>
+            <span className="task-card-sub">{t("taskAnalyzeSub")}</span>
           </span>
-          <span className="task-card-act">Pick a folder →</span>
+          <span className="task-card-act">{t("taskAnalyzeAct")}</span>
         </button>
         {addingFolder && (
           <div className="intro-addfolder">
@@ -64,7 +61,7 @@ export function SessionIntro({
               busy={busy}
               onAdd={async (path, writable) => {
                 const ok = await addRoot(path, writable);
-                if (ok !== false) onPrefill(FOLDER_PROMPT);
+                if (ok !== false) onPrefill(t("promptAnalyze"));
                 return ok;
               }}
               onDismiss={() => setAddingFolder(false)}
@@ -76,25 +73,25 @@ export function SessionIntro({
         <button
           className="task-card"
           data-testid="intro-task-write"
-          onClick={() => onPrefill(WRITE_PROMPT)}
+          onClick={() => onPrefill(t("promptWrite"))}
         >
           <span className="task-card-body">
-            <span className="task-card-title">Write one document from a folder of files</span>
-            <span className="task-card-sub">I'll read them and draft it for you to edit</span>
+            <span className="task-card-title">{t("taskWriteTitle")}</span>
+            <span className="task-card-sub">{t("taskWriteSub")}</span>
           </span>
-          <span className="task-card-act">Start →</span>
+          <span className="task-card-act">{t("taskStart")}</span>
         </button>
 
         <button
           className="task-card"
           data-testid="intro-task-tidy"
-          onClick={() => onPrefill(TIDY_PROMPT)}
+          onClick={() => onPrefill(t("promptTidy"))}
         >
           <span className="task-card-body">
-            <span className="task-card-title">Sort out a folder that's become a mess</span>
-            <span className="task-card-sub">I'll propose names and an order, and wait for your go-ahead</span>
+            <span className="task-card-title">{t("taskTidyTitle")}</span>
+            <span className="task-card-sub">{t("taskTidySub")}</span>
           </span>
-          <span className="task-card-act">Start →</span>
+          <span className="task-card-act">{t("taskStart")}</span>
         </button>
       </div>
     </div>

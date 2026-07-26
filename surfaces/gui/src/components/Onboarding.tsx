@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { LanguagePicker } from "./LanguagePicker";
+import { useT } from "../i18n";
 import {
   cloudLogin,
   connectManaged,
@@ -43,6 +45,7 @@ const TOOL_ROWS = [
 const TOOLS_SOON = ["gmail", "google_calendar"];
 
 export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "automations") => void }) {
+  const t = useT();
   const [step, setStep] = useState(0);
 
   // -- step 1: model (Qumge connect ⇄ demoted gallery ⇄ key form, shared machinery) --
@@ -139,11 +142,18 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
   };
 
   // -- shared bits ----------------------------------------------------------------
+  // The language switch sits on the first screen, not only in Settings. Someone
+  // who downloaded from qumge.com in Chinese and got an English window has to be
+  // able to fix that before they have any reason to believe the app has a
+  // Settings tab.
   const dots = (
-    <div className="flex justify-center gap-2 mb-6">
+    <div className="relative flex justify-center items-center gap-2 mb-6">
       {STEPS.map((s) => (
         <span key={s} className={"w-1.5 h-1.5 rounded-full " + (s <= step ? "bg-accent" : "bg-line")} />
       ))}
+      <div className="absolute right-0 top-1/2 -translate-y-1/2">
+        <LanguagePicker compact />
+      </div>
     </div>
   );
 
@@ -157,7 +167,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
         {step === 0 && (
           <section data-testid="ob-step-model" className="flex-1 min-h-0 flex flex-col">
             {/* Persistent header — stays put while the region below swaps (§39). */}
-            <h1 className="text-[19px] font-semibold">Welcome to Marlo<span className="beta-tag">BETA</span></h1>
+            <h1 className="text-[19px] font-semibold">{t("welcomeTo")}<span className="beta-tag">{t("beta")}</span></h1>
             <p className="text-[13px] text-muted mt-0.5 mb-4">
               Connect to Qumge to get started — one sign-in, every model, and your key stays
               on this Mac.

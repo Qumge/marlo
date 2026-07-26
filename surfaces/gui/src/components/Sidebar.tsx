@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useT } from "../i18n";
 import {
   announceCloudChanged,
   AUTOMATIONS_CHANGED,
@@ -75,13 +76,14 @@ function UnseenBadge({ n, failed }: { n: number; failed?: boolean }) {
 // Liveness = working (in-flight turn) / sleeping (a self-wake is pending). A count-less dot that
 // never bubbles — it says "this is alive", not "this needs you".
 function LiveDot({ state }: { state?: "working" | "sleeping" | "idle" }) {
+  const t = useT();
   if (state !== "working" && state !== "sleeping") return null;
   return state === "working" ? (
-    <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse shrink-0" title="Working now" />
+    <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse shrink-0" title={t("workingNow")} />
   ) : (
     <span
       className="w-1.5 h-1.5 rounded-full bg-faint/60 shrink-0"
-      title="Sleeping (will wake itself)"
+      title={t("sleeping")}
     />
   );
 }
@@ -171,6 +173,7 @@ const compactAge = (iso?: string | null): string => {
 // Sessions shown per group before "Show more" comes from Settings (sessions_peek, default 5).
 
 export function Sidebar(props: Props) {
+  const t = useT();
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [appMenuOpen, setAppMenuOpen] = useState(false);
   // The account row (§26): cloud sign-in status drives the avatar/name/dot; refreshed on
@@ -453,7 +456,7 @@ export function Sidebar(props: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         <button
-          title="Session actions"
+          title={t("sessionActions")}
           aria-label="Session actions"
           aria-haspopup="menu"
           aria-expanded={menuOpen}
@@ -488,7 +491,7 @@ export function Sidebar(props: Props) {
               <div className="h-px bg-line my-1 mx-2" />
               {confirmDelId === s.session_id ? (
                 <button
-                  title="Click again to permanently delete"
+                  title={t("confirmDelete")}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[12.5px] text-left font-medium text-danger hover:bg-paper"
                   data-testid="row-menu-delete"
                   role="menuitem"
@@ -498,7 +501,7 @@ export function Sidebar(props: Props) {
                   }}
                 >
                   <Icon name="trash" size={13} className="shrink-0" />
-                  <span className="flex-1">Delete?</span>
+                  <span className="flex-1">{t("deleteQ")}</span>
                 </button>
               ) : (
                 <button
@@ -508,7 +511,7 @@ export function Sidebar(props: Props) {
                   onClick={() => setConfirmDelId(s.session_id)}
                 >
                   <Icon name="trash" size={13} className="shrink-0" />
-                  <span className="flex-1">Delete</span>
+                  <span className="flex-1">{t("delete")}</span>
                 </button>
               )}
             </div>
@@ -711,7 +714,7 @@ export function Sidebar(props: Props) {
       </span>
       <button
         className="w-6 h-6 grid place-items-center rounded-md text-faint hover:text-ink hover:bg-paper -mr-1"
-        title="Group & filter conversations"
+        title={t("groupAndFilter")}
         aria-label="Group and filter conversations"
         onClick={() => setGroupMenuOpen((v) => !v)}
       >
@@ -864,7 +867,7 @@ export function Sidebar(props: Props) {
               </span>
               <button
                 className="w-5 h-5 grid place-items-center rounded text-faint hover:text-ink hover:bg-panel"
-                title="New project"
+                title={t("newProject")}
                 aria-label="New project"
                 onClick={() => props.onNewProject(browseKey)}
               >
@@ -1299,6 +1302,7 @@ function NewSessionSplit({
   onNew: (agent: string) => void;
   onManage: () => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const enabled = (personas || []).filter((p) => p.enabled);
   // With a single enabled persona there is nothing to pick — the split collapses to a plain
@@ -1320,7 +1324,7 @@ function NewSessionSplit({
         {!solo && (
           <button
             className="px-2.5 rounded-r-lg bg-accent text-white border-l border-white/25 hover:opacity-95 flex items-center"
-            title="Start with a specific persona"
+            title={t("startWithPersona")}
             aria-label="Choose a persona"
             onClick={() => setOpen((v) => !v)}
           >

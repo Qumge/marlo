@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useT } from "../i18n";
 // Emits the asset URL only; the worker itself loads lazily with the pdfjs chunk.
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import {
@@ -76,6 +77,7 @@ export function RightRail({
   openAccessKey = 0,
   onOpenIntegrations,
 }: Props) {
+  const t = useT();
   const [open, setOpen] = useState<Record<Panel, boolean>>({
     progress: true,
     artifacts: true,
@@ -177,17 +179,17 @@ export function RightRail({
                   <button
                     className="rail-mini-btn"
                     onClick={(e) => { e.stopPropagation(); revealArtifact(sessionId, artifacts[0].path, "reveal"); }}
-                    title="Show the folder where these files are saved"
+                    title={t("showSaveFolder")}
                   >
                     <Icon name="folder" size={13} />
                   </button>
                 )}
-                <button className="rail-mini-btn" onClick={(e) => { e.stopPropagation(); refreshArtifacts(); }} title="Refresh artifacts"><Icon name="refresh" size={13} /></button>
+                <button className="rail-mini-btn" onClick={(e) => { e.stopPropagation(); refreshArtifacts(); }} title={t("refreshArtifacts")}><Icon name="refresh" size={13} /></button>
               </>
             }
           >
             {artifacts.length === 0 ? (
-              <div className="rail-muted">No previewable files yet.</div>
+              <div className="rail-muted">{t("artifactsEmpty")}</div>
             ) : (
               <div className="artifact-list">
                 {artifacts.slice(0, 16).map((a) => (
@@ -298,6 +300,7 @@ function ArtifactViewer({
   onReload: () => Promise<void>;
   onBack: () => void;
 }) {
+  const t = useT();
   const [reloadKey, setReloadKey] = useState(0);
   const isHtml = content?.kind === "html" && !content.error;
   // Best viewed in a real app: spreadsheets, PDFs, and Office docs (pptx/docx can't preview inline)
@@ -306,7 +309,7 @@ function ArtifactViewer({
   return (
     <div className="artifact-viewer">
       <div className="artifact-head">
-        <button className="artifact-icon-btn" onClick={onBack} aria-label="Back to artifacts" title="Back">
+        <button className="artifact-icon-btn" onClick={onBack} aria-label="Back to artifacts" title={t("back")}>
           <Icon name="arrowLeft" size={16} />
         </button>
         <div className="artifact-heading">
@@ -322,7 +325,7 @@ function ArtifactViewer({
                 setReloadKey((k) => k + 1);
               }}
               aria-label="Reload preview"
-              title="Reload"
+              title={t("reload")}
             >
               <Icon name="refresh" size={16} />
             </button>
@@ -332,7 +335,7 @@ function ArtifactViewer({
               className="artifact-icon-btn"
               onClick={() => revealArtifact(sessionId, artifact.path, "open")}
               aria-label="Open in default app"
-              title="Open in default app"
+              title={t("openInDefaultApp")}
             >
               <Icon name="panelOpen" size={16} />
             </button>
@@ -343,7 +346,7 @@ function ArtifactViewer({
             className="artifact-icon-btn"
             onClick={() => navigator.clipboard?.writeText(artifact.abs_path || artifact.path)}
             aria-label="Copy path"
-            title="Copy full path"
+            title={t("copyFullPath")}
           >
             <Icon name="copy" size={16} />
           </button>
@@ -351,7 +354,7 @@ function ArtifactViewer({
             className="artifact-icon-btn"
             onClick={() => revealArtifact(sessionId, artifact.path, "reveal")}
             aria-label="Show in folder"
-            title="Show in folder"
+            title={t("showInFolder")}
           >
             <Icon name="folder" size={16} />
           </button>
@@ -359,7 +362,7 @@ function ArtifactViewer({
       </div>
       <div className="artifact-preview">
         {!content ? (
-          <div className="rail-muted">Loading...</div>
+          <div className="rail-muted">{t("loading")}</div>
         ) : content.error ? (
           <div className="rail-error">{content.error}</div>
         ) : content.kind === "html" ? (
@@ -461,8 +464,9 @@ function parseCsv(text: string): string[][] {
 }
 
 function CsvTable({ text }: { text: string }) {
+  const t = useT();
   const rows = parseCsv(text);
-  if (!rows.length) return <div className="rail-muted artifact-table-note">Empty file.</div>;
+  if (!rows.length) return <div className="rail-muted artifact-table-note">{t("emptyFile")}</div>;
   return <GridTable rows={rows} />;
 }
 
@@ -471,6 +475,7 @@ function CsvTable({ text }: { text: string }) {
 // WKWebView has no inline PDF plugin (<embed> shows a gray pane in the Tauri shell), so we
 // rasterize pages with pdf.js onto stacked canvases — same lazy-chunk pattern as SheetViewer.
 function PdfViewer({ dataUrl }: { dataUrl: string }) {
+  const t = useT();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const holder = useRef<HTMLDivElement | null>(null);
@@ -513,13 +518,14 @@ function PdfViewer({ dataUrl }: { dataUrl: string }) {
   if (error) return <div className="rail-error artifact-table-note">Could not render PDF: {error}</div>;
   return (
     <div className="artifact-pdfjs">
-      {loading && <div className="rail-muted artifact-table-note">Rendering PDF…</div>}
+      {loading && <div className="rail-muted artifact-table-note">{t("renderingPdf")}</div>}
       <div ref={holder} />
     </div>
   );
 }
 
 function SheetViewer({ dataUrl }: { dataUrl: string }) {
+  const t = useT();
   const [sheets, setSheets] = useState<{ name: string; rows: unknown[][] }[] | null>(null);
   const [error, setError] = useState("");
   const [active, setActive] = useState(0);
@@ -548,7 +554,7 @@ function SheetViewer({ dataUrl }: { dataUrl: string }) {
   }, [dataUrl]);
 
   if (error) return <div className="rail-error artifact-table-note">Could not parse spreadsheet: {error}</div>;
-  if (!sheets) return <div className="rail-muted artifact-table-note">Parsing spreadsheet…</div>;
+  if (!sheets) return <div className="rail-muted artifact-table-note">{t("parsingSpreadsheet")}</div>;
   const sheet = sheets[active];
   return (
     <div className="sheet-viewer">

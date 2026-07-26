@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useT } from "../i18n";
 import { pollQumgeDevice, startQumgeDevice, type QumgeDeviceStart, type QumgeDevicePoll } from "../api";
 import { openExternal } from "../tauri";
 
@@ -32,6 +33,7 @@ function clampInterval(seconds: unknown): number {
 }
 
 export function QumgeConnect({ onConnected }: { onConnected: () => void }) {
+  const t = useT();
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   // The poll loop's own timer — not React state, so a tick never causes a render by itself.
   const timerRef = useRef<number | null>(null);
@@ -142,12 +144,9 @@ export function QumgeConnect({ onConnected }: { onConnected: () => void }) {
           data-testid="qumge-open-browser"
           onClick={() => openExternal(verification_uri_complete)}
         >
-          Open browser
+          {t("openBrowser")}
         </button>
-        <p className="text-[11.5px] text-faint">
-          Didn't open? The address above already carries your code — paste it into any
-          browser, on this Mac or another device.
-        </p>
+        <p className="text-[11.5px] text-faint">{t("deviceHint")}</p>
       </div>
     );
   }
@@ -155,10 +154,10 @@ export function QumgeConnect({ onConnected }: { onConnected: () => void }) {
   if (phase.kind === "denied" || phase.kind === "expired" || phase.kind === "error") {
     const message =
       phase.kind === "denied"
-        ? "Sign-in was denied."
+        ? t("signInDenied")
         : phase.kind === "expired"
-          ? "That code expired before it was used."
-          : phase.message || "Something went wrong connecting to Qumge.";
+          ? t("codeExpired")
+          : phase.message || t("connectFailed");
     return (
       <div className="space-y-2" data-testid="qumge-failed">
         <p className="text-[13px] text-muted" data-testid="qumge-error-message">
@@ -169,7 +168,7 @@ export function QumgeConnect({ onConnected }: { onConnected: () => void }) {
           data-testid="qumge-try-again"
           onClick={() => void start()}
         >
-          Try again
+          {t("tryAgain")}
         </button>
       </div>
     );
@@ -186,7 +185,7 @@ export function QumgeConnect({ onConnected }: { onConnected: () => void }) {
       disabled={starting}
       onClick={() => void start()}
     >
-      {starting ? "Connecting…" : "Connect to Qumge"}
+      {starting ? t("connecting") : t("connectToQumge")}
     </button>
   );
 }
