@@ -333,13 +333,17 @@ DESCRIPTORS: list[ProviderDescriptor] = [
         recommended_model="accounts/fireworks/models/glm-5p2",
         env_key="FIREWORKS_API_KEY",
     ),
+    # No custom endpoint_help: the auto-generated one ("...just add your key") is accurate
+    # here too — this card is reached from Settings ▸ Models and the demoted onboarding
+    # gallery, neither of which can start the device flow, so "sign in from the app
+    # instead" was advice nobody on THIS card could act on. Keeping the shape identical to
+    # every other _compat vendor also means this descriptor could be offered upstream.
     _compat(
         "qumge",
         "Qumge",
         base_url="https://qumge.com/v1",
         recommended_model="anthropic/claude-sonnet-4.6",
         env_key="QUMGE_API_KEY",
-        endpoint_help="One key for every model. Sign in from the app rather than pasting a key.",
     ),
     ProviderDescriptor(
         name="ollama",

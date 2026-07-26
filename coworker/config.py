@@ -23,10 +23,17 @@ from .secrets import state_dir
 # opt into command prefixes in their user-owned global config, accepting that authority.
 DEFAULT_ALLOWED_COMMANDS: list[str] = []
 
+# The one place the default model id lives. It used to be a separate string literal in
+# config.py, agent.py, docs/config.example.toml, and (shadowed by their callers today, but
+# the same class of duplication) server/manager.py and tui/app.py — bumping the recommended
+# model meant five one-line edits kept in lockstep by hand, and a missed one doesn't fail,
+# it just silently diverges. tests/test_config.py pins all five back to this constant.
+DEFAULT_MODEL = "qumge:anthropic/claude-sonnet-4.6"
+
 
 @dataclass
 class Config:
-    model: str = "qumge:anthropic/claude-sonnet-4.6"
+    model: str = DEFAULT_MODEL
     mode: str = "interactive"
     max_iterations: int = 150
     allowed_commands: list[str] = field(

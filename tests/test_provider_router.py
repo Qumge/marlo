@@ -458,9 +458,13 @@ def test_first_configured_provider_wins_default(tmp_path, monkeypatch):
     from coworker.server.manager import SessionManager
 
     mgr = SessionManager(data_dir=tmp_path)
-    assert (
-        mgr.model == "gpt-5.6-sol"
-    )  # fresh install: built-in default, openai unconfigured
+    # Fresh install: SessionManager's own built-in default (DEFAULT_MODEL, consolidated in
+    # config.py — Fix 6). Its provider (qumge) is unconfigured here too (no QUMGE_API_KEY,
+    # no stored key), so "first configured provider wins" still fires below exactly as
+    # before this constant was unified.
+    from coworker.config import DEFAULT_MODEL
+
+    assert mgr.model == DEFAULT_MODEL
 
     # the first provider that gets a key takes over the default
     mgr.set_provider("anthropic", {"api_key": "sk-ant-x"})

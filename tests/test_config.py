@@ -132,6 +132,39 @@ def test_build_engine_respects_max_iterations(tmp_path):
         engine.executor.close()
 
 
+def test_default_model_is_one_constant_used_everywhere():
+    """Five call sites used to carry the SAME default model id as their own separate
+    string literal (config.py, agent.py, docs/config.example.toml, and — currently
+    shadowed by their callers, but the same class of duplication — server/manager.py
+    and tui/app.py). Bumping the recommended model meant five one-line edits kept in
+    lockstep by hand; missing one doesn't fail anything, it just silently diverges.
+    One constant, five references — this is the trip wire if a future edit
+    reintroduces a stray literal."""
+    import inspect
+    import tomllib
+    from pathlib import Path
+
+    from coworker.agent import build_engine
+    from coworker.config import DEFAULT_MODEL, Config
+    from coworker.server.manager import SessionManager
+    from coworker.tui.app import CoworkerApp
+
+    assert Config().model == DEFAULT_MODEL
+    assert (
+        inspect.signature(build_engine).parameters["model"].default == DEFAULT_MODEL
+    )
+    assert (
+        inspect.signature(SessionManager.__init__).parameters["model"].default
+        == DEFAULT_MODEL
+    )
+    assert (
+        inspect.signature(CoworkerApp.__init__).parameters["model"].default
+        == DEFAULT_MODEL
+    )
+    doc = Path(__file__).resolve().parent.parent / "docs" / "config.example.toml"
+    assert tomllib.loads(doc.read_text())["model"] == DEFAULT_MODEL
+
+
 def test_cloud_endpoints_default_to_production():
     """A fresh install must work without a hand-edited config.toml. An empty
     relay default shipped once as "connected but relay OFF" on every machine

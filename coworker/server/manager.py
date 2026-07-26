@@ -35,7 +35,7 @@ from ..subscriptions import ChannelBuffer, SubscriptionStore
 from ..unrouted import UnroutedStore
 from ..unattended import UnattendedRegistry
 from ..audit import AuditStore
-from ..config import load_config, workspace_allowed_commands
+from ..config import DEFAULT_MODEL, load_config, workspace_allowed_commands
 from ..conversations import ConversationStore, title_from
 from ..engine import ApprovalOutcome, Approver, TurnEngine
 from ..roots import RootDir
@@ -110,7 +110,7 @@ class SessionManager:
         *,
         workspace: Optional[str | Path] = None,  # default/seed workspace (e.g. --cwd)
         data_dir: Optional[str | Path] = None,
-        model: str = "gpt-5.6-sol",
+        model: str = DEFAULT_MODEL,
         mode: Mode = Mode.INTERACTIVE,
         provider: Optional[ProviderClient] = None,
     ) -> None:

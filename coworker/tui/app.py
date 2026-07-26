@@ -16,6 +16,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Footer, Header, Input, Label, RichLog, Static
 
 from ..agent import build_code_engine
+from ..config import DEFAULT_MODEL
 from ..engine import ApprovalOutcome, PermissionRequest
 from ..events import Event, EventType
 from ..conversations import ConversationStore
@@ -82,7 +83,7 @@ class CoworkerApp(App):
         self,
         *,
         workspace: str | Path,
-        model: str = "gpt-5.6-sol",
+        model: str = DEFAULT_MODEL,
         mode: Mode = Mode.INTERACTIVE,
         provider: Optional[ProviderClient] = None,
         memory_store: Optional[MemoryStore] = None,

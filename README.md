@@ -11,8 +11,8 @@
 > **What Marlo changes.** OpenWorker asks you to pick a model provider and paste an
 > API key before you can start. That is the right default for developers and the
 > wrong one for the people Marlo is for — marketers, operators, founders without an
-> engineer. Marlo replaces that first screen with a Qumge sign-in, and ships with
-> its digital employees already configured.
+> engineer. Marlo replaces that first screen with a Qumge sign-in: one click, no key
+> to paste, every model behind it.
 >
 > Everything else is upstream's work. Fixes that aren't Qumge-specific go back to
 > them.
@@ -71,7 +71,7 @@ Under the hood:
 
 Model access is yours: pick a provider, paste your key, switch anytime. Supported out of the box:
 
-**OpenAI · Anthropic · Google Gemini · Inkling (Thinking Machines) · GLM (Z.ai) · DeepSeek · Kimi (Moonshot) · Qwen · MiniMax · Mistral · Grok (xAI)** - plus open-weight models via **Together** and **Fireworks**, and fully local models via **Ollama**.
+**Qumge · OpenAI · Anthropic · Google Gemini · Inkling (Thinking Machines) · GLM (Z.ai) · DeepSeek · Kimi (Moonshot) · Qwen · MiniMax · Mistral · Grok (xAI)** - plus open-weight models via **Together** and **Fireworks**, and fully local models via **Ollama**.
 
 A curated model list marks what we've verified for tool-calling work. Adding any model string works at your own risk.
 

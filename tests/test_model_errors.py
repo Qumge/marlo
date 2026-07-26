@@ -31,6 +31,14 @@ def test_flagships_are_the_defaults():
     assert get_descriptor("anthropic").recommended_model == "claude-fable-5"
 
 
+def test_config_default_model_is_tied_to_the_qumge_descriptor():
+    """Both sides carry the SAME id as an independent literal — changing the recommended
+    model (registry.py) without also changing the config default (config.py) stays green
+    everywhere else, since nothing else compares them. This assertion is the one place
+    that would fail if they drift apart."""
+    assert Config().model == f"qumge:{get_descriptor('qumge').recommended_model}"
+
+
 # -- friendly access/quota errors --------------------------------------------------------
 def test_no_access_errors_are_translated():
     # OpenAI's 404/403 body for a model the org can't use yet

@@ -13,7 +13,7 @@ from .agents import Agent, AgentContext, code_agent
 from .automation import scheduling_tools
 from .selfwake import selfwake_tools
 from .subscriptions import subscription_tools
-from .config import load_config
+from .config import DEFAULT_MODEL, load_config
 from .connectors import (
     connector_list,
     load_settings,
@@ -110,7 +110,7 @@ def build_engine(
     *,
     agent: Agent,
     workspace: Optional[str | Path] = None,
-    model: str = "qumge:anthropic/claude-sonnet-4.6",
+    model: str = DEFAULT_MODEL,
     mode: Mode = Mode.INTERACTIVE,
     approver: Optional[Approver] = None,
     provider: Optional[ProviderClient] = None,
