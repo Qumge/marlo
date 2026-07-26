@@ -46,10 +46,9 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://download.openworker.com/latest.json",
-        "https://github.com/andrewyng/openworker/releases/latest/download/latest.json"
+        "https://github.com/Qumge/marlo/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVCNzEzRjY5OTkzNUNBNjkKUldScHlqV1phVDl4VzBvTnFLLytzaDkzNVd3WWNuUm8yNE95WTBFNnBtcGF1RENxeTRuNVhQeloK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVFQkM5REJDQjRCNTYyOUMKUldTY1lyVzB2SjI4N2x2bzMxM01VdjlmSUFwNjhZeHh0and2QWE3Tk4zUDd5T0FEdVptNzI3bjkK",
       "windows": {
         "installMode": "passive"
       }

@@ -19,9 +19,12 @@
 
 ---
 
-**[openworker.com](https://openworker.com)** · [Download](#download) · [Issues](https://github.com/andrewyng/openworker/issues)
+**[qumge.com](https://qumge.com)** · [Download](#download) · [Issues](https://github.com/Qumge/marlo/issues)
 
-> **Beta** - OpenWorker is in open beta: fully usable, updates itself, and we're actively polishing rough edges. [Issues](https://github.com/andrewyng/openworker/issues) welcome.
+> **Pre-release** — Marlo has no published build yet. Everything below describes what it does
+> today from source; the download links appear here when the first signed build ships.
+> Bugs in Marlo go to [our issues](https://github.com/Qumge/marlo/issues); bugs in the
+> underlying engine are usually [upstream's](https://github.com/andrewyng/openworker/issues).
 
 **AI that gets your everyday tasks done.** OpenWorker is an open-source AI coworker that lives on your desktop and delivers **finished work**, not just chat: a polished document, a Slack reply with the numbers, an updated calendar, a triaged inbox.
 
@@ -31,13 +34,14 @@ It runs on your machine and doesn't lock you into any model: bring your own API 
 
 ## Download
 
-[**⬇ macOS (Apple Silicon)**](https://download.openworker.com/mac)
-<sub>macOS 12+ · signed & notarized · auto-updates</sub>
+**Not yet.** Marlo has no released build. The links that used to sit here pointed at
+OpenWorker's binaries — downloading those would have given you the upstream app, not this
+one, so they are gone rather than left as a convenience.
 
-[**⬇ Windows 10/11 (x64)**](https://download.openworker.com/windows)
-<sub>builds are not yet code-signed, so SmartScreen will warn; signing is in progress</sub>
+Until the first signed build ships, run from source: [Development](#development) below.
 
-Open the app, add a model key (or point it at Ollama), and ask for something real.
+If you want a finished app today, [OpenWorker](https://github.com/andrewyng/openworker) is
+the project Marlo derives from and it ships signed builds.
 
 ## How it works
 
@@ -84,8 +88,8 @@ OpenWorker is local-first. Everything lives on your machine: the agent loop, you
 Prerequisites: Python 3.10+, Node 20+, and (for the desktop shell) the Rust toolchain via [rustup](https://rustup.rs/).
 
 ```shell
-git clone https://github.com/andrewyng/openworker
-cd openworker
+git clone https://github.com/Qumge/marlo
+cd marlo
 
 # 1. One-time bootstrap - creates the Python venv at .venv
 #    (on Windows, run from Git Bash or WSL)
