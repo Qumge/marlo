@@ -1647,6 +1647,26 @@ class SessionManager:
             self._qumge_flow = None
             if not res.get("ok"):
                 return {"status": "error", "error": res.get("error")}
+
+            # Signing in brings the models AND the skill catalog. Without this the
+            # product's second half never arrives: SkillLoader reads two local
+            # directories, so qumge.com's curated SKILL.md files were reachable
+            # only by hand-copying one in.
+            #
+            # Best-effort on purpose — a catalog that failed to register must not
+            # turn a successful sign-in into an error the user cannot act on.
+            #
+            # Nothing is reloaded here: mcp.json is read when a session starts, and
+            # sign-in happens before the first one. Connecting from Settings
+            # mid-session picks it up on the next session, the same as any other
+            # edit to that file.
+            try:
+                from ..qumge import skills_mcp
+
+                skills_mcp.ensure_installed(qumge_device.base_url())
+            except Exception:
+                pass
+
             return {"status": "connected"}
 
         self._qumge_flow = None
