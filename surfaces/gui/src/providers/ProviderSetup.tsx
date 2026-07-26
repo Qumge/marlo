@@ -270,17 +270,25 @@ export function ProviderCards({
   tp,
   gridClass = "grid grid-cols-2 gap-2.5",
   lastUsed = false,
+  exclude = [],
 }: {
   ps: ProviderSetupState;
   tp: string; // testid prefix ("ob" onboarding, "set" settings)
   gridClass?: string;
   lastUsed?: boolean;
+  // Provider names to leave out of this rendering of the gallery — e.g. onboarding's
+  // demoted BYO-key fallback hides "qumge" (Task 4: it's the one sign-in that fallback is
+  // an alternative TO, one control away — a raw-key form for it here would just be a
+  // second, worse way to reach the same provider) without affecting Settings ▸ Models,
+  // which shares this component and has no such nearby alternative to point back to.
+  exclude?: string[];
 }) {
   const card =
     "flex items-center gap-2.5 rounded-xl border border-line bg-panel px-3 py-2.5 text-left hover:border-lineStrong transition-colors";
+  const shown = exclude.length ? ps.ordered.filter((p) => !exclude.includes(p.name)) : ps.ordered;
   return (
     <div className={gridClass}>
-      {ps.ordered.map((p) => (
+      {shown.map((p) => (
         <button
           key={p.name}
           className={card}

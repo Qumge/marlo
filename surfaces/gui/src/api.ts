@@ -1347,18 +1347,38 @@ export interface QumgeDevicePoll {
   error?: string;
 }
 
+// A JSON body is not success: the sidecar's auth middleware answers a bad/missing launch
+// token with a 401 `{"error": "..."}` — valid, parseable JSON that would otherwise sail
+// through `res.json()` untouched, leaving `data.interval` `undefined` and feeding a
+// `setTimeout(..., NaN)` retry loop. Both helpers must reject on a non-OK response so the
+// ONE try/catch in QumgeConnect is where a failure becomes a message.
 export async function startQumgeDevice(deviceName?: string): Promise<QumgeDeviceStart> {
   const res = await fetch(`${httpBase()}/v1/qumge/device/start`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(deviceName ? { device_name: deviceName } : {}),
   });
-  return res.json();
+  const data = await res.json();
+  // Two distinct failure shapes here: a non-OK HTTP response, and a 200 that is ITSELF a
+  // failure (qumge.com rate-limited/unreachable — device_flow.py's typed
+  // `{status: "error", ...}`). A real success body never carries a `status` field, so this
+  // check can't misfire on one.
+  if (!res.ok || data?.status === "error") {
+    throw new Error(data?.error || `Qumge sign-in request failed (HTTP ${res.status}).`);
+  }
+  return data;
 }
 
 export async function pollQumgeDevice(): Promise<QumgeDevicePoll> {
   const res = await fetch(`${httpBase()}/v1/qumge/device/poll`);
-  return res.json();
+  const data = await res.json();
+  // Only a non-OK HTTP response throws here — an app-level `{status: "error", ...}` body
+  // (e.g. "no sign-in in progress") is a normal, meaningful poll result; the caller's
+  // switch inspects `status` itself (see QumgeConnect.tsx).
+  if (!res.ok) {
+    throw new Error(data?.error || `Qumge poll request failed (HTTP ${res.status}).`);
+  }
+  return data;
 }
 
 // -- super-agent --------------------------------------------------------------

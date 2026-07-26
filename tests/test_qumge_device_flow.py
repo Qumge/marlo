@@ -152,10 +152,21 @@ def test_start_sends_device_name_when_given():
     assert fake.requests[0][1] == {"device_name": "my-mac"}
 
 
-def test_start_omits_device_name_when_not_given():
+def test_start_defaults_device_name_to_hostname_when_not_given(monkeypatch):
+    """The webview has no way to name "this machine" — it never sees the OS. Only the
+    server can, so start() fills it in itself rather than shipping every device
+    nameless (Fix 7)."""
+    monkeypatch.setattr(device_flow.socket, "gethostname", lambda: "marlo-imac")
     fake = FakeClient([_start_payload()])
     device_flow.start(client=fake)
-    assert fake.requests[0][1] == {}
+    assert fake.requests[0][1] == {"device_name": "marlo-imac"}
+
+
+def test_start_uses_the_given_device_name_over_the_hostname(monkeypatch):
+    monkeypatch.setattr(device_flow.socket, "gethostname", lambda: "marlo-imac")
+    fake = FakeClient([_start_payload()])
+    device_flow.start("explicit-name", client=fake)
+    assert fake.requests[0][1] == {"device_name": "explicit-name"}
 
 
 # ------------------------------------------------------------------------------------------
@@ -381,6 +392,77 @@ def test_poll_connected_goes_through_set_provider_not_a_raw_secretstore_write(
     mgr.poll_qumge_device()
 
     assert "qumge:anthropic/claude-sonnet-4.6" in mgr._curated_models()
+
+
+def test_start_qumge_device_rate_limited_is_a_typed_error_not_a_crash(tmp_path, monkeypatch):
+    """qumge.com caps /device/code at 20/hour. Before this fix, start()'s raise_for_status()
+    propagated straight out of start_qumge_device (nothing caught it), so a 429 became an
+    unhandled exception — a 500 at the REST layer and just "Something went wrong" in the
+    panel. Retrying ("Try again") requests a FRESH code every time, so an impatient user
+    walks straight into that cap — the message needs to say so, not the generic fallback."""
+    _patch_client(monkeypatch, [FakeResponse(429, {"error": "rate_limited"})])
+    mgr = _manager(tmp_path)
+
+    result = mgr.start_qumge_device()
+
+    assert result["status"] == "error"
+    assert result["kind"] == "rate_limited"
+    assert "error" in result and result["error"]
+    assert mgr._qumge_flow is None
+
+
+def test_start_qumge_device_network_failure_is_a_typed_error_not_a_crash(tmp_path, monkeypatch):
+    """A dead network/DNS failure must not raise out of the manager either — same bug,
+    different trigger, and it must be distinguishable from the rate-limit case."""
+    _patch_client(monkeypatch, [httpx.ConnectError("boom")])
+    mgr = _manager(tmp_path)
+
+    result = mgr.start_qumge_device()
+
+    assert result["status"] == "error"
+    assert result["kind"] == "unreachable"
+    assert mgr._qumge_flow is None
+
+
+def test_start_qumge_device_rate_limited_and_network_errors_read_differently(
+    tmp_path, monkeypatch
+):
+    """Distinct `kind`s exist so the panel can phrase them differently — collapsing both
+    into one generic message is exactly the defect being fixed."""
+    _patch_client(monkeypatch, [FakeResponse(429, {"error": "rate_limited"})])
+    rate_limited = _manager(tmp_path).start_qumge_device()
+
+    _patch_client(monkeypatch, [httpx.ConnectError("boom")])
+    unreachable = _manager(tmp_path).start_qumge_device()
+
+    assert rate_limited["kind"] != unreachable["kind"]
+    assert rate_limited["error"] != unreachable["error"]
+
+
+def test_rest_start_route_never_500s_on_a_qumge_rate_limit(tmp_path, monkeypatch):
+    _patch_client(monkeypatch, [FakeResponse(429, {"error": "rate_limited"})])
+    mgr = _manager(tmp_path)
+    client = _rest_client(mgr)
+
+    resp = client.post("/v1/qumge/device/start")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "error"
+    assert body["kind"] == "rate_limited"
+
+
+def test_rest_start_route_never_500s_on_a_dead_network(tmp_path, monkeypatch):
+    _patch_client(monkeypatch, [httpx.ConnectError("boom")])
+    mgr = _manager(tmp_path)
+    client = _rest_client(mgr)
+
+    resp = client.post("/v1/qumge/device/start")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "error"
+    assert body["kind"] == "unreachable"
 
 
 def test_starting_a_second_flow_abandons_the_first(tmp_path, monkeypatch):

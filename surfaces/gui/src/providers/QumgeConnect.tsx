@@ -10,19 +10,41 @@ import { openExternal } from "../tauri";
 // is nothing for this component to store or display even by mistake.
 type Phase =
   | { kind: "idle" }
+  | { kind: "starting" }
   | { kind: "waiting"; data: QumgeDeviceStart }
   | { kind: "denied" }
   | { kind: "expired" }
   | { kind: "error"; message?: string };
 
+// Poll interval bounds (seconds). The server can widen this on `slow_down`, and a start
+// response hands one back too — either could arrive missing, zero, negative, or absurd from
+// a malformed/adversarial body, and that value feeds directly into `setTimeout`. Clamping
+// keeps a bad value from becoming `setTimeout(poll, NaN)` (fires in ~1ms — a tight loop) or
+// an effectively-dead multi-hour wait.
+const MIN_POLL_INTERVAL_S = 1;
+const MAX_POLL_INTERVAL_S = 60;
+const DEFAULT_POLL_INTERVAL_S = 5;
+
+function clampInterval(seconds: unknown): number {
+  const n = Number(seconds);
+  if (!Number.isFinite(n) || n <= 0) return DEFAULT_POLL_INTERVAL_S;
+  return Math.min(MAX_POLL_INTERVAL_S, Math.max(MIN_POLL_INTERVAL_S, n));
+}
+
 export function QumgeConnect({ onConnected }: { onConnected: () => void }) {
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   // The poll loop's own timer — not React state, so a tick never causes a render by itself.
   const timerRef = useRef<number | null>(null);
-  const intervalRef = useRef(5); // seconds; server may widen this (RFC 8628 slow_down)
+  const intervalRef = useRef(DEFAULT_POLL_INTERVAL_S); // server may widen this (RFC 8628 slow_down)
   // Flipped on unmount so an in-flight start()/poll() promise that resolves afterward can't
   // call setState on a gone component — belt-and-braces alongside clearing the timer itself.
   const stoppedRef = useRef(false);
+  // Bumped on every start() call; a start()/poll() continuation only applies its result if
+  // it's still the CURRENT one. Without this, two flows in flight (a double-click, or "Try
+  // again" while a straggler is still resolving) race: the server keeps only the latest, but
+  // whichever promise happens to resolve last would otherwise win the display — showing code
+  // A while the server polls code B.
+  const startSeqRef = useRef(0);
 
   useEffect(
     () => () => {
@@ -43,7 +65,7 @@ export function QumgeConnect({ onConnected }: { onConnected: () => void }) {
       error: "couldn't reach the sign-in server",
     }));
     if (stoppedRef.current) return;
-    if (res.interval) intervalRef.current = res.interval;
+    if (res.interval !== undefined) intervalRef.current = clampInterval(res.interval);
     switch (res.status) {
       case "connected":
         onConnected();
@@ -54,24 +76,45 @@ export function QumgeConnect({ onConnected }: { onConnected: () => void }) {
       case "expired":
         setPhase({ kind: "expired" });
         return;
+      case "pending":
+        schedulePoll();
+        return;
       case "error":
         setPhase({ kind: "error", message: res.error });
         return;
-      default: // pending
-        schedulePoll();
+      default:
+        // An unrecognized status is a bug or a server we don't understand — NOT "keep
+        // polling forever". Silently treating anything-but-the-known-terminals as pending
+        // is exactly how a malformed/empty body turns into an unbounded fetch loop behind
+        // a "waiting" panel.
+        setPhase({
+          kind: "error",
+          message: res.error || `unexpected sign-in status: ${String(res.status)}`,
+        });
+        return;
     }
   };
 
   // Also the "Try again" action — restarting the flow IS asking for a fresh code.
   const start = async () => {
+    // Reentry guard: a second click while a flow is already starting/waiting must not
+    // issue a second request. Read fresh on every call (not cached in a ref) so it always
+    // reflects the CURRENT phase.
+    if (phase.kind === "starting" || phase.kind === "waiting") return;
+    const seq = ++startSeqRef.current;
+    setPhase({ kind: "starting" });
     try {
       const data = await startQumgeDevice();
-      if (stoppedRef.current) return;
-      intervalRef.current = data.interval;
+      if (stoppedRef.current || seq !== startSeqRef.current) return; // superseded by a newer start()
+      intervalRef.current = clampInterval(data.interval);
       setPhase({ kind: "waiting", data });
       schedulePoll();
-    } catch {
-      if (!stoppedRef.current) setPhase({ kind: "error" });
+    } catch (err) {
+      if (stoppedRef.current || seq !== startSeqRef.current) return;
+      setPhase({
+        kind: "error",
+        message: err instanceof Error ? err.message : undefined,
+      });
     }
   };
 
@@ -128,13 +171,18 @@ export function QumgeConnect({ onConnected }: { onConnected: () => void }) {
     );
   }
 
+  // idle or starting: same button, disabled + relabeled synchronously the instant it's
+  // clicked (before the network round trip even begins) so a second click can't slip in a
+  // second flow while the first is in flight.
+  const starting = phase.kind === "starting";
   return (
     <button
-      className="px-4 py-2 rounded-lg bg-accent text-white text-[13px] font-medium"
+      className="px-4 py-2 rounded-lg bg-accent text-white text-[13px] font-medium disabled:opacity-60"
       data-testid="qumge-connect-start"
+      disabled={starting}
       onClick={() => void start()}
     >
-      Connect to Qumge
+      {starting ? "Connecting…" : "Connect to Qumge"}
     </button>
   );
 }

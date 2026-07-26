@@ -12,6 +12,7 @@ it can be tested without a server.
 from __future__ import annotations
 
 import os
+import socket
 import time
 from dataclasses import dataclass
 from typing import Optional
@@ -38,12 +39,16 @@ class Flow:
 
 
 def start(device_name: Optional[str] = None, *, client: Optional[httpx.Client] = None) -> Flow:
+    # The webview never sees the OS, so it has nothing worth sending here — only the
+    # server can name "this machine". Fall back to the hostname rather than shipping
+    # every device nameless (an explicit name, when the caller has one, still wins).
+    device_name = device_name or socket.gethostname()
     owns = client is None
     client = client or httpx.Client(timeout=TIMEOUT)
     try:
         r = client.post(
             f"{base_url()}/device/code",
-            json={"device_name": device_name} if device_name else {},
+            json={"device_name": device_name},
         )
         r.raise_for_status()
         d = r.json()

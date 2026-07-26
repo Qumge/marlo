@@ -152,6 +152,110 @@ describe("QumgeConnect", () => {
     expect(screen.getByTestId("qumge-error-message")).toBeTruthy();
   });
 
+  it("double-clicking Connect issues only one device flow, and disables the button meanwhile", async () => {
+    vi.mocked(startQumgeDevice).mockResolvedValue(START);
+    vi.mocked(pollQumgeDevice).mockResolvedValue({ status: "pending" });
+
+    render(<QumgeConnect onConnected={vi.fn()} />);
+    const btn = () => screen.getByTestId("qumge-connect-start") as HTMLButtonElement;
+    fireEvent.click(btn());
+    // Synchronous, before the round trip resolves: the button is already disabled — a
+    // second click here must not start a second flow.
+    expect(btn().disabled).toBe(true);
+    fireEvent.click(btn());
+    await flushClick();
+
+    expect(startQumgeDevice).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("qumge-user-code").textContent).toBe("ABCD-1234");
+  });
+
+  it("a stale start() resolution is discarded even if two calls land in the same batch", async () => {
+    // The synchronous "starting" guard closes the gap for a normal double-click (proven
+    // above), but two click events CAN still land in the same React batch (both handlers
+    // reading the same pre-update `phase`) — dispatching both inside one `act()` forces
+    // that. The sequence number is what still gets the right answer on screen when that
+    // happens: whichever call is CURRENT wins, never whichever promise settles last.
+    let resolveFirst!: (v: unknown) => void;
+    let resolveSecond!: (v: unknown) => void;
+    vi.mocked(startQumgeDevice)
+      .mockImplementationOnce(() => new Promise((r) => (resolveFirst = r)) as any)
+      .mockImplementationOnce(() => new Promise((r) => (resolveSecond = r)) as any);
+    vi.mocked(pollQumgeDevice).mockResolvedValue({ status: "pending" });
+
+    render(<QumgeConnect onConnected={vi.fn()} />);
+    const btn = () => screen.getByTestId("qumge-connect-start") as HTMLButtonElement;
+
+    act(() => {
+      fireEvent.click(btn());
+      fireEvent.click(btn());
+    });
+    await flushClick();
+    expect(startQumgeDevice).toHaveBeenCalledTimes(2);
+
+    // The FIRST call's promise resolves LAST — out of order — and must be ignored: a
+    // second start() has already superseded it.
+    await act(async () => {
+      resolveSecond({ ...START, user_code: "SECOND-CODE" });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId("qumge-user-code").textContent).toBe("SECOND-CODE");
+
+    await act(async () => {
+      resolveFirst({ ...START, user_code: "FIRST-CODE" });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId("qumge-user-code").textContent).toBe("SECOND-CODE");
+  });
+
+  it("start() failing surfaces the thrown message instead of a bare fallback", async () => {
+    vi.mocked(startQumgeDevice).mockRejectedValue(
+      new Error("Too many sign-in attempts — wait a bit and try again."),
+    );
+
+    render(<QumgeConnect onConnected={vi.fn()} />);
+    fireEvent.click(screen.getByTestId("qumge-connect-start"));
+    await flushClick();
+
+    expect(screen.getByTestId("qumge-error-message").textContent).toBe(
+      "Too many sign-in attempts — wait a bit and try again.",
+    );
+  });
+
+  it("clamps a missing/invalid interval instead of scheduling a near-0ms poll loop", async () => {
+    vi.mocked(startQumgeDevice).mockResolvedValue({ ...START, interval: 0 });
+    vi.mocked(pollQumgeDevice).mockResolvedValue({ status: "pending" });
+
+    render(<QumgeConnect onConnected={vi.fn()} />);
+    fireEvent.click(screen.getByTestId("qumge-connect-start"));
+    await flushClick();
+
+    // A bogus 0 must not fire the poll almost immediately.
+    await advance(500);
+    expect(pollQumgeDevice).not.toHaveBeenCalled();
+    await advance(4500); // clamped to the 5s default
+    expect(pollQumgeDevice).toHaveBeenCalledTimes(1);
+  });
+
+  it("an unrecognized poll status is treated as an error, not silently re-polled forever", async () => {
+    vi.mocked(startQumgeDevice).mockResolvedValue(START);
+    // No `status` at all — e.g. the exact shape produced by an unauthenticated JSON error
+    // body sailing through un-thrown (the bug this guards against).
+    vi.mocked(pollQumgeDevice).mockResolvedValueOnce({} as any);
+
+    render(<QumgeConnect onConnected={vi.fn()} />);
+    fireEvent.click(screen.getByTestId("qumge-connect-start"));
+    await flushClick();
+    await advance(5000);
+
+    expect(pollQumgeDevice).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("qumge-failed")).toBeTruthy();
+    // No second poll was ever scheduled — this is the "unbounded fetch loop" the fix stops.
+    await advance(30000);
+    expect(pollQumgeDevice).toHaveBeenCalledTimes(1);
+  });
+
   it("clears the polling timer on unmount — no request loop survives the component", async () => {
     vi.mocked(startQumgeDevice).mockResolvedValue(START);
     vi.mocked(pollQumgeDevice).mockResolvedValue({ status: "pending" });

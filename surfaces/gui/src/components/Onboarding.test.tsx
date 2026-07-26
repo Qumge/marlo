@@ -67,6 +67,23 @@ const UNCONFIGURED: ProviderInfo[] = [
   },
 ];
 
+// Includes "qumge" — the server's real /v1/providers list carries a descriptor for every
+// provider, Qumge included (registry.py), so the fallback gallery would show its card too
+// unless it's deliberately excluded (Fix 4).
+const UNCONFIGURED_WITH_QUMGE: ProviderInfo[] = [
+  ...UNCONFIGURED,
+  {
+    name: "qumge",
+    title: "Qumge",
+    needs_key: true,
+    fields: [field("api_key")],
+    configured: false,
+    values: {},
+    suggested_models: [],
+    recommended_model: null,
+  },
+];
+
 const QUMGE_START: QumgeDeviceStart = {
   user_code: "ABCD-1234",
   verification_uri: "https://qumge.com/device",
@@ -130,6 +147,31 @@ describe("Onboarding — step 0 (Task 4: connect to Qumge, not the gallery)", ()
 
     expect(continueBtn().disabled).toBe(false);
     // Still on the Qumge panel — arming Next didn't require opening the fallback.
+    expect(screen.queryByTestId("ob-provider-gallery")).toBeNull();
+  });
+
+  it("the demoted gallery never shows a Qumge card — its own help text is a dead end there", async () => {
+    vi.mocked(getProviders).mockResolvedValue(UNCONFIGURED_WITH_QUMGE);
+
+    render(<Onboarding onDone={vi.fn()} />);
+    await screen.findByTestId("qumge-connect-start");
+    fireEvent.click(screen.getByTestId("ob-use-own-key"));
+
+    expect(screen.getByTestId("ob-provider-gallery")).toBeTruthy();
+    expect(screen.getByTestId("ob-provider-openai")).toBeTruthy();
+    expect(screen.queryByTestId("ob-provider-qumge")).toBeNull();
+  });
+
+  it("'Use your own API key instead' is reversible — a control returns to the Qumge panel", async () => {
+    render(<Onboarding onDone={vi.fn()} />);
+    await screen.findByTestId("qumge-connect-start");
+
+    fireEvent.click(screen.getByTestId("ob-use-own-key"));
+    expect(screen.getByTestId("ob-provider-gallery")).toBeTruthy();
+    expect(screen.queryByTestId("qumge-connect-start")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("ob-back-to-qumge"));
+    expect(await screen.findByTestId("qumge-connect-start")).toBeTruthy();
     expect(screen.queryByTestId("ob-provider-gallery")).toBeNull();
   });
 

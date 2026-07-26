@@ -53,9 +53,11 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
   // to unblock the button, even though that refresh still runs to keep the demoted gallery
   // (and Settings ▸ Models, which shares this same hook's shape) in sync underneath.
   const [qumgeConnected, setQumgeConnected] = useState(false);
-  // Reveals the ORIGINAL gallery/form in the same box, in place — one-way disclosure; the
-  // vendor cards are demoted, not deleted (Marlo is open-source and BYO-key is part of
-  // that promise, it just no longer goes first).
+  // Reveals the ORIGINAL gallery/form in the same box, in place — a two-way disclosure
+  // ("‹ Back to Qumge sign-in" returns to the QumgeConnect panel; the gallery's own
+  // "qumge" card is hidden here so there's nowhere else this needs to lead back from).
+  // The vendor cards are demoted, not deleted (Marlo is open-source and BYO-key is part
+  // of that promise, it just no longer goes first).
   const [useOwnKey, setUseOwnKey] = useState(false);
 
   const anyReady =
@@ -168,9 +170,22 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
                 </button>
               </div>
             ) : !ps.sel ? (
-              /* ---- the provider GALLERY (demoted behind "Use your own API key instead") ---- */
-              <div className="flex-1 min-h-0 overflow-y-auto pr-1" data-testid="ob-provider-gallery">
-                <ProviderCards ps={ps} tp="ob" />
+              /* ---- the provider GALLERY (demoted behind "Use your own API key instead") ----
+                 "qumge" is excluded here on purpose: it's the ONE sign-in this whole
+                 fallback exists as an alternative to, one control below — a raw API-key
+                 form for it here would just be a second, worse way to reach the exact same
+                 provider. */
+              <div className="flex-1 min-h-0 flex flex-col" data-testid="ob-provider-gallery-wrap">
+                <button
+                  className="text-[12.5px] text-faint hover:text-muted self-start mb-2"
+                  onClick={() => setUseOwnKey(false)}
+                  data-testid="ob-back-to-qumge"
+                >
+                  ‹ Back to Qumge sign-in
+                </button>
+                <div className="flex-1 min-h-0 overflow-y-auto pr-1" data-testid="ob-provider-gallery">
+                  <ProviderCards ps={ps} tp="ob" exclude={["qumge"]} />
+                </div>
               </div>
             ) : (
               /* ---- one provider's key form, same box ---- */
