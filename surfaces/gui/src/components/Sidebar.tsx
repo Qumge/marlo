@@ -1164,7 +1164,7 @@ export function Sidebar(props: Props) {
                         });
                       }}
                     >
-                      <Icon name="plug" size={15} className="shrink-0" /> Sign in to Marlo
+                      <Icon name="plug" size={15} className="shrink-0" /> Sign in to OpenWorker Cloud
                       Cloud
                     </button>
                   </>

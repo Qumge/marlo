@@ -74,12 +74,27 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
     void ps.refreshProviders();
   };
 
+  // Step 1 ("Connect your everyday tools") is hidden in Marlo.
+  //
+  // Every connector on that page — GitHub, Notion, HubSpot, Attio, Slack, Gmail —
+  // has its OAuth brokered by OpenWorker Cloud, a service this project does not
+  // operate. Clicking "Sign in for one-click connections" leaves an app called
+  // Marlo and lands on opencoworker.us.auth0.com asking the user to log in to
+  // "OpenWorker Desktop". Even with honest copy that reads like a phishing page,
+  // and the account it asks for is one we cannot create, support, or revoke.
+  //
+  // What Marlo can actually do today runs entirely on this machine: files,
+  // search, shell, git. The step comes back when we broker the OAuth ourselves —
+  // flip this to true and the page returns unchanged.
+  const SHOW_CONNECTOR_STEP = false;
+  const STEPS = SHOW_CONNECTOR_STEP ? [0, 1, 2] : [0, 2];
+
   const advance = async () => {
     if (nextFromForm && !ps.credentialed) {
       ps.cancelBackTimer();
       if (!(await ps.runTestAndSave())) return;
     }
-    setStep(1);
+    setStep(SHOW_CONNECTOR_STEP ? 1 : 2);
   };
 
   // -- step 2: connect your everyday tools (§39 two-state page) -------------------
@@ -126,8 +141,8 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
   // -- shared bits ----------------------------------------------------------------
   const dots = (
     <div className="flex justify-center gap-2 mb-6">
-      {[0, 1, 2].map((i) => (
-        <span key={i} className={"w-1.5 h-1.5 rounded-full " + (i <= step ? "bg-accent" : "bg-line")} />
+      {STEPS.map((s) => (
+        <span key={s} className={"w-1.5 h-1.5 rounded-full " + (s <= step ? "bg-accent" : "bg-line")} />
       ))}
     </div>
   );
@@ -223,7 +238,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
           </section>
         )}
 
-        {step === 1 && (
+        {SHOW_CONNECTOR_STEP && step === 1 && (
           /* §41 (owner design, 2026-07-19, supersedes §39's card gallery): BENEFIT ROWS are
              the connect surface — one row set, two states, ZERO layout shift. Pre-sign-in the
              rows make the case and a pinned band asks for sign-in; after sign-in the band's
@@ -295,7 +310,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
                   <span className="block text-[13px] font-semibold text-ink mb-0.5">
                     Sign in for one-click connections
                   </span>
-                  Marlo handles the OAuth for 20+ tools — no dev consoles, no pasted keys.
+                  OpenWorker handles the OAuth for 20+ tools — no dev consoles, no pasted keys.
                   Tokens stay on this Mac.
                 </span>
                 {signinPhase ? (

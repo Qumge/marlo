@@ -3,7 +3,7 @@ import type { SlackWorkspace } from "../../api";
 
 // UX-027: the post-connect "how mentions reach you" card. A tabbed carousel of
 // animated split-scenes — Slack on the left (pinned to light-Slack colors, so it
-// reads as a screenshot of Slack), Marlo on the right (app tokens). Tabs
+// reads as a screenshot of Slack), OpenWorker on the right (app tokens). Tabs
 // auto-advance through one full tour, then idle on a loop of the current scene;
 // clicking a tab takes over. The chevron collapses the carousel to the status
 // line — collapsed IS the seen-state (stored locally, survives restarts).
@@ -74,7 +74,7 @@ export function SlackHowItWorks({ workspaces }: { workspaces: SlackWorkspace[] }
     <div className="mb-5" data-testid="slack-howitworks">
       <div className="flex items-baseline gap-2.5">
         <h3 className="text-[13.5px] font-semibold tracking-tight">
-          Getting started with Slack &amp; Marlo
+          Getting started with Slack &amp; OpenWorker
         </h3>
         <button
           className="ml-auto shrink-0 inline-flex items-center gap-1.5 text-[12px] text-muted hover:text-ink"
@@ -182,7 +182,7 @@ function SlackRail({ active }: { active: string }) {
       <div className="hiw-slnav"><span className="hiw-pres" />Priya N</div>
       <div className="hiw-slnav"><span className="hiw-pres" />Emma W</div>
       <div className="hiw-sect">Agents &amp; apps</div>
-      <div className="hiw-slnav"><span className="hiw-appav">OW</span>Marlo</div>
+      <div className="hiw-slnav"><span className="hiw-appav">OW</span>OpenWorker</div>
     </div>
   );
 }
@@ -226,7 +226,7 @@ function OwWin({ children }: { children: React.ReactNode }) {
   return (
     <div className="hiw-win hiw-ow">
       <div className="hiw-owtop">
-        <span className="hiw-dots"><i /><i /><i /></span> Marlo
+        <span className="hiw-dots"><i /><i /><i /></span> OpenWorker
       </div>
       <div className="hiw-owbody">{children}</div>
     </div>
@@ -236,7 +236,7 @@ function OwWin({ children }: { children: React.ReactNode }) {
 function OwRail({ hot, hotSub, glow }: { hot?: string; hotSub?: string; glow?: boolean }) {
   return (
     <div className="hiw-owrail">
-      <div className="hiw-brand">Marlo</div>
+      <div className="hiw-brand">OpenWorker</div>
       <div className="hiw-newbtn">＋ New session</div>
       <div className="hiw-ownav">⌕ Search</div>
       <div className="hiw-ownav">◷ Automations</div>
@@ -314,7 +314,7 @@ function SceneMention({ meFirst, meInitial }: { meFirst: string; meInitial: stri
                 <span className="hiw-men">@OpenWorker</span> summarize this thread
               </Msg>
               <div className="hiw-cnt">1 reply</div>
-              <Msg av="OW" avBg="#4a154b" name="Marlo" app ts="6:34 PM">
+              <Msg av="OW" avBg="#4a154b" name="OpenWorker" app ts="6:34 PM">
                 Launch traction: signups up 3.4× since the post…
               </Msg>
             </div>
@@ -334,7 +334,7 @@ function SceneMention({ meFirst, meInitial }: { meFirst: string; meInitial: stri
               Reading the thread… signups up 3.4×, top referrer is the press page. <i>(replying in the Slack thread)</i>
             </div>
           </div>
-          <div className="hiw-owcomposer">Message Marlo…</div>
+          <div className="hiw-owcomposer">Message OpenWorker…</div>
         </div>
       </OwWin>
     </>
@@ -377,13 +377,13 @@ function SceneThread({ meFirst, meInitial }: { meFirst: string; meInitial: strin
                 <span className="hiw-men">@OpenWorker</span> summarize this thread
               </Msg>
               <div className="hiw-cnt">2 replies</div>
-              <Msg av="OW" avBg="#4a154b" name="Marlo" app ts="6:34 PM">
+              <Msg av="OW" avBg="#4a154b" name="OpenWorker" app ts="6:34 PM">
                 Launch traction: signups up 3.4×…
               </Msg>
               <Msg av="P" avBg="#7c6cd0" name="Priya N" ts="6:36 PM" delay=".8s">
                 <span className="hiw-men">@OpenWorker</span> break it down by country?
               </Msg>
-              <Msg av="OW" avBg="#4a154b" name="Marlo" app ts="6:36 PM" delay="4.8s">
+              <Msg av="OW" avBg="#4a154b" name="OpenWorker" app ts="6:36 PM" delay="4.8s">
                 Top: US 41% · India 22% · Germany 9%…
               </Msg>
             </div>
@@ -393,7 +393,7 @@ function SceneThread({ meFirst, meInitial }: { meFirst: string; meInitial: strin
       </SlackWin>
       <OwWin>
         <div className="hiw-owrail">
-          <div className="hiw-brand">Marlo</div>
+          <div className="hiw-brand">OpenWorker</div>
           <div className="hiw-newbtn">＋ New session</div>
           <div className="hiw-ownav">⌕ Search</div>
           <div className="hiw-ownav">◷ Automations</div>
@@ -414,7 +414,7 @@ function SceneThread({ meFirst, meInitial }: { meFirst: string; meInitial: strin
               Top countries: US 41%, India 22%, Germany 9% — context kept from the whole thread.
             </div>
           </div>
-          <div className="hiw-owcomposer">Message Marlo…</div>
+          <div className="hiw-owcomposer">Message OpenWorker…</div>
         </div>
       </OwWin>
     </>

@@ -201,4 +201,39 @@ describe("Onboarding — step 0 (Task 4: connect to Qumge, not the gallery)", ()
     expect(continueBtn().disabled).toBe(false);
     expect(screen.queryByTestId("ob-provider-gallery")).toBeNull();
   });
+
+  // Next used to land on "Connect your everyday tools", whose sign-in button
+  // leaves an app called Marlo and opens opencoworker.us.auth0.com asking the
+  // user to log in to "OpenWorker Desktop". Every connector on that page is
+  // brokered by a service this project does not run, so the step is hidden until
+  // we broker the OAuth ourselves.
+  //
+  // Nothing else would notice it coming back: the page renders, the build
+  // succeeds, and the existing tests all stop at step 0.
+  it("Next skips the connector page — it belongs to a service we do not run", async () => {
+    vi.useFakeTimers();
+    vi.mocked(startQumgeDevice).mockResolvedValue(QUMGE_START);
+    vi.mocked(pollQumgeDevice).mockResolvedValue({ status: "connected" });
+
+    render(<Onboarding onDone={vi.fn()} />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.click(screen.getByTestId("qumge-connect-start"));
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(() => vi.advanceTimersByTimeAsync(5000));
+    expect(continueBtn().disabled).toBe(false);
+
+    fireEvent.click(continueBtn());
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.queryByTestId("ob-step-tools")).toBeNull();
+    expect(screen.getByTestId("ob-step-done")).toBeTruthy();
+  });
 });

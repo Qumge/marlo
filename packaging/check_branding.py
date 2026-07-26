@@ -38,6 +38,16 @@ SRC = Path(__file__).resolve().parent.parent / "surfaces/gui/src"
 SUFFIXES = {".ts", ".tsx", ".css"}
 EXEMPT_FILES = {"Sidebar.test.tsx"}  # persona fixture, not copy
 
+# Everything under components/connectors/ describes OpenWorker Cloud's brokered
+# OAuth: which service holds the client secret, which app the user approves on
+# GitHub (@ocw-agent), which bot name appears in Slack. Renaming those would be a
+# false statement about who handles a user's tokens, not a branding update.
+#
+# The rename that shipped in 0.2.2 did exactly that — "OpenWorker handles the
+# OAuth for 20+ tools" became "Marlo handles the OAuth for 20+ tools", one screen
+# before the app sends the user to opencoworker.us.auth0.com.
+EXEMPT_DIRS = {"connectors"}
+
 ALLOWED = [
     re.compile(r"OpenWorker Cloud"),
     re.compile(r"openworker\.com"),
@@ -47,6 +57,13 @@ ALLOWED = [
     re.compile(r'"openworker"'),
     re.compile(r"@OpenWorker"),
     re.compile(r"OpenWorker sidecar token"),  # the server's own error string
+    # The connector sign-in card: OpenWorker Cloud brokers this OAuth, not us.
+    re.compile(r"OpenWorker handles the OAuth"),
+    # The coworker gallery is curated upstream — publisher === "OpenWorker".
+    re.compile(r"from the OpenWorker team"),
+    # What opencoworker.us.auth0.com actually calls the app it signs you into.
+    # Quoted in the comments explaining why the connector step is hidden.
+    re.compile(r"OpenWorker Desktop"),
 ]
 
 
@@ -62,6 +79,8 @@ def main() -> int:
         if path.suffix not in SUFFIXES or not path.is_file():
             continue
         if path.name in EXEMPT_FILES:
+            continue
+        if EXEMPT_DIRS & set(path.relative_to(SRC).parts[:-1]):
             continue
         scanned += 1
 
