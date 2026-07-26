@@ -73,8 +73,9 @@ fi
 # signs and notarises cleanly, then aborts the app inside did_finish_launching before
 # any window exists. 0.2.0 shipped that way. Runs before the 4-minute Rust build so
 # the failure is immediate.
-echo "==> [0/5] checking bundled icons"
+echo "==> [0/5] checking bundled icons and product name"
 python3 "$HERE/check_icons.py"
+python3 "$HERE/check_branding.py"
 
 echo "==> [1/5] PyInstaller: bundling openworker-server ($TRIPLE)"
 "$PLATFORM/.venv/bin/pyinstaller" --noconfirm --clean \

@@ -64,9 +64,11 @@ if ($running) {
 
 # Same guard as build_dmg.sh: a 16-bit icon aborts the app on launch and nothing
 # else in the pipeline can see it. See packaging/check_icons.py.
-Write-Host "==> [0/3] checking bundled icons" -ForegroundColor Cyan
+Write-Host "==> [0/3] checking bundled icons and product name" -ForegroundColor Cyan
 & python3 (Join-Path $Here "check_icons.py")
 if ($LASTEXITCODE -ne 0) { throw "icon check failed (exit $LASTEXITCODE)" }
+& python3 (Join-Path $Here "check_branding.py")
+if ($LASTEXITCODE -ne 0) { throw "branding check failed (exit $LASTEXITCODE)" }
 
 Write-Host "==> [1/3] PyInstaller: bundling openworker-server ($Triple)" -ForegroundColor Cyan
 & $PyInst --noconfirm --clean `
