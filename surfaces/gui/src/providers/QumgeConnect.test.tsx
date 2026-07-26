@@ -61,21 +61,52 @@ describe("QumgeConnect", () => {
     await flushClick();
 
     expect(screen.getByTestId("qumge-user-code").textContent).toBe("ABCD-1234");
+    // The COMPLETE url. Rendering the bare one meant a person who copied it —
+    // the only route while "Open browser" was dead — still had to retype the
+    // code by hand.
     expect(screen.getByTestId("qumge-verification-uri").textContent).toBe(
-      "https://qumge.com/device",
+      "https://qumge.com/device?user_code=ABCD-1234",
     );
     // No key of any kind is ever rendered — the server holds it.
     expect(document.body.textContent).not.toMatch(/sk-|api[_ ]?key/i);
 
-    // The "browser may not open by itself" line + the open-browser action are best-effort;
-    // the code/URL above must not depend on this succeeding.
+    // Outside the desktop shell (npm run dev) window.open is the real thing.
     fireEvent.click(screen.getByTestId("qumge-open-browser"));
     expect(openSpy).toHaveBeenCalledWith(
       START.verification_uri_complete,
       "_blank",
       "noopener,noreferrer",
     );
-    expect(screen.getByText(/may not open/i)).toBeTruthy();
+    expect(screen.getByText(/didn't open/i)).toBeTruthy();
+  });
+
+  // This assertion used to say window.open — and passed, for every build in
+  // which the button did nothing at all. window.open is a no-op in a Tauri
+  // webview; the code reached for a `__TAURI__.opener` plugin that was never
+  // installed, fell through to window.open, and the person sat looking at a
+  // button that swallowed their clicks. Asserting the fallback is asserting the
+  // bug, so this pins the desktop path specifically.
+  it("in the desktop shell the button invokes the app's opener, not the dead window.open path", async () => {
+    vi.mocked(startQumgeDevice).mockResolvedValue(START);
+    vi.mocked(pollQumgeDevice).mockResolvedValue({ status: "pending" });
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    const invoke = vi.fn().mockResolvedValue(undefined);
+    (globalThis as any).__TAURI__ = { core: { invoke } };
+
+    try {
+      render(<QumgeConnect onConnected={vi.fn()} />);
+      fireEvent.click(screen.getByTestId("qumge-connect-start"));
+      await flushClick();
+
+      fireEvent.click(screen.getByTestId("qumge-open-browser"));
+
+      expect(invoke).toHaveBeenCalledWith("open_external", {
+        url: START.verification_uri_complete,
+      });
+      expect(openSpy).not.toHaveBeenCalled();
+    } finally {
+      delete (globalThis as any).__TAURI__;
+    }
   });
 
   it("polls at the server-given interval and calls onConnected once the status flips", async () => {

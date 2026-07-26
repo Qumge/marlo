@@ -237,6 +237,46 @@ async fn pick_folder(app: tauri::AppHandle) -> Option<String> {
     rx.recv().ok().flatten().map(|fp| fp.to_string())
 }
 
+/// Open a URL in the user's default browser.
+///
+/// The Qumge device flow needs this: the app shows a code and has to get the
+/// person to qumge.com to approve it. Before this existed the frontend fell back
+/// to `window.open`, which does nothing in a Tauri webview — the "Open browser"
+/// button had never worked, and the only way through was to copy a URL by hand
+/// and retype an eight-character code. For the people Marlo is for, that is a
+/// wall, not an inconvenience.
+///
+/// http(s) only. `open` will just as happily launch a file:// path or hand a
+/// custom scheme to whatever registered it, and this argument arrives from the
+/// webview.
+#[tauri::command]
+fn open_external(url: String) -> Result<(), String> {
+    if !(url.starts_with("https://") || url.starts_with("http://")) {
+        return Err("refusing to open a non-http(s) url".into());
+    }
+    #[cfg(target_os = "macos")]
+    let mut cmd = {
+        let mut c = std::process::Command::new("/usr/bin/open");
+        c.arg(&url);
+        c
+    };
+    #[cfg(target_os = "windows")]
+    let mut cmd = {
+        let mut c = std::process::Command::new("cmd");
+        // The empty "" is start's title argument: without it start treats a
+        // quoted url as the window title and opens nothing.
+        c.args(["/C", "start", "", url.as_str()]);
+        c
+    };
+    #[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
+    let mut cmd = {
+        let mut c = std::process::Command::new("xdg-open");
+        c.arg(&url);
+        c
+    };
+    cmd.spawn().map(|_| ()).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 fn get_autostart(app: tauri::AppHandle) -> bool {
     app.autolaunch().is_enabled().unwrap_or(false)
@@ -604,6 +644,7 @@ pub fn run() {
         ))
         .invoke_handler(tauri::generate_handler![
             pick_folder,
+            open_external,
             get_autostart,
             set_autostart,
             get_keep_awake,

@@ -129,8 +129,12 @@ export function QumgeConnect({ onConnected }: { onConnected: () => void }) {
           >
             {user_code}
           </div>
-          <p className="text-[13px] text-muted select-all mt-1" data-testid="qumge-verification-uri">
-            {verification_uri}
+          {/* The COMPLETE uri, the one carrying ?user_code=. Showing the bare
+              address meant anyone who copied it still had to retype the code
+              above it by hand — and copying was the only way through while
+              "Open browser" did nothing. */}
+          <p className="text-[13px] text-muted select-all mt-1 break-all" data-testid="qumge-verification-uri">
+            {verification_uri_complete || verification_uri}
           </p>
         </div>
         <button
@@ -141,8 +145,8 @@ export function QumgeConnect({ onConnected }: { onConnected: () => void }) {
           Open browser
         </button>
         <p className="text-[11.5px] text-faint">
-          The browser may not open on its own — the address above works from any device, so
-          feel free to copy it and open it wherever's convenient.
+          Didn't open? The address above already carries your code — paste it into any
+          browser, on this Mac or another device.
         </p>
       </div>
     );
