@@ -33,7 +33,7 @@ def default_config(base_url: str) -> dict:
         # Read-only lookups against a public catalog: no approval prompt for
         # searching, which would otherwise interrupt every "is there a skill
         # for…" with a modal about a GET.
-        "requiresApproval": False,
+        "requires_approval": False,
     }
 
 

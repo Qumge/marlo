@@ -73,7 +73,14 @@ def _parse(name: str, raw: dict[str, Any], secrets: SecretStore) -> MCPServerDef
         enabled=bool(raw.get("enabled", True)),
         include_tools=raw.get("include_tools"),
         exclude_tools=raw.get("exclude_tools"),
-        requires_approval=bool(raw.get("requires_approval", True)),
+        # Both spellings. This file is documented as paste-compatible with Claude
+        # Desktop and Cursor, whose JSON is camelCase throughout, so a pasted
+        # config silently kept the default and prompted for approval on every
+        # call — which is how the Qumge skills entry shipped: requiresApproval
+        # false in the file, requires_approval true in the parsed def.
+        requires_approval=bool(
+            raw.get("requires_approval", raw.get("requiresApproval", True))
+        ),
         auth=(str(raw["auth"]).lower() if raw.get("auth") else None),
     )
 
