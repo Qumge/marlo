@@ -1,73 +1,44 @@
 // Start-screen template tasks (§27): three concrete rows, no icon tiles, no "Set me up" list.
-// Sub-lines are outcome-voiced; connection state lives in the dots + the trailing action.
-// Gated row (source not live for this session) → "Configure ›" expands the rail's Access
-// section (§32); ready row → click prefills the composer with the template stem.
+// Sub-lines are outcome-voiced.
+//
+// Two of these rows used to be HubSpot and GitHub→Slack, gated on connectors whose
+// "Configure ›" opened the connector sign-in. That sign-in is brokered by OpenWorker
+// Cloud, a service this project does not run, so the step is hidden and the rows went
+// with it — they invited people into a door that no longer opens. Every row now works
+// with nothing but a folder, which means no row is ever gated and "Configure ›" is gone
+// from this screen entirely.
 import { expect } from "@playwright/test";
 import { test } from "./fixtures";
 
-test("three rows, no Set-me-up; gated rows show Configure › and expand the rail's Access section", async ({
-  page,
-}) => {
+test("three rows, none of them gated behind a connector", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByText("What should we produce?")).toBeVisible();
 
-  // Exactly the three template tasks; the old setup list is gone.
   await expect(page.locator(".task-card")).toHaveCount(3);
   await expect(page.getByText("Set me up (optional)")).toHaveCount(0);
   await expect(page.getByText("Give me access to a folder")).toHaveCount(0);
 
-  // Fixture session state: slack + github live, hubspot not → the HubSpot row is gated,
-  // with the Configure affordance visible AT REST (no hover needed — it IS the row's action);
-  // the github+slack automation row has everything it needs.
-  const hs = page.getByTestId("intro-task-hubspot");
-  await expect(hs).toContainText("Configure ›");
-  await expect(hs.locator(".task-card-act")).toHaveCSS("opacity", "1");
-  await expect(page.getByTestId("intro-task-github-slack")).toContainText("Start →");
+  // The connector rows are gone, not merely renamed.
+  await expect(page.getByTestId("intro-task-hubspot")).toHaveCount(0);
+  await expect(page.getByTestId("intro-task-github-slack")).toHaveCount(0);
+  // And with them the only thing on this screen that led to the hidden step.
+  await expect(page.getByText("Configure ›")).toHaveCount(0);
 
-  // Sub-lines describe the task's outcome, never connection state.
-  await expect(hs).toContainText("Sources, stages, and who needs follow-up");
-  await expect(hs).not.toContainText(/connect/i);
-
-  // Configure → the rail's Access section expands (§32), not a bespoke setup surface.
-  await hs.click();
-  await expect(page.getByRole("region", { name: "Session access" })).toBeVisible();
-  // No composer prefill happened on the gated click.
-  await expect(page.getByPlaceholder(/Ask the coworker/)).toHaveValue("");
+  await expect(page.getByTestId("intro-task-write")).toContainText("Start →");
+  await expect(page.getByTestId("intro-task-tidy")).toContainText("Start →");
 });
 
-test("ready rows reveal Start → on hover and prefill the composer", async ({ page }) => {
-  // Make every source live for this session (registered after the fixture's routes → wins).
-  await page.route("**/v1/sessions/*/connections*", (route) =>
-    route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        connected: [
-          { connector: "hubspot", enabled: true, detail: "" },
-          { connector: "github", enabled: true, detail: "" },
-          { connector: "slack", enabled: true, detail: "" },
-        ],
-        recommended: [],
-        attention: 0,
-      }),
-    }),
-  );
+test("a folder task prefills the composer with its own prompt", async ({ page }) => {
   await page.goto("/");
 
-  const hs = page.getByTestId("intro-task-hubspot");
-  await expect(hs).toContainText("Start →");
-  // The action is hover-revealed on ready rows (hidden at rest).
-  await expect(hs.locator(".task-card-act")).toHaveCSS("opacity", "0");
-  await hs.hover();
-  await expect(hs.locator(".task-card-act")).toHaveCSS("opacity", "1");
+  const write = page.getByTestId("intro-task-write");
+  await expect(write).toContainText("Write one document from a folder of files");
+  await write.click();
+  await expect(page.getByPlaceholder(/Ask the coworker/)).toHaveValue(/write me one document/);
 
-  await hs.click();
-  await expect(page.getByPlaceholder(/Ask the coworker/)).toHaveValue(/HubSpot leads/);
-
-  // Both sources live → the automation row is ready too; its prefill is the recipe stem.
-  const gh = page.getByTestId("intro-task-github-slack");
-  await expect(gh).toContainText("Start →");
-  await gh.click();
-  await expect(page.getByPlaceholder(/Ask the coworker/)).toHaveValue(/weekly progress report/);
+  const tidy = page.getByTestId("intro-task-tidy");
+  await tidy.click();
+  await expect(page.getByPlaceholder(/Ask the coworker/)).toHaveValue(/rename and organise/);
 });
 
 test("folder task opens the inline add-folder form; adding a folder prefills the composer", async ({

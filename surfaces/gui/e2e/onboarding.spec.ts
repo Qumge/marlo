@@ -5,6 +5,11 @@
 // opens on <QumgeConnect> by default. Step 2 is a two-state tools page (why-paragraph +
 // sign-in → mini connector gallery with live one-click connects). Entered here via the
 // REPLAY path (Settings ▸ Appearance ▸ "Run setup again") — which is itself under test.
+// The two `test.skip`ed tools-page cases below cover a screen that is currently
+// unreachable: onboarding hides it behind SHOW_CONNECTOR_STEP because every
+// connector on it has its OAuth brokered by OpenWorker Cloud, which this project
+// does not run. The page itself is untouched — flip that flag and delete the two
+// `.skip`s together.
 import { expect } from "@playwright/test";
 import { test } from "./fixtures";
 
@@ -67,7 +72,10 @@ test("provider gallery: cards wear their state; Next arms off stored credentials
   // A configured provider already arms Next — no form visit required.
   await expect(page.getByTestId("ob-continue")).toBeEnabled();
   await page.getByTestId("ob-continue").click();
-  await expect(page.getByTestId("ob-step-tools")).toBeVisible();
+  // Lands on the last screen — the connector page between them is hidden behind
+  // SHOW_CONNECTOR_STEP, because OpenWorker Cloud brokers every sign-in on it.
+  await expect(page.getByTestId("ob-step-tools")).toHaveCount(0);
+  await expect(page.getByTestId("ob-step-done")).toBeVisible();
 });
 
 test("key form: Test verifies, saves, and returns to the gallery with the ✓", async ({
@@ -77,7 +85,7 @@ test("key form: Test verifies, saves, and returns to the gallery with the ✓", 
 
   await page.getByTestId("ob-provider-zai").click();
   // The header stays put (§39 fixed frame): the welcome headline is still on screen.
-  await expect(page.getByRole("heading", { name: "Welcome to OpenWorker" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Welcome to Marlo" })).toBeVisible();
   // Optional endpoint is a quiet disclosure with no explainer copy (owner call 2026-07-18).
   await expect(page.getByTestId("ob-field-base_url")).toHaveCount(0);
   await page.getByTestId("ob-endpoint-link").click();
@@ -125,10 +133,13 @@ test("key form: revisiting a connected provider shows the in-field saved state; 
   // Test-then-Continue two-step), then advances.
   await page.getByTestId("ob-field-api_key").fill("zk-good");
   await page.getByTestId("ob-continue").click();
-  await expect(page.getByTestId("ob-step-tools")).toBeVisible();
+  // Lands on the last screen — the connector page between them is hidden behind
+  // SHOW_CONNECTOR_STEP, because OpenWorker Cloud brokers every sign-in on it.
+  await expect(page.getByTestId("ob-step-tools")).toHaveCount(0);
+  await expect(page.getByTestId("ob-step-done")).toBeVisible();
 });
 
-test("tools page: sign-in morphs the page into the connector gallery; a card connects one-click", async ({
+test.skip("tools page: sign-in morphs the page into the connector gallery; a card connects one-click", async ({
   page,
 }) => {
   await openOnboarding(page);
@@ -172,7 +183,7 @@ test("tools page: sign-in morphs the page into the connector gallery; a card con
   await expect(page.getByRole("heading", { name: "Automations" })).toBeVisible();
 });
 
-test("tools page skips cleanly; Start working lands in a session with the panel open", async ({
+test.skip("tools page skips cleanly; Start working lands in a session with the panel open", async ({
   page,
 }) => {
   await openOnboarding(page);

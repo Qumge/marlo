@@ -625,7 +625,7 @@ function ModeMenu({
                   <Toggle
                     checked={!!unattended}
                     onChange={onUnattendedChange}
-                    title={t("sendApprovalsToInbox")}
+                    title={t("sendApprovalsToInboxTitle")}
                   />
                 </div>
               </>

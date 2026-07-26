@@ -107,6 +107,7 @@ export const en = {
   fetchingModels: "Fetching the model list from the server",
   loadingModels: "Loading models…",
   sendApprovalsToInbox: "Send approvals to Inbox",
+  sendApprovalsToInboxTitle: "Send approvals to the Inbox",
   remove: "Remove",
 
   // -- settings: language ---------------------------------------------------

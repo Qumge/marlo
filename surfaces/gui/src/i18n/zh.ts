@@ -91,6 +91,7 @@ export const zh: Strings = {
   fetchingModels: "正在从服务器获取模型列表",
   loadingModels: "正在加载模型…",
   sendApprovalsToInbox: "把待办发到收件箱",
+  sendApprovalsToInboxTitle: "把需要你点头的事发到收件箱",
   remove: "移除",
 
   language: "语言",
