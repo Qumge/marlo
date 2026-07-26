@@ -112,6 +112,21 @@ MATRIX: dict[str, ModelEntry] = {
     "fireworks:accounts/fireworks/models/llama4-maverick-instruct-basic": ModelEntry(
         "Llama 4 Maverick · via Fireworks"
     ),
+    # -- Qumge (gateway; one key, every model above via `qumge:<vendor>/<model-id>`) ----
+    # These mirror `SessionManager.COMPAT_MODELS["qumge"]` (server/manager.py) — keep the
+    # two lists in lockstep (tests/test_capabilities.py enforces the capability side of
+    # that). Capabilities here are copied from the underlying model reached through its
+    # OWN native prefix, not guessed: Qumge is a pass-through, not a different model.
+    "qumge:anthropic/claude-sonnet-4.6": ModelEntry(
+        "Claude Sonnet 4.6 · via Qumge", _AGENTIC_VISION
+    ),
+    "qumge:anthropic/claude-opus-4-6": ModelEntry(
+        "Claude Opus 4.6 · via Qumge", _AGENTIC_VISION
+    ),
+    "qumge:openai/gpt-5.6-sol": ModelEntry("GPT-5.6 Sol · via Qumge", _AGENTIC_VISION),
+    "qumge:deepseek/deepseek-v4-flash": ModelEntry(
+        "DeepSeek V4 Flash · via Qumge", _AGENTIC
+    ),
 }
 
 
