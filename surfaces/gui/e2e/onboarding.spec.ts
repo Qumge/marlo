@@ -1,9 +1,10 @@
-// First-run onboarding (UX-DECISIONS §24 → §29 → §39): model → your tools → go.
-// §39: step 1 is a provider GALLERY (cards wear their own state; a card opens its key
-// form inside a fixed-height swap region; Test verifies, SAVES, and returns) and step 2
-// is a two-state tools page (why-paragraph + sign-in → mini connector gallery with live
-// one-click connects). Entered here via the REPLAY path (Settings ▸ Appearance ▸ "Run
-// setup again") — which is itself under test.
+// First-run onboarding (UX-DECISIONS §24 → §29 → §39 → Task 4): connect → your tools → go.
+// §39: the provider GALLERY (cards wear their own state; a card opens its key form inside a
+// fixed-height swap region; Test verifies, SAVES, and returns) — DEMOTED by Task 4 (owner
+// call, 2026-07-26) behind a quiet "Use your own API key instead" toggle, since step 1 now
+// opens on <QumgeConnect> by default. Step 2 is a two-state tools page (why-paragraph +
+// sign-in → mini connector gallery with live one-click connects). Entered here via the
+// REPLAY path (Settings ▸ Appearance ▸ "Run setup again") — which is itself under test.
 import { expect } from "@playwright/test";
 import { test } from "./fixtures";
 
@@ -15,10 +16,39 @@ async function openOnboarding(page) {
   await expect(page.getByTestId("ob-step-model")).toBeVisible();
 }
 
-test("provider gallery: cards wear their state; Next arms off stored credentials", async ({
+/** Past the Task 4 default screen: opens the demoted BYO-key gallery/form in place. */
+async function openProviderGallery(page) {
+  await openOnboarding(page);
+  await expect(page.getByTestId("qumge-connect-start")).toBeVisible();
+  await page.getByTestId("ob-use-own-key").click();
+  await expect(page.getByTestId("ob-provider-gallery")).toBeVisible();
+}
+
+test("step 0 opens on Connect to Qumge; the vendor gallery stays out of the DOM until the BYO-key fallback is opened", async ({
   page,
 }) => {
   await openOnboarding(page);
+
+  // The default screen: one Qumge connect action, no vendor cards, Next already armed
+  // (fixtures seed openai/anthropic as pre-configured — Task 4 doesn't require Qumge
+  // itself to unblock Next, only that it CAN).
+  await expect(page.getByTestId("qumge-connect-start")).toBeVisible();
+  await expect(page.getByTestId("ob-provider-gallery")).toHaveCount(0);
+  await expect(page.getByTestId("ob-provider-openai")).toHaveCount(0);
+  await expect(page.getByTestId("ob-continue")).toBeEnabled();
+
+  // The fallback reveals the SAME gallery in place — Qumge's own action is gone, not just
+  // hidden by CSS (a fresh testid, not a display:none sibling).
+  await page.getByTestId("ob-use-own-key").click();
+  await expect(page.getByTestId("ob-provider-gallery")).toBeVisible();
+  await expect(page.getByTestId("ob-provider-openai")).toContainText("✓ Connected");
+  await expect(page.getByTestId("qumge-connect-start")).toHaveCount(0);
+});
+
+test("provider gallery: cards wear their state; Next arms off stored credentials", async ({
+  page,
+}) => {
+  await openProviderGallery(page);
 
   // Every card carries its own status with zero clicks (the 2026-07-16 confusion —
   // "is OpenAI already connected?" — is answered by the gallery itself).
@@ -43,7 +73,7 @@ test("provider gallery: cards wear their state; Next arms off stored credentials
 test("key form: Test verifies, saves, and returns to the gallery with the ✓", async ({
   page,
 }) => {
-  await openOnboarding(page);
+  await openProviderGallery(page);
 
   await page.getByTestId("ob-provider-zai").click();
   // The header stays put (§39 fixed frame): the welcome headline is still on screen.
@@ -72,7 +102,7 @@ test("key form: Test verifies, saves, and returns to the gallery with the ✓", 
 test("key form: revisiting a connected provider shows the in-field saved state; drafts survive switching", async ({
   page,
 }) => {
-  await openOnboarding(page);
+  await openProviderGallery(page);
 
   // Revisit a configured provider: green in-field pill + masked placeholder — the old
   // empty-password-field-reads-as-not-set-up trap (owner complaint 2026-07-16) is gone.

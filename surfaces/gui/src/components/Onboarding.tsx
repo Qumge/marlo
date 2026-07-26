@@ -10,14 +10,19 @@ import {
 } from "../api";
 import { ConnectorBadge } from "../connectors/ConnectorIcon";
 import { ProviderCards, ProviderForm, useProviderSetup } from "../providers/ProviderSetup";
+import { QumgeConnect } from "../providers/QumgeConnect";
 import { Spinner } from "./AutomationQuickstart";
 
-// First-run onboarding (UX-DECISIONS §24 → §29 → §39): model → your tools → go.
-// §39 (owner design, 2026-07-18): step 1 is a PROVIDER GALLERY — 13 real brand
-// marks, two per row, each card wearing its own state — and step 2 is a
-// two-state tools page whose post-sign-in body is a mini connector gallery with
-// live one-click connects. Both steps share one frame rule: the header and
-// footer never move; only the middle region swaps, at a fixed height.
+// First-run onboarding (UX-DECISIONS §24 → §29 → §39 → Task 4): connect → your tools → go.
+// §39 (owner design, 2026-07-18): step 1 used to open straight on a PROVIDER GALLERY — 13
+// real brand marks, two per row, each card wearing its own state. Task 4 (owner call,
+// 2026-07-26) demotes that gallery: for the people Marlo is for, thirteen vendor cards and
+// a paste-your-key form is where they left. Step 1 now opens on <QumgeConnect> — one
+// sign-in, nothing to paste — with a quiet "Use your own API key instead" swapping the SAME
+// box for the very same gallery/form, in place, on demand. Step 2 is a two-state tools page
+// whose post-sign-in body is a mini connector gallery with live one-click connects. Both
+// steps share one frame rule: the header and footer never move; only the middle region
+// swaps, at a fixed height.
 // The gallery/form themselves live in providers/ProviderSetup.tsx, shared with
 // Settings ▸ Models (UX-021) so the two surfaces can't drift.
 // Replayable from Settings ▸ General ▸ "Run setup again".
@@ -40,16 +45,32 @@ const TOOLS_SOON = ["gmail", "google_calendar"];
 export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "automations") => void }) {
   const [step, setStep] = useState(0);
 
-  // -- step 1: model (provider gallery ⇄ key form, shared machinery) ---------------
+  // -- step 1: model (Qumge connect ⇄ demoted gallery ⇄ key form, shared machinery) --
   const ps = useProviderSetup();
   const [skipConfirm, setSkipConfirm] = useState(false);
+  // Task 4: Qumge is the default path, tracked here (not just via ps.providers) so Next
+  // arms the instant onConnected fires — no round trip through refreshProviders() required
+  // to unblock the button, even though that refresh still runs to keep the demoted gallery
+  // (and Settings ▸ Models, which shares this same hook's shape) in sync underneath.
+  const [qumgeConnected, setQumgeConnected] = useState(false);
+  // Reveals the ORIGINAL gallery/form in the same box, in place — one-way disclosure; the
+  // vendor cards are demoted, not deleted (Marlo is open-source and BYO-key is part of
+  // that promise, it just no longer goes first).
+  const [useOwnKey, setUseOwnKey] = useState(false);
 
   const anyReady =
-    ps.providers.some((p) => p.configured && p.needs_key) || ps.keylessOk.size > 0;
+    qumgeConnected ||
+    ps.providers.some((p) => p.configured && p.needs_key) ||
+    ps.keylessOk.size > 0;
   // In the form with typed-but-untested input, Next verifies+saves first (tester
   // catch 2026-07-12: a manual Test-then-Continue two-step reads as a puzzle).
   const nextFromForm = !!ps.sel && ps.dirty && ps.secretFilled;
   const canNext = anyReady || nextFromForm;
+
+  const handleQumgeConnected = () => {
+    setQumgeConnected(true);
+    void ps.refreshProviders();
+  };
 
   const advance = async () => {
     if (nextFromForm && !ps.credentialed) {
@@ -121,12 +142,33 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
             {/* Persistent header — stays put while the region below swaps (§39). */}
             <h1 className="text-[19px] font-semibold">Welcome to OpenWorker<span className="beta-tag">BETA</span></h1>
             <p className="text-[13px] text-muted mt-0.5 mb-4">
-              Pick a model provider to get started — OpenWorker runs on your own key, and your
-              key and your data stay on this Mac.
+              Connect to Qumge to get started — one sign-in, every model, and your key stays
+              on this Mac.
             </p>
 
-            {!ps.sel ? (
-              /* ---- the provider GALLERY ---- */
+            {!useOwnKey ? (
+              /* ---- Task 4: CONNECT TO QUMGE, the default path — one sign-in, nothing to
+                  paste, no gallery to parse first. ---- */
+              <div className="flex-1 min-h-0 flex flex-col" data-testid="ob-qumge-connect">
+                <div className="flex-1 min-h-0 flex flex-col items-start justify-center gap-4">
+                  {qumgeConnected ? (
+                    <span className="text-[13px] text-ok font-medium" data-testid="ob-qumge-connected">
+                      ✓ Connected to Qumge
+                    </span>
+                  ) : (
+                    <QumgeConnect onConnected={handleQumgeConnected} />
+                  )}
+                </div>
+                <button
+                  className="text-[12.5px] text-faint hover:text-muted self-start"
+                  onClick={() => setUseOwnKey(true)}
+                  data-testid="ob-use-own-key"
+                >
+                  Use your own API key instead
+                </button>
+              </div>
+            ) : !ps.sel ? (
+              /* ---- the provider GALLERY (demoted behind "Use your own API key instead") ---- */
               <div className="flex-1 min-h-0 overflow-y-auto pr-1" data-testid="ob-provider-gallery">
                 <ProviderCards ps={ps} tp="ob" />
               </div>
