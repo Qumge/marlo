@@ -21,6 +21,7 @@ import aisuite as ai
 
 from .agents.base import AgentContext
 from .risk import RiskClass
+from .tools.documents import document_tools
 from .tools.files import file_tools
 from .tools.git import git_tools
 from .tools.search import search_tools
@@ -81,6 +82,16 @@ def _files(context: AgentContext) -> list:
     ]
 
 
+def _documents(context: AgentContext) -> list:
+    """write_docx / write_xlsx — the formats a deliverable is actually handed over in.
+
+    Separate from `files` on purpose: those write text, these write binary Office
+    formats through bundled libraries, and a persona that should not be producing
+    Word documents can decline the capability without losing read/write.
+    """
+    return document_tools(str(context.workspace))
+
+
 def _git(context: AgentContext) -> list:
     ws = str(context.workspace)
     return [*ai.toolkits.git(root=ws), *git_tools(ws)]  # git_status, git_diff, git_log
@@ -114,6 +125,14 @@ _CAPS: list[Capability] = [
         build=_files,
         requires=("workspace",),
         risk=(RiskClass.READ, RiskClass.WRITE_LOCAL),
+    ),
+    Capability(
+        id="documents",
+        name="Documents",
+        description="Write Word (.docx) and Excel (.xlsx) files — what a deliverable is handed over as.",
+        build=_documents,
+        requires=("workspace",),
+        risk=(RiskClass.WRITE_LOCAL,),
     ),
     Capability(
         id="git",

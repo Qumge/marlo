@@ -71,7 +71,9 @@ def test_persona_detail_endpoint(tmp_path, monkeypatch):
     )  # §16 collapse: ops is a scratch persona now
     assert detail["default_permission_mode"] == "interactive"
     assert "anthropic:claude-opus-4-8" in detail["recommended_models"]
-    assert set(detail["tools"]) == {"files", "search", "shell", "todo"}
+    # `documents` (write_docx / write_xlsx) rides with the knowledge toolset: an ops
+    # deliverable is a report someone reads, not a markdown file.
+    assert set(detail["tools"]) == {"files", "documents", "search", "shell", "todo"}
     assert detail["description"]  # the manifest description is surfaced
 
     # recommends annotated with `connected` (github connected; slack/datadog not)

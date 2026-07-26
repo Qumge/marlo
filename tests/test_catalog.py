@@ -46,6 +46,11 @@ COWORK_TOOLS = {
     "shell_task_output",
     "shell_task_kill",
     "todo_write",
+    # The `documents` capability. Cowork exists to produce a deliverable, and a
+    # deliverable is handed over as .docx or .xlsx — markdown and csv are what a
+    # developer wants. Code does NOT get these: a repo has no use for Word.
+    "write_docx",
+    "write_xlsx",
 }
 
 
