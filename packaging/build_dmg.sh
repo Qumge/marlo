@@ -69,6 +69,13 @@ if [ -n "${APPLE_CERTIFICATE:-}" ] && [ -n "${APPLE_SIGNING_IDENTITY:-}" ]; then
   security list-keychains -d user -s "$KC" login.keychain-db
 fi
 
+# Cheap, and it guards a failure nothing downstream can see: a 16-bit icon builds,
+# signs and notarises cleanly, then aborts the app inside did_finish_launching before
+# any window exists. 0.2.0 shipped that way. Runs before the 4-minute Rust build so
+# the failure is immediate.
+echo "==> [0/5] checking bundled icons"
+python3 "$HERE/check_icons.py"
+
 echo "==> [1/5] PyInstaller: bundling openworker-server ($TRIPLE)"
 "$PLATFORM/.venv/bin/pyinstaller" --noconfirm --clean \
   --distpath "$HERE/dist" --workpath "$HERE/build" "$HERE/openworker-server.spec"
