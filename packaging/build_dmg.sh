@@ -156,8 +156,25 @@ fi
 # under set -u on macOS's stock bash 3.2 — hit by keyless (fresh-clone) builds.
 ( cd "$GUI" && npm run tauri build -- --bundles app ${UPDATER_OVERLAY[@]+"${UPDATER_OVERLAY[@]}"} )
 
-echo "==> [4/5] hdiutil: wrapping into .dmg"
 BUNDLE="$GUI/src-tauri/target/release/bundle"
+
+# macOS 26+ frames a legacy CFBundleIconFile app on a pale plate. Compiling an
+# asset catalog and setting CFBundleIconName opts out of that — see
+# make_asset_catalog.py. It edits Info.plist and Resources, which breaks the
+# signature `tauri build` just applied, so the bundle is re-signed here. That
+# re-sign has to keep the hardened runtime and entitlements or notarization
+# rejects it.
+echo "==> [3.5/5] app icon: asset catalog"
+python3 "$HERE/make_asset_catalog.py" "$BUNDLE/macos/$APP.app"
+if [ -n "${APPLE_SIGNING_IDENTITY:-}" ]; then
+  echo "    re-signing the bundle after the Info.plist edit"
+  codesign --force --sign "$APPLE_SIGNING_IDENTITY" --timestamp --options runtime \
+    --entitlements "$GUI/src-tauri/entitlements.plist" \
+    "$BUNDLE/macos/$APP.app"
+  codesign --verify --deep --strict "$BUNDLE/macos/$APP.app"
+fi
+
+echo "==> [4/5] hdiutil: wrapping into .dmg"
 STAGING="$(mktemp -d)"
 cp -R "$BUNDLE/macos/$APP.app" "$STAGING/"
 ln -s /Applications "$STAGING/Applications"
