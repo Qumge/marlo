@@ -36,7 +36,8 @@ _DOCX_SCHEMA = {
             "Write a Word document (.docx) from markdown. Use this whenever the user asks "
             "for a document, report, letter, memo, or anything they will open in Word or "
             "send to someone — not a .md file, which they cannot use. Supports #/##/### "
-            "headings, paragraphs, - bullets, 1. numbered lists, **bold** and *italic*."
+            "headings, paragraphs, - bullets, 1. numbered lists, | markdown | tables |, "
+            "--- rules, **bold** and *italic*."
         ),
         "parameters": {
             "type": "object",
@@ -97,6 +98,22 @@ _RUN_SPLIT = re.compile(r"(\*\*[^*]+\*\*|\*[^*]+\*)")
 _BULLET = re.compile(r"^\s*[-*+]\s+(.*)$")
 _NUMBERED = re.compile(r"^\s*\d+[.)]\s+(.*)$")
 _HEADING = re.compile(r"^(#{1,6})\s+(.*)$")
+# A markdown table row: at least one pipe with content around it. Models reach
+# for tables constantly in this kind of work — the first real run of write_docx
+# produced a contract summary whose every table arrived as literal rows of
+# "| 客户 | 蓝湖设计 |", which reads as a document someone forgot to finish.
+_TABLE_ROW = re.compile(r"^\s*\|(.+)\|\s*$")
+# The |---|:---:|---| separator under a header row. Alignment is parsed out and
+# discarded: Word tables carry their own alignment and a literal dashes row is
+# the most obvious tell that markdown leaked through.
+_TABLE_SEP = re.compile(r"^\s*\|[\s:\-|]+\|\s*$")
+# A thematic break. Left alone it prints as three hyphens in the middle of a page.
+_HRULE = re.compile(r"^\s*(-{3,}|\*{3,}|_{3,})\s*$")
+
+
+def _split_row(line: str) -> list[str]:
+    inner = _TABLE_ROW.match(line).group(1)
+    return [c.strip() for c in inner.split("|")]
 
 
 def _add_runs(paragraph, text: str) -> None:
@@ -140,11 +157,48 @@ def document_tools(workspace: str) -> list:
         if title:
             doc.core_properties.title = title
 
-        for raw in (markdown or "").split("\n"):
-            line = raw.rstrip()
+        lines = [raw.rstrip() for raw in (markdown or "").split("\n")]
+        i = 0
+        while i < len(lines):
+            line = lines[i]
             if not line.strip():
+                i += 1
                 continue
-            if m := _HEADING.match(line):
+
+            # Tables first: a run of pipe rows is one object, not N paragraphs.
+            if _TABLE_ROW.match(line) and i + 1 < len(lines) and _TABLE_SEP.match(lines[i + 1]):
+                header = _split_row(line)
+                body: list[list[str]] = []
+                j = i + 2
+                while j < len(lines) and _TABLE_ROW.match(lines[j]) and not _TABLE_SEP.match(lines[j]):
+                    body.append(_split_row(lines[j]))
+                    j += 1
+
+                table = doc.add_table(rows=1, cols=len(header))
+                # A built-in style, so the table arrives with rules around the
+                # cells. Without one Word draws no borders at all and the result
+                # looks like columns of floating text.
+                try:
+                    table.style = "Table Grid"
+                except KeyError:  # pragma: no cover - style set varies by template
+                    pass
+                for cell, text in zip(table.rows[0].cells, header):
+                    cell.paragraphs[0].clear() if hasattr(cell.paragraphs[0], "clear") else None
+                    run = cell.paragraphs[0].add_run(text)
+                    run.bold = True
+                for row in body:
+                    cells = table.add_row().cells
+                    for cell, text in zip(cells, row[: len(header)]):
+                        _add_runs(cell.paragraphs[0], text)
+                i = j
+                continue
+
+            if _HRULE.match(line):
+                # Markdown's thematic break. Rendered as an empty paragraph rather
+                # than three literal hyphens sitting in the middle of the page;
+                # Word has no first-class horizontal rule worth the XML.
+                doc.add_paragraph()
+            elif m := _HEADING.match(line):
                 # Word's built-in Heading 1..6; level 0 is the document Title style,
                 # which is not what "# " means in a body of markdown.
                 doc.add_heading(m.group(2).strip(), level=min(len(m.group(1)), 6))
@@ -154,6 +208,7 @@ def document_tools(workspace: str) -> list:
                 _add_runs(doc.add_paragraph(style="List Number"), m.group(1))
             else:
                 _add_runs(doc.add_paragraph(), line)
+            i += 1
 
         target.parent.mkdir(parents=True, exist_ok=True)
         doc.save(str(target))

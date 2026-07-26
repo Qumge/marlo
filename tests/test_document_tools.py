@@ -81,6 +81,62 @@ def test_rewriting_replaces_rather_than_accumulates(docx, tmp_path):
     assert texts == ["Second"], "a deliverable regenerated twice must not contain both drafts"
 
 
+def test_markdown_tables_become_word_tables(docx, tmp_path):
+    """The first real run produced a contract summary whose every table arrived as
+    literal rows of "| 客户 | 蓝湖设计 |". Eleven unit tests were green, because
+    they only covered what had been implemented — models reach for tables
+    constantly in this kind of work and nothing had ever asked for one."""
+    docx(
+        path="t.docx",
+        markdown=(
+            "# Contracts\n\n"
+            "| Client | Ends | Fee |\n"
+            "|--------|------|----:|\n"
+            "| Blue   | 2026-02-28 | 60,000 |\n"
+            "| Star   | 2026-03-01 | 180,000 |\n\n"
+            "Follow up soon."
+        ),
+    )
+
+    from docx import Document
+
+    doc = Document(str(tmp_path / "t.docx"))
+    assert len(doc.tables) == 1, "a markdown table must become a Word table, not lines of text"
+
+    table = doc.tables[0]
+    assert len(table.rows) == 3  # header + two
+    assert [c.text for c in table.rows[0].cells] == ["Client", "Ends", "Fee"]
+    assert [c.text for c in table.rows[1].cells] == ["Blue", "2026-02-28", "60,000"]
+    assert table.rows[0].cells[0].paragraphs[0].runs[0].bold, "header row reads as a header"
+
+    # And nothing pipe-shaped survives in the prose.
+    body = "\n".join(p.text for p in doc.paragraphs)
+    assert "|" not in body
+    assert "----" not in body
+    assert "Follow up soon." in body, "text after the table still lands"
+
+
+def test_a_lone_pipe_line_is_not_mistaken_for_a_table(docx, tmp_path):
+    # Without the separator row underneath, it is prose that happens to contain
+    # pipes — turning it into a one-row table would mangle ordinary writing.
+    docx(path="p.docx", markdown="Use grep | sort to sort the output.")
+
+    from docx import Document
+
+    doc = Document(str(tmp_path / "p.docx"))
+    assert len(doc.tables) == 0
+    assert "grep | sort" in "\n".join(p.text for p in doc.paragraphs)
+
+
+def test_horizontal_rules_do_not_print_as_hyphens(docx, tmp_path):
+    docx(path="h.docx", markdown="# A\n\n---\n\n# B")
+
+    from docx import Document
+
+    texts = [p.text.strip() for p in Document(str(tmp_path / "h.docx")).paragraphs]
+    assert "---" not in texts, "a thematic break must not land as three hyphens mid-page"
+
+
 # -- xlsx ---------------------------------------------------------------------
 
 def test_rows_become_a_readable_sheet(xlsx, tmp_path):
