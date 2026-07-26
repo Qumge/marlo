@@ -1439,11 +1439,7 @@ export function App() {
             <div className="main-scroll" ref={scrollRef} onScroll={handleScroll}>
               {idle ? (
                 agent === "cowork" ? (
-                  <SessionIntro
-                    sessionId={sessionId}
-                    onOpenSessionSettings={openAccess}
-                    onPrefill={prefillComposer}
-                  />
+                  <SessionIntro sessionId={sessionId} onPrefill={prefillComposer} />
                 ) : (
                   <div className="hero">
                     <h1 className="greeting">

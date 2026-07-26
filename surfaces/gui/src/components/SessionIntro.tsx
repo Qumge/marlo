@@ -1,8 +1,5 @@
-import { useEffect, useState } from "react";
-import { getConnectors, getSessionConnections } from "../api";
+import { useState } from "react";
 import type { Attachment } from "../types";
-import { ConnectorIcon } from "../connectors/ConnectorIcon";
-import { indexConnectors, visualFor, type ConnectorMap } from "../connectors/visuals";
 import { useRoots } from "../useRoots";
 import { AddFolderForm } from "./AddFolderForm";
 
@@ -14,47 +11,27 @@ import { AddFolderForm } from "./AddFolderForm";
 // composer. Not ready → "Configure ›" always visible (for a gated row the setup action IS the
 // row's meaning), opening the §23 Session settings drawer — no second setup surface here.
 
+// All three tasks work with nothing but a folder. Two of them used to be HubSpot
+// and GitHub→Slack, whose "Configure ›" led to the connector sign-in — brokered by
+// OpenWorker Cloud, a service this project does not run. That page is hidden now,
+// so those rows were an invitation into a door that no longer opens.
 const FOLDER_PROMPT = "Analyze the files in this folder and summarize what matters.";
-const HUBSPOT_PROMPT =
-  "Create a report on my recent HubSpot leads: sources, stages, and who needs follow-up.";
-const GH_SLACK_PROMPT =
-  "Set up a weekly progress report: summarize activity in my GitHub repos and post it to Slack every Friday morning.";
+const WRITE_PROMPT =
+  "Read the files in this folder and write me one document that pulls the important parts together. Save it in the folder.";
+const TIDY_PROMPT =
+  "Look through this folder, tell me how you'd rename and organise the files so they make sense, and do it once I say yes.";
 
 export function SessionIntro({
   sessionId,
-  onOpenSessionSettings,
   onPrefill,
 }: {
   sessionId: string;
-  // Opens the §23 Session settings drawer (sources section) — the gated rows' Configure target.
-  onOpenSessionSettings: () => void;
   onPrefill: (text: string, attachments?: Attachment[]) => void;
 }) {
   const { roots, busy, error, addRoot } = useRoots(sessionId);
-  const [live, setLive] = useState<Set<string>>(new Set());
-  const [byName, setByName] = useState<ConnectorMap>({});
   const [addingFolder, setAddingFolder] = useState(false);
 
-  useEffect(() => {
-    // Live = what this session can touch right now (connected AND not muted here) — the same
-    // truth the §23 glance renders, so the dots here can never disagree with the row above.
-    getSessionConnections(sessionId)
-      .then((c) => setLive(new Set(c.connected.filter((x) => x.enabled).map((x) => x.connector))))
-      .catch(() => {});
-    getConnectors()
-      .then((list) => setByName(indexConnectors(list)))
-      .catch(() => {});
-  }, [sessionId]);
-
   const shared = roots.filter((r) => !r.primary);
-  const hubspotReady = live.has("hubspot");
-  const ghSlackReady = live.has("github") && live.has("slack");
-
-  const dot = (name: string, on: boolean) => (
-    <span className={"task-dot" + (on ? "" : " off")} key={name}>
-      <ConnectorIcon connector={visualFor(name, "connector", byName)} size={12} />
-    </span>
-  );
 
   const pickFolder = () => {
     // A shared folder already exists → straight to the prompt; otherwise share one first.
@@ -97,34 +74,27 @@ export function SessionIntro({
         )}
 
         <button
-          className={"task-card" + (hubspotReady ? "" : " gated")}
-          data-testid="intro-task-hubspot"
-          onClick={() => (hubspotReady ? onPrefill(HUBSPOT_PROMPT) : onOpenSessionSettings())}
+          className="task-card"
+          data-testid="intro-task-write"
+          onClick={() => onPrefill(WRITE_PROMPT)}
         >
           <span className="task-card-body">
-            <span className="task-card-title">Create a report from my HubSpot leads</span>
-            <span className="task-card-sub">
-              {dot("hubspot", hubspotReady)}
-              Sources, stages, and who needs follow-up
-            </span>
+            <span className="task-card-title">Write one document from a folder of files</span>
+            <span className="task-card-sub">I'll read them and draft it for you to edit</span>
           </span>
-          <span className="task-card-act">{hubspotReady ? "Start →" : "Configure ›"}</span>
+          <span className="task-card-act">Start →</span>
         </button>
 
         <button
-          className={"task-card" + (ghSlackReady ? "" : " gated")}
-          data-testid="intro-task-github-slack"
-          onClick={() => (ghSlackReady ? onPrefill(GH_SLACK_PROMPT) : onOpenSessionSettings())}
+          className="task-card"
+          data-testid="intro-task-tidy"
+          onClick={() => onPrefill(TIDY_PROMPT)}
         >
           <span className="task-card-body">
-            <span className="task-card-title">Automate a weekly GitHub progress report to Slack</span>
-            <span className="task-card-sub">
-              {dot("github", live.has("github"))}
-              {dot("slack", live.has("slack"))}
-              Repo activity, summarized and posted every Friday
-            </span>
+            <span className="task-card-title">Sort out a folder that's become a mess</span>
+            <span className="task-card-sub">I'll propose names and an order, and wait for your go-ahead</span>
           </span>
-          <span className="task-card-act">{ghSlackReady ? "Start →" : "Configure ›"}</span>
+          <span className="task-card-act">Start →</span>
         </button>
       </div>
     </div>

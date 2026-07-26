@@ -34,8 +34,19 @@ import re
 import sys
 from pathlib import Path
 
-SRC = Path(__file__).resolve().parent.parent / "surfaces/gui/src"
-SUFFIXES = {".ts", ".tsx", ".css"}
+ROOT = Path(__file__).resolve().parent.parent
+
+# The first version of this check scanned only surfaces/gui/src, so the rename it
+# was guarding stopped at the language boundary and left the old name in the tray
+# menu, its tooltip, the pages the sidecar serves on localhost, the client name an
+# MCP provider shows on its consent screen, and the folder created in the user's
+# home. All of those a person reads directly.
+ROOTS = [
+    ROOT / "surfaces/gui/src",
+    ROOT / "surfaces/gui/src-tauri/src",
+    ROOT / "coworker",
+]
+SUFFIXES = {".ts", ".tsx", ".css", ".rs", ".py"}
 EXEMPT_FILES = {"Sidebar.test.tsx"}  # persona fixture, not copy
 
 # Everything under components/connectors/ describes OpenWorker Cloud's brokered
@@ -64,38 +75,50 @@ ALLOWED = [
     # What opencoworker.us.auth0.com actually calls the app it signs you into.
     # Quoted in the comments explaining why the connector step is hidden.
     re.compile(r"OpenWorker Desktop"),
+    # The Slack bot's own rename history, which is why [ocw:…] ids stay parseable.
+    re.compile(r"the bot's rebrand"),
+    re.compile(r"to OpenWorker \(2026-07-22\)"),
 ]
 
 
 def main() -> int:
-    if not SRC.is_dir():
-        print(f"source directory not found: {SRC}", file=sys.stderr)
+    missing = [str(r) for r in ROOTS if not r.is_dir()]
+    if missing:
+        print("source directories not found: " + ", ".join(missing), file=sys.stderr)
         return 1
 
     offenders = []
     scanned = 0
 
-    for path in sorted(SRC.rglob("*")):
-        if path.suffix not in SUFFIXES or not path.is_file():
-            continue
-        if path.name in EXEMPT_FILES:
-            continue
-        if EXEMPT_DIRS & set(path.relative_to(SRC).parts[:-1]):
-            continue
-        scanned += 1
-
-        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-            if "OpenWorker" not in line:
+    for src in ROOTS:
+        for path in sorted(src.rglob("*")):
+            if path.suffix not in SUFFIXES or not path.is_file():
                 continue
-            if any(p.search(line) for p in ALLOWED):
+            if path.name in EXEMPT_FILES:
                 continue
-            rel = path.relative_to(SRC)
-            offenders.append(f"  {rel}:{lineno}  {line.strip()}")
+            if "__pycache__" in path.parts:
+                continue
+            if EXEMPT_DIRS & set(path.relative_to(src).parts[:-1]):
+                continue
+            scanned += 1
+            _scan(path, src, offenders)
 
+    return _report(scanned, offenders)
+
+
+def _scan(path: Path, src: Path, offenders: list) -> None:
+    for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        if "OpenWorker" not in line:
+            continue
+        if any(p.search(line) for p in ALLOWED):
+            continue
+        offenders.append(f"  {path.relative_to(src)}:{lineno}  {line.strip()}")
+
+
+def _report(scanned: int, offenders: list) -> int:
     # A path change that makes this scan nothing must fail, not pass silently.
-    if scanned < 20:
-        print(f"only {scanned} files scanned under {SRC} — the check would pass vacuously",
-              file=sys.stderr)
+    if scanned < 100:
+        print(f"only {scanned} files scanned — the check would pass vacuously", file=sys.stderr)
         return 1
 
     if offenders:
