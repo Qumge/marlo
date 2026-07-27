@@ -16,7 +16,10 @@ export const en = {
   newSession: "New session",
   search: "Search",
   automations: "Automations",
-  recent: "RECENT",
+  // Sentence case: the header's CSS already uppercases it. Shouting in the
+  // catalog changes the DOM text a screen reader announces and every test reads,
+  // for a visual result CSS was already producing.
+  recent: "Recent",
   noConversations: "No conversations yet.",
   notSignedIn: "Not signed in",
 
@@ -44,6 +47,11 @@ export const en = {
   // -- composer -------------------------------------------------------------
   composerPlaceholder: "Ask the coworker…  (drop or paste files)",
   askForApproval: "Ask for approval",
+  modeDiscuss: "Discuss",
+  modeDiscussSub: "Chat and explore — no edits or commands",
+  modeAskSub: "Ask before edits and commands",
+  modeFull: "Full access",
+  modeFullSub: "Run everything without asking",
   noModel: "No model",
 
   // -- right rail -----------------------------------------------------------
@@ -53,6 +61,11 @@ export const en = {
   artifacts: "Artifacts",
   artifactsEmpty: "No previewable files yet.",
   access: "Access",
+  working: "Working...",
+  workingOnThis: "Working on this task.",
+  workingWithTools: (n: number) =>
+    `Working on this task with ${n} tool call${n === 1 ? "" : "s"} so far.`,
+  nToolCallsSoFar: (n: number) => `${n} tool call${n === 1 ? "" : "s"} so far.`,
 
   // -- onboarding -----------------------------------------------------------
   welcomeTo: "Welcome to Marlo",
@@ -114,6 +127,26 @@ export const en = {
   balanceTitle: "Qumge credit — click to add more",
   balanceLowTitle: "Running low on credit — click to top up",
   addCredit: "Add credit",
+
+  // -- sidebar + rail chrome ------------------------------------------------
+  // These keys existed from the first translation pass; the components around
+  // them kept their English literals, so a Chinese user got a Chinese greeting
+  // inside an English window. The catalog was never the missing half.
+  noMatchingConversations: "No matching conversations.",
+  showLess: "Show less",
+  showMore: (n: number) => `Show ${n} more`,
+  // Deliberately NOT the same string as groupAndFilter ("Group & filter…"),
+  // which is the tooltip: a screen reader reads "&" as an ampersand mid-sentence.
+  // Collapsing the two into one key is exactly how a switch lost its accessible
+  // name earlier in this rename.
+  groupAndFilterAria: "Group and filter conversations",
+  groupBy: "Group by",
+  groupPersona: "Persona",
+  groupChronological: "Chronological",
+  showProducedFiles: "Show files this conversation produced",
+  noSources: "no sources",
+  nFolders: (n: number) => `${n} folder${n === 1 ? "" : "s"}`,
+  giveFolderAccess: "+ Give access to a folder…",
 
   // -- account (sidebar footer) ---------------------------------------------
   // The footer used to report sign-in to OpenWorker Cloud — a third party whose

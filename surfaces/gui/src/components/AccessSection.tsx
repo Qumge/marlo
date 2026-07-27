@@ -36,6 +36,7 @@ import { ConnectSetup } from "./ManageTabs";
 import { RootRow } from "./RootRow";
 import { ChannelPicker } from "./SubscriptionsChip";
 import { Toggle } from "./Toggle";
+import { useT } from "../i18n";
 
 // A channel address's platform: "slack:C0123" → "slack"; a bare id or "#mention" defaults to
 // slack (the backend's own default when no platform prefix is given).
@@ -69,6 +70,7 @@ export function AccessSection({
   openKey?: number;
   onOpenIntegrations?: () => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [conns, setConns] = useState<SessionConnections | null>(null);
   const [byName, setByName] = useState<ConnectorMap>({});
@@ -130,10 +132,10 @@ export function AccessSection({
     // listen for the sign-in broadcast so the pane flips the moment login lands.
     const load = () => getCloudStatus().then(setCloud).catch(() => {});
     load();
-    const t = setInterval(load, 5000);
+    const timer = setInterval(load, 5000);
     window.addEventListener(CLOUD_CHANGED, load);
     return () => {
-      clearInterval(t);
+      clearInterval(timer);
       window.removeEventListener(CLOUD_CHANGED, load);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -212,14 +214,14 @@ export function AccessSection({
   const names = live.map((c) => labelFor(c.connector, byName));
   const sourcesPart =
     names.length === 0
-      ? "no sources"
+      ? t("noSources")
       : names.length <= 2
         ? names.join(", ")
         : `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
   const folderPart = projectScoped
     ? baseName(workspace || roots.find((r) => r.primary)?.path || "") || null
     : roots.length > 0
-      ? `${roots.length} folder${roots.length === 1 ? "" : "s"}`
+      ? t("nFolders")(roots.length)
       : null;
   const summary = folderPart ? `${sourcesPart} · ${folderPart}` : sourcesPart;
 
@@ -228,7 +230,7 @@ export function AccessSection({
       <div className="rail-section-head">
         <button className="rail-section-toggle" onClick={() => setOpen((v) => !v)} data-testid="access-toggle">
           <Icon name={open ? "chevronDown" : "chevronRight"} size={14} className="rail-chev" />
-          <span>Access</span>
+          <span>{t("access")}</span>
           <span
             className="ml-auto min-w-0 truncate text-[11px] font-normal text-faint"
             data-testid="access-summary"
@@ -451,7 +453,7 @@ export function AccessSection({
                     className="mt-1 text-[12px] text-accent hover:underline text-left"
                     onClick={() => setAddingFolder(true)}
                   >
-                    + Give access to a folder…
+                    {t("giveFolderAccess")}
                   </button>
                 )}
                 {rootsError && <div className="roots-err">{rootsError}</div>}
@@ -486,7 +488,7 @@ function ConnectInline({
   onBack: () => void;
 }) {
   useEffect(() => {
-    const t = setInterval(async () => {
+    const timer = setInterval(async () => {
       try {
         const list = await getConnectors();
         if (list.find((x) => x.name === c.name)?.connected) onDone();
@@ -494,7 +496,7 @@ function ConnectInline({
         /* poll again */
       }
     }, 2500);
-    return () => clearInterval(t);
+    return () => clearInterval(timer);
   }, [c.name, onDone]);
 
   return (

@@ -46,13 +46,32 @@ ROOTS = [
     ROOT / "surfaces/gui/src-tauri/src",
     ROOT / "surfaces/gui/src-tauri",  # Info.plist — see below
     ROOT / "coworker",
+    # packaging/ was never scanned, including by the file this check lives in.
+    # The DMG install window said "Install OpenWorker" through eleven releases:
+    # the words were baked into a committed PNG, which no check can read and no
+    # diff can show. They are drawn from make_dmg_background.py now, so they are
+    # text, and text is what this file is for.
+    ROOT / "packaging",
 ]
+# Build outputs, not source. packaging/dist holds the frozen sidecar's vendored
+# dependencies — thousands of files, none of them ours, several of which say
+# "Install ..." in an entirely unrelated sense.
+EXCLUDE_DIRS = {"dist", "build", "node_modules", "__pycache__"}
 # .plist is here because src-tauri/Info.plist carries the NS*UsageDescription
 # strings macOS prints inside its own permission dialogs. Those named OpenWorker
 # through five releases: a system prompt asking for your Documents folder on
 # behalf of a product you never installed is what malware looks like, and no
 # check reached the file.
 SUFFIXES = {".ts", ".tsx", ".css", ".rs", ".py", ".plist"}
+
+
+def _is_self(path: Path) -> bool:
+    """This file names every allowed OpenWorker in order to allow it.
+
+    Scanning packaging/ brought the checker into its own scope, where its
+    documentation of the four legitimate cases reads as eleven violations.
+    """
+    return path.name == "check_branding.py"
 
 
 def _is_test(path: Path) -> bool:
@@ -111,9 +130,9 @@ def main() -> int:
         for path in sorted(src.rglob("*")):
             if path.suffix not in SUFFIXES or not path.is_file():
                 continue
-            if _is_test(path):
+            if _is_self(path) or _is_test(path):
                 continue
-            if "__pycache__" in path.parts:
+            if EXCLUDE_DIRS & set(path.parts):
                 continue
             if EXEMPT_DIRS & set(path.relative_to(src).parts[:-1]):
                 continue

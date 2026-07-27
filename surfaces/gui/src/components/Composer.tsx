@@ -20,10 +20,12 @@ import {
 // polished enough to ship, and Custom (config.toml auto-allow rules) is a power-user mode
 // with no in-app explanation. The server still honors both — a session already in one of
 // those modes keeps working; the picker just doesn't offer them.
-const PERMISSION_OPTIONS: Option[] = [
-  { value: "discuss", label: "Discuss", description: "Chat and explore — no edits or commands" },
-  { value: "interactive", label: "Ask for approval", description: "Ask before edits and commands" },
-  { value: "auto", label: "Full access", description: "Run everything without asking" },
+// Built at render, not at module load: a label frozen at import time is a label
+// that never changes when the user switches language.
+const permissionOptions = (t: ReturnType<typeof useT>): Option[] => [
+  { value: "discuss", label: t("modeDiscuss"), description: t("modeDiscussSub") },
+  { value: "interactive", label: t("askForApproval"), description: t("modeAskSub") },
+  { value: "auto", label: t("modeFull"), description: t("modeFullSub") },
 ];
 
 // No hardcoded model fallback: until the server supplies the list (a few seconds after a
@@ -392,7 +394,7 @@ export function Composer(props: Props) {
         <textarea
           ref={textareaRef}
           className="w-full block px-3.5 pt-3.5 pb-1.5 text-[14.5px]"
-          placeholder={props.placeholder || "Ask the coworker…  (drop or paste files)"}
+          placeholder={props.placeholder || t("composerPlaceholder")}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={onKey}
@@ -564,7 +566,8 @@ function ModeMenu({
 }) {
   const t = useT();
   const [open, setOpen] = useState(false);
-  const current = PERMISSION_OPTIONS.find((o) => o.value === mode);
+  const options = permissionOptions(t);
+  const current = options.find((o) => o.value === mode);
   return (
     <div className="relative">
       {/* Borderless, and it names the CHOSEN mode (owner ask 2026-07-11, competitor composer
@@ -592,7 +595,7 @@ function ModeMenu({
             role="menu"
             data-testid="mode-menu"
           >
-            {PERMISSION_OPTIONS.map((o) => (
+            {options.map((o) => (
               <button
                 key={o.value}
                 className="w-full flex flex-col items-start px-2.5 py-1.5 rounded-lg text-left hover:bg-paper"

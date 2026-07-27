@@ -180,9 +180,15 @@ BUNDLE="$GUI/src-tauri/target/release/bundle"
 STAGING="$(mktemp -d)"
 cp -R "$BUNDLE/macos/$APP.app" "$STAGING/"
 ln -s /Applications "$STAGING/Applications"
-# Background art (arrow + "drag to Applications") — hidden folder Finder reads for the window.
+# Background art (arrow + "Install Marlo") — hidden folder Finder reads for the window.
 # A HiDPI TIFF (1x + native 2x reps) so text/arrow stay crisp on Retina; a plain 1x PNG would
 # be upscaled and look hazy/pixelated.
+#
+# Redrawn from packaging/make_dmg_background.py rather than trusted as a committed
+# binary: the product name is IN that picture, and it read "Install OpenWorker" for
+# eleven releases because no check can see inside a PNG and no diff shows one. The
+# script no-ops without Pillow, which is why the generated .tiff is committed too.
+python3 "$HERE/make_dmg_background.py" || true
 mkdir "$STAGING/.background"
 cp "$HERE/dmg-background.tiff" "$STAGING/.background/bg.tiff"
 DMG="$BUNDLE/dmg/${APP}_${VERSION}_${ARCH}.dmg"

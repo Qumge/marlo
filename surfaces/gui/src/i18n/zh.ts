@@ -35,6 +35,11 @@ export const zh: Strings = {
 
   composerPlaceholder: "说说你要什么…（也可以把文件拖进来）",
   askForApproval: "动手前先问我",
+  modeDiscuss: "只聊聊",
+  modeDiscussSub: "只讨论，不改文件也不执行命令",
+  modeAskSub: "改文件、执行命令前先问你",
+  modeFull: "完全放手",
+  modeFullSub: "什么都不问，直接做",
   noModel: "还没选模型",
 
   progress: "进展",
@@ -43,6 +48,10 @@ export const zh: Strings = {
   artifacts: "产出",
   artifactsEmpty: "还没有可预览的文件",
   access: "可访问范围",
+  working: "正在做…",
+  workingOnThis: "正在做这件事。",
+  workingWithTools: (n) => `正在做这件事，已经用了 ${n} 次工具。`,
+  nToolCallsSoFar: (n) => `已经用了 ${n} 次工具。`,
 
   welcomeTo: "欢迎使用 Marlo",
   onboardLede: "连上 Qumge 就能开始 —— 登录一次，所有模型都能用，密钥只存在这台 Mac 上。",
@@ -97,6 +106,18 @@ export const zh: Strings = {
   balanceTitle: "Qumge 余额 —— 点击充值",
   balanceLowTitle: "余额不多了 —— 点击充值",
   addCredit: "充值",
+
+  noMatchingConversations: "没有匹配的对话",
+  showLess: "收起",
+  showMore: (n) => `还有 ${n} 条`,
+  groupAndFilterAria: "分组和筛选对话",
+  groupBy: "分组方式",
+  groupPersona: "按角色",
+  groupChronological: "按时间",
+  showProducedFiles: "查看这次对话产出的文件",
+  noSources: "没有外部来源",
+  nFolders: (n) => `${n} 个文件夹`,
+  giveFolderAccess: "+ 授权一个文件夹…",
 
   accountOf: (email) => `${email} · Qumge`,
   accountAria: (email) => `账号：${email}`,
