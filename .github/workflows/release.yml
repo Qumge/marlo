@@ -219,6 +219,13 @@ jobs:
             echo "::warning::R2 密钥未配置 —— 这次发布【没有镜像】，够不着 GitHub 的用户装不上也更新不了"
             exit 0
           fi
+          # Cloudflare 控制台里"S3 API"那一栏给的地址【有时带着桶名】
+          # （https://<account>.r2.cloudflarestorage.com/<bucket>）。原样传给
+          # --endpoint-url 的话，对象会落到 <bucket>/<bucket>/… 去。剥掉它 ——
+          # 与其指望填的人记得，不如让两种写法都对。
+          R2_ENDPOINT="${R2_ENDPOINT%/}"
+          R2_ENDPOINT="${R2_ENDPOINT%/$R2_BUCKET}"
+          echo "endpoint=$R2_ENDPOINT bucket=$R2_BUCKET"
           # 按 tag 归档一份（清单指向这里，版本永远对得上）……
           aws s3 cp dist/ "s3://$R2_BUCKET/marlo/$TAG/" \
             --endpoint-url "$R2_ENDPOINT" --recursive --no-progress

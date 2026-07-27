@@ -59,7 +59,7 @@ def main() -> int:
     ap.add_argument(
         "--base-url",
         default="",
-        help="镜像根地址，如 https://dl.qumge.com/marlo。给了就用 <base>/<tag>/<asset>，"
+        help="镜像根地址，如 https://cdn.qumge.com/marlo。给了就用 <base>/<tag>/<asset>，"
         "不给就回落到 GitHub releases。",
     )
     args = ap.parse_args()

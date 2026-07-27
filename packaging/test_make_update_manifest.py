@@ -38,29 +38,29 @@ def test_without_a_mirror_it_still_points_at_github(tmp_path):
 
 
 def test_with_a_mirror_every_url_moves(tmp_path):
-    m = build(tmp_path, "--base-url", "https://dl.qumge.com/marlo")
+    m = build(tmp_path, "--base-url", "https://cdn.qumge.com/marlo")
     assert m["platforms"], "没有平台条目，这个测试什么也没证明"
     for name, p in m["platforms"].items():
-        assert p["url"].startswith("https://dl.qumge.com/marlo/v0.3.4/"), name
+        assert p["url"].startswith("https://cdn.qumge.com/marlo/v0.3.4/"), name
         assert "github.com" not in p["url"], f"{name} 还指着 GitHub —— 没代理的用户下不动"
 
 
 def test_the_tag_stays_pinned(tmp_path):
     # 绝不能指向 latest/：清单必须引用【它自己发布的那批】产物，否则半发布状态下
     # 会混版本。
-    m = build(tmp_path, "--base-url", "https://dl.qumge.com/marlo")
+    m = build(tmp_path, "--base-url", "https://cdn.qumge.com/marlo")
     for p in m["platforms"].values():
         assert "/v0.3.4/" in p["url"] and "/latest/" not in p["url"]
 
 
 def test_a_trailing_slash_does_not_double_up(tmp_path):
-    m = build(tmp_path, "--base-url", "https://dl.qumge.com/marlo/")
+    m = build(tmp_path, "--base-url", "https://cdn.qumge.com/marlo/")
     for p in m["platforms"].values():
         assert "//v0.3.4" not in p["url"].replace("https://", "")
 
 
 def test_signatures_still_travel(tmp_path):
     # 镜像换的是地址，不是信任链：签名仍然要在，客户端仍然按 pubkey 校验。
-    m = build(tmp_path, "--base-url", "https://dl.qumge.com/marlo")
+    m = build(tmp_path, "--base-url", "https://cdn.qumge.com/marlo")
     for p in m["platforms"].values():
         assert p["signature"] == "SIGNATURE"
