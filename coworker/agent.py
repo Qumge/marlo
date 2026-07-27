@@ -127,6 +127,7 @@ def build_engine(
     audit_sink: Optional[Any] = None,
     roots: Optional[list] = None,
     directory_requester: Optional[Any] = None,
+    connector_requester: Optional[Any] = None,
     plan_approver: Optional[Any] = None,
     question_asker: Optional[Any] = None,
     subscription_store: Optional[Any] = None,
@@ -323,6 +324,7 @@ def build_engine(
         audit_sink=audit_sink,
         context_provider=context_provider,
         directory_requester=directory_requester,
+        connector_requester=connector_requester,
         plan_approver=plan_approver,
         question_asker=question_asker,
     )

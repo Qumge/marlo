@@ -368,6 +368,7 @@ class SessionManager(QumgeManagerMixin):
         approver: Optional[Approver] = None,
         extra_tools: Optional[list[Any]] = None,
         directory_requester: Optional[Any] = None,
+        connector_requester: Optional[Any] = None,
         plan_approver: Optional[Any] = None,
         question_asker: Optional[Any] = None,
     ) -> Optional[TurnEngine]:
@@ -438,6 +439,10 @@ class SessionManager(QumgeManagerMixin):
             approver=approver or self.inbox_approver(session_id, agent),
             directory_requester=directory_requester
             or self.inbox_directory_requester(session_id, agent),
+            # 没有 connector_requester 时【不】退回 Inbox 版本：连一个账号要
+            # 开浏览器、要人当场操作，把它排进收件箱等于让 agent 停在那里等
+            # 一件没人会去做的事。无 requester 时工具报错，agent 换条路。
+            connector_requester=connector_requester,
             plan_approver=plan_approver or self.inbox_plan_approver(session_id, agent),
             question_asker=question_asker
             or self.inbox_question_asker(session_id, agent),
@@ -2644,7 +2649,9 @@ class SessionManager(QumgeManagerMixin):
         item = self.inbox.get(item_id)
         if item is None:
             return
-        protected_kinds = {"approval", "directory", "plan"}
+        # 授权一个账号至少和授权一个文件夹同等敏感 —— 不能让频道里的
+        # 旁人替本人点头。
+        protected_kinds = {"approval", "directory", "plan", "connector"}
         if (
             getattr(event, "platform", "") == "slack"
             and item.kind in protected_kinds

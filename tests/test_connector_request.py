@@ -99,3 +99,86 @@ def test_the_code_persona_does_not_get_it(tmp_path):
         for t in code_agent().tool_factory(AgentContext(workspace=str(tmp_path)))
     }
     assert "request_connector" not in names
+
+
+# -- engine 侧：两次等待 -------------------------------------------------------
+
+import asyncio
+
+import pytest
+
+from coworker.engine import TurnEngine
+
+
+class _Call:
+    """最小的 ToolCall 替身。"""
+
+    def __init__(self, connector="gmail", reason="read your mail"):
+        self.id = "tc1"
+        self.name = "request_connector"
+        self.arguments = {"connector": connector, "reason": reason}
+
+
+async def _drain(engine, call):
+    return [e async for e in engine._handle_connector_request(call)]
+
+
+def test_without_a_requester_it_reports_failure_not_success():
+    # 无头 surface（自动化、后台唤醒）没有人能点浏览器。这时候必须报错——
+    # 返回 connected=True 会让 agent 去调一个没有凭据的 API。
+    eng = TurnEngine.__new__(TurnEngine)
+    eng.connector_requester = None
+    eng.messages = []
+    eng._audit = lambda *a, **k: None
+
+    events = asyncio.run(_drain(eng, _Call()))
+    kinds = [e.type.value for e in events]
+    assert "connector_requested" not in kinds, "没人能应答时不该弹卡片"
+    assert kinds[-1] == "tool_finished"
+    assert events[-1].data["status"] == "denied"
+
+
+def test_it_emits_the_card_before_waiting():
+    # 顺序要紧：先发事件（界面画出卡片），再等。反过来用户看不到要他做什么。
+    seen = []
+
+    async def requester(args, tool_call_id=None):
+        seen.append("waited")
+        return {"connected": True}
+
+    eng = TurnEngine.__new__(TurnEngine)
+    eng.connector_requester = requester
+    eng.messages = []
+    eng._audit = lambda *a, **k: None
+
+    async def _interruptible(coro, interrupted=None):
+        return await coro
+
+    eng._interruptible = _interruptible
+
+    events = asyncio.run(_drain(eng, _Call()))
+    assert events[0].type.value == "connector_requested"
+    assert events[0].data["connector"] == "gmail"
+    assert seen == ["waited"]
+    assert events[-1].data["status"] == "ok"
+
+
+def test_a_decline_is_denied_not_an_error():
+    # 用户说不要，是一个正常结果。agent 该换条路，而不是把它当故障重试。
+    async def requester(args, tool_call_id=None):
+        return {"connected": False, "reason": "the user declined the request"}
+
+    eng = TurnEngine.__new__(TurnEngine)
+    eng.connector_requester = requester
+    eng.messages = []
+    eng._audit = lambda *a, **k: None
+
+    async def _interruptible(coro, interrupted=None):
+        return await coro
+
+    eng._interruptible = _interruptible
+
+    events = asyncio.run(_drain(eng, _Call()))
+    assert events[-1].data["status"] == "denied"
+    # 工具结果进了消息历史，agent 读得到原因
+    assert any("declined" in str(m) for m in eng.messages)

@@ -1554,6 +1554,74 @@ def create_app(manager: SessionManager) -> FastAPI:
                     )
             return {"answer": await manager.inbox.wait(item.id)}
 
+        async def connector_requester(args: dict, tool_call_id=None) -> dict:
+            """两次等待，这是它比 directory_requester 复杂的唯一原因。
+
+            第一次等用户在卡片上点头。第二次等浏览器里的 OAuth 真的完成 ——
+            connect-managed 只负责【打开】浏览器，完成是异步回来的（GUI 那边
+            靠 tab 的轮询发现，见 ManageTabs.tsx 的 oneClick 注释）。
+
+            两次都等，是因为 agent 需要一个确定的答案：它拿到 connected=True
+            就继续干活，拿到 False 就换条路。返回"已经开始了，你等等"对一个
+            正在做事的 agent 毫无用处。
+            """
+            import asyncio as _asyncio
+
+            from ..connectors.descriptors import get_descriptor
+
+            name = str(args.get("connector", "")).strip()
+            d = get_descriptor(name)
+            if d is None:
+                return {"connected": False, "error": f"unknown connector: {name}"}
+
+            # 已经连上了就别再问一遍 —— 用户点过的东西不该再弹一次。
+            if any(
+                c.get("name") == name and c.get("connected")
+                for c in manager.list_connectors()
+            ):
+                return {"connected": True, "already": True}
+
+            item = manager.inbox.add_connector(
+                session_id,
+                f"Connect {d.title}?",
+                body=str(args.get("reason", "")),
+                inbox=_route(),
+                visibility=_visibility(),
+                data={
+                    "connector": name,
+                    "title": d.title,
+                    # 中转方写进卡片数据，界面【在用户点头之前】就得说清楚
+                    # token 经谁的手。managed=True 的走 OpenWorker Cloud；
+                    # 其余是本机直连，不能凭空说"由 X 中转"。
+                    "brokered_by": "OpenWorker Cloud" if getattr(d, "managed", False) else "",
+                },
+                tool_call_id=tool_call_id,
+            )
+            if item.state == "pending":
+                manager.persist_session(session_id)
+                if item.visibility == VIS_INBOX:
+                    await _mirror(item)
+
+            resp = _parse_json(await manager.inbox.wait(item.id))
+            if not resp.get("connected"):
+                return {"connected": False, "reason": "the user declined the request"}
+
+            # 第二次等待：浏览器那一趟。轮询 list_connectors —— 和 GUI 用的
+            # 是同一个完成信号，不另发明一套。
+            deadline = _asyncio.get_event_loop().time() + CONNECT_TIMEOUT_S
+            while _asyncio.get_event_loop().time() < deadline:
+                if any(
+                    c.get("name") == name and c.get("connected")
+                    for c in manager.list_connectors()
+                ):
+                    return {"connected": True}
+                await _asyncio.sleep(CONNECT_POLL_S)
+            # 超时不是"失败"，是"还没回来"——说清楚，别让 agent 以为用户拒绝了。
+            return {
+                "connected": False,
+                "error": f"{d.title} was not connected within {CONNECT_TIMEOUT_S}s — the browser step may still be open",
+            }
+
         async def directory_requester(args: dict, tool_call_id=None) -> dict:
             # The engine has already emitted DIRECTORY_REQUESTED. Park, await, then apply the grant.
             item = manager.inbox.add_directory(
@@ -1663,6 +1731,7 @@ def create_app(manager: SessionManager) -> FastAPI:
             approver=approver,
             extra_tools=mcp_tools,
             directory_requester=directory_requester,
+            connector_requester=connector_requester,
             plan_approver=plan_approver,
             question_asker=question_asker,
         )
@@ -1938,6 +2007,12 @@ def create_app(manager: SessionManager) -> FastAPI:
     app.include_router(qumge_router(manager))
 
     return app
+
+
+# 浏览器里的 OAuth 要人操作：切窗口、登录、点同意。三分钟是"人还在弄"和
+# "人已经走开了"之间一个诚实的界线；轮询间隔跟 GUI 的 tab 轮询同量级。
+CONNECT_TIMEOUT_S = 180
+CONNECT_POLL_S = 2.0
 
 
 def _parse_json(s: str) -> dict[str, Any]:

@@ -27,6 +27,7 @@ KIND_QUESTION = "question"
 KIND_NOTIFICATION = "notification"
 KIND_DIRECTORY = "directory"  # agent asks to be granted a folder
 KIND_PLAN = "plan"  # agent presents a plan for approval
+KIND_CONNECTOR = "connector"  # agent asks the user to connect an account
 
 STATE_PENDING = "pending"
 STATE_RESOLVED = "resolved"
@@ -223,6 +224,28 @@ class InboxStore:
         return self.add(
             session_id,
             KIND_DIRECTORY,
+            title,
+            body=body,
+            inbox=inbox,
+            visibility=visibility,
+            data=data,
+            tool_call_id=tool_call_id,
+        )
+
+    def add_connector(
+        self,
+        session_id,
+        title,
+        *,
+        body="",
+        inbox="default",
+        visibility=VIS_INBOX,
+        data=None,
+        tool_call_id=None,
+    ) -> InboxItem:
+        return self.add(
+            session_id,
+            KIND_CONNECTOR,
             title,
             body=body,
             inbox=inbox,
