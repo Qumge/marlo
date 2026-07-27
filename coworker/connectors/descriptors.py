@@ -86,6 +86,11 @@ class ConnectorDescriptor:
     # the GUI shows a disabled button with a "Coming soon" badge, the server
     # refuses begin_managed_connect, and the manual path is unaffected.
     managed_paused: bool = False
+    # 【我们自己】的设备码授权入口（非空即支持）。与 managed 分开，不是复用：
+    # managed 的含义是"经 OpenWorker Cloud 一键"，把自家产品塞进同一个布尔值
+    # 等于说它的 token 也由第三方中转 —— 那是假的，而授权卡片上的中转方就是
+    # 从这里推出来的。凭空说"由 X 中转"而实际没有，是自己制造一个不信任的理由。
+    device_auth_base: str = ""
     # Multi-account (accounts.py generic layer): the creds field that names an
     # account (e.g. "project_id"), or "@identity" = the validator's identity
     # string. Non-empty → profiles live at `<name>:account:<id>` and the
@@ -418,6 +423,30 @@ _ALLOWED_FIELD = Field(
 )
 
 DESCRIPTORS: list[ConnectorDescriptor] = [
+    ConnectorDescriptor(
+        name="autowhisper",
+        title="AutoWhisper",
+        icon="sparkle",
+        blurb="社交媒体内容创作与发布 —— 生成、排期、发布，以及看数据。",
+        auth="api_token",
+        two_way=False,
+        # 我们自己的设备码入口。这条链路整条是我们的：授权页上写的是我们的
+        # 名字，没有第三方经手 token。
+        device_auth_base="https://autowhisper.ai",
+        fields=[
+            Field(
+                key="api_token",
+                label="API token",
+                secret=True,
+                required=True,
+                help="一键授权会自动填这里。也可以到 AutoWhisper 的「设置 ▸ API」自己生成一个。",
+            )
+        ],
+        instructions=[
+            "一键：在浏览器里批准一次，之后不用再管。",
+            "手动：到 AutoWhisper 的「设置 ▸ API」生成一个 token 粘进来。",
+        ],
+    ),
     ConnectorDescriptor(
         name="telegram",
         title="Telegram",
