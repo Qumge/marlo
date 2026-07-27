@@ -14,7 +14,7 @@
 //   - Cloud sign-in is reachable from any signed-out one-click pane, inline.
 import { expect } from "@playwright/test";
 import { test } from "./fixtures";
-import { QUMGE_STATE } from "./fixtures";
+import { QUMGE_STATE } from "./fixtures.qumge";
 
 async function openConnectors(page) {
   await page.goto("/");

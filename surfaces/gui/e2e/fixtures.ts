@@ -1,4 +1,5 @@
 import { test as base, expect, type Page } from "@playwright/test";
+import { qumgeRoute, resetQumgeState } from "./fixtures.qumge";
 
 // The app-wide /ws/events socket each page opened (UX-026 toast et al.) — specs
 // push server events through it via sendAppEvent below.
@@ -228,21 +229,6 @@ export function seedCloudSignedIn() {
     user_id: "usr_e2e",
   });
 }
-
-// The Qumge account behind the sidebar footer: who is signed in, and what is
-// left. `signed_in` comes from a key on disk in the real sidecar, so it stays
-// true here even where the balance is absent.
-export const QUMGE_STATE = {
-  signed_in: true,
-  email: "someone@example.com",
-  balance: {
-    balance_micro_usd: 19_120_000,
-    balance: 19.12,
-    currency: "USD",
-    topup_url: "https://qumge.com/en/gateway/topup/new",
-    low: false,
-  } as Record<string, unknown> | null,
-};
 
 const GALLERY_PERSONAS = [
   {
@@ -591,17 +577,7 @@ export async function mockApi(page: import("@playwright/test").Page) {
     user_id: "",
     telemetry_enabled: true,
   });
-  Object.assign(QUMGE_STATE, {
-    signed_in: true,
-    email: "someone@example.com",
-    balance: {
-      balance_micro_usd: 19_120_000,
-      balance: 19.12,
-      currency: "USD",
-      topup_url: "https://qumge.com/en/gateway/topup/new",
-      low: false,
-    },
-  });
+  resetQumgeState();
 
   // The scripted fake agent behind the session WebSocket. Speaks the real event protocol
   // ({type, data}), so the full send → stream → render loop and the approval round-trip run
@@ -1176,14 +1152,10 @@ export async function mockApi(page: import("@playwright/test").Page) {
           ),
         ],
       });
-    if (p.endsWith("/v1/qumge/account")) return json({ ...QUMGE_STATE });
-    if (p.endsWith("/v1/qumge/balance")) return json({ balance: QUMGE_STATE.balance });
-    if (p.endsWith("/v1/providers/qumge") && m === "DELETE") {
-      // What the account row's Sign out does: drop the key. Everything about
-      // the account goes with it, including the balance.
-      Object.assign(QUMGE_STATE, { signed_in: false, email: null, balance: null });
-      return json({ ok: true });
-    }
+    // 只调一次：qumgeRoute 命中 DELETE 时会改状态，调两次等于把"退出登录"
+    // 执行两遍。
+    const qumge = qumgeRoute(p, m, json);
+    if (qumge) return qumge;
     if (p.endsWith("/v1/cloud/status")) return json({ ...CLOUD_STATE });
     if (p.endsWith("/v1/cloud/login") && m === "POST") {
       Object.assign(CLOUD_STATE, { signed_in: true, account: "rohit@openworker.com", user_id: "usr_e2e" });
