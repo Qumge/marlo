@@ -34,6 +34,33 @@ def test_manual_paste_stays_available():
     assert any(f.key == "api_token" for f in d.fields)
 
 
+def test_the_device_base_points_at_the_host_that_actually_serves_it():
+    """域名写错一个字，整条授权链就是死的，而卡片上不会说为什么。
+
+    2026-07-27 真踩过：descriptors 里写的是 autowhisper.ai，而
+      autowhisper.xyz/device/code  POST → 200，真发出 user_code
+      autowhisper.ai/device/code   POST → 405（裸响应，没有 Rails 头）
+    .ai 后面不是这个应用；AutoWhisper 的 config.hosts 白名单里【只有】
+    autowhisper.xyz 和 www.autowhisper.xyz。
+
+    这条测不了网络（单测不该联网），但它能拦住"又写回 .ai"这一种。
+    """
+    d = get_descriptor("autowhisper")
+    assert d.device_auth_base == "https://autowhisper.xyz", (
+        f"device_auth_base 是 {d.device_auth_base} —— 服务在 autowhisper.xyz 上，"
+        "写别的域名等于让用户点了授权卡片拿到 405"
+    )
+
+
+def test_no_device_base_uses_a_bare_or_http_host():
+    # 设备码流程里走的是 token：明文 http 等于把它交给任何一个中间人。
+    for d in DESCRIPTORS:
+        base = getattr(d, "device_auth_base", "")
+        if base:
+            assert base.startswith("https://"), f"{d.name}: {base}"
+            assert not base.endswith("/"), f"{d.name} 末尾多了斜杠，拼出来会是双斜杠"
+
+
 def test_the_openworker_ones_do_not_grow_a_device_base():
     # 反过来也别串：借道的那几个不该冒出一个自己的设备码入口。
     for name in ("outlook", "notion", "slack"):
@@ -75,11 +102,11 @@ class _FakeClient:
 def test_start_returns_what_the_card_needs():
     c = _FakeClient(200, {
         "device_code": "secret", "user_code": "K7M2-QP4X",
-        "verification_uri": "https://autowhisper.ai/en/device",
-        "verification_uri_complete": "https://autowhisper.ai/en/device?user_code=K7M2-QP4X",
+        "verification_uri": "https://autowhisper.xyz/en/device",
+        "verification_uri_complete": "https://autowhisper.xyz/en/device?user_code=K7M2-QP4X",
         "interval": 5, "expires_in": 900,
     })
-    f = device_connect.start("https://autowhisper.ai", "autowhisper", "Mac", client=c)
+    f = device_connect.start("https://autowhisper.xyz", "autowhisper", "Mac", client=c)
     assert f.user_code == "K7M2-QP4X"
     assert f.connector == "autowhisper"
     assert f.verification_uri_complete.endswith("K7M2-QP4X")

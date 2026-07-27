@@ -448,7 +448,16 @@ DESCRIPTORS: list[ConnectorDescriptor] = [
         two_way=False,
         # 我们自己的设备码入口。这条链路整条是我们的：授权页上写的是我们的
         # 名字，没有第三方经手 token。
-        device_auth_base="https://autowhisper.ai",
+        # 【必须是 .xyz】。2026-07-27 实测：
+        #   autowhisper.xyz/device/code  POST → 200，真发出 user_code
+        #   autowhisper.ai/device/code   POST → 405（裸响应，没有任何 Rails 头）
+        # .ai 后面不是这个应用。AutoWhisper 生产配置里 asset_host、
+        # default_url_options[:host] 处处是 .xyz，而 config.hosts 白名单【只有】
+        # autowhisper.xyz 和 www.autowhisper.xyz —— 就算流量到了 Rails 也会被拒。
+        # 服务端自己返回的 verification_uri 也是 https://autowhisper.xyz/en/device。
+        #
+        # 写错这一个字，用户点授权卡片拿到的是 405，而卡片上不会说为什么。
+        device_auth_base="https://autowhisper.xyz",
         fields=[
             Field(
                 key="api_token",
