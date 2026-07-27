@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { BalanceChip } from "./BalanceChip";
+import { useEffect, useMemo, useState } from "react";
 import { useT } from "../i18n";
 import {
   AUTOMATIONS_CHANGED,
-  CLOUD_CHANGED,
   getAutomations,
   getPersonas,
   getSettings,
@@ -15,20 +13,16 @@ import {
   type RecentWorkspace,
   type SurfaceVisibility,
 } from "../api";
-import { getQumgeAccount, qumgeSignOut, type QumgeAccount } from "../api.qumge";
 import type { SessionInfo } from "../types";
 import { isProjectScoped, shortPersonaName } from "../personaScope";
 import { ConnectorIcon } from "../connectors/ConnectorIcon";
 import { Icon, type IconName } from "./Icon";
 import { PersonaGlyph, personaGlyph } from "./personaIcon";
 import { SearchModal } from "./SearchModal";
-import { QumgeSignInModal } from "./QumgeSignInModal";
+import { AccountRow } from "./AccountRow";
+import { AttnBadge } from "./AttnBadge";
 import { baseName } from "../paths";
 import { showPersonas } from "../flags";
-
-// The credit figure in the account row moves as work happens; without a timer it
-// would show whatever was true when the window was last focused.
-const ACCOUNT_REFRESH_MS = 60_000;
 
 // Session surfaces shown as accordions, in display order. The surfaced personas drive this list
 // (so third-party / Ops personas appear); the hardcoded set is the fallback before personas load.
@@ -47,18 +41,6 @@ const surfaceFromPersona = (p: Persona) => ({
 
 // Attention = Inbox items awaiting a session (an accent count that bubbles session → persona →
 // footer Inbox — all views of the one Inbox queue, never a second list).
-function AttnBadge({ n }: { n: number }) {
-  if (!n) return null;
-  return (
-    <span
-      className="text-[10px] font-semibold text-ink bg-faint/30 rounded-full px-1.5 leading-[15px] shrink-0"
-      title={`${n} awaiting your attention`}
-    >
-      {n > 99 ? "99+" : n}
-    </span>
-  );
-}
-
 // UX-023: unseen-run count on a Scheduled entry. Deliberately QUIET — same neutral
 // treatment as the attention badge; failure only colors the tooltip's words, not the
 // sidebar (owner call 2026-07-20: no color, and the entry alone carries the count).
@@ -176,41 +158,18 @@ const compactAge = (iso?: string | null): string => {
 export function Sidebar(props: Props) {
   const t = useT();
   const [searchModalOpen, setSearchModalOpen] = useState(false);
-  const [appMenuOpen, setAppMenuOpen] = useState(false);
-  // The account row (§26): the QUMGE account drives the avatar/name/dot/credit.
-  // It used to be OpenWorker Cloud's sign-in state — a third party whose
-  // connectors this build does not support — so the row said "Not signed in" to
-  // someone whose own balance was rendered two centimetres to its right.
-  // Refreshed on focus, when the menu opens, and on a timer for the balance.
-  const [account, setAccount] = useState<QumgeAccount>({
-    signed_in: false,
-    email: null,
-    balance: null,
-  });
-  const [signInOpen, setSignInOpen] = useState(false);
   // Inbox chip sticky unlock (§26): absent until the product first parks an item (or a
   // session first goes Unattended), then permanent. Per-device, like nav collapse.
   const [inboxUnlocked, setInboxUnlocked] = useState(
     () => localStorage.getItem("ocw:inbox-unlocked") === "1",
   );
-  const refreshAccount = () => getQumgeAccount().then(setAccount).catch(() => {});
   useEffect(() => {
-    refreshAccount();
-    const onFocus = () => refreshAccount();
-    window.addEventListener("focus", onFocus);
-    window.addEventListener(CLOUD_CHANGED, onFocus);
-    // The credit figure moves as work happens, so the row would otherwise sit on
-    // whatever it read when the window was last focused.
-    const timer = window.setInterval(refreshAccount, ACCOUNT_REFRESH_MS);
     const unlock = () => {
       localStorage.setItem("ocw:inbox-unlocked", "1");
       setInboxUnlocked(true);
     };
     window.addEventListener(INBOX_UNLOCK, unlock);
     return () => {
-      window.clearInterval(timer);
-      window.removeEventListener("focus", onFocus);
-      window.removeEventListener(CLOUD_CHANGED, onFocus);
       window.removeEventListener(INBOX_UNLOCK, unlock);
     };
   }, []);
@@ -359,37 +318,7 @@ export function Sidebar(props: Props) {
   // other session — the OriginIcon in the row's indicator cluster marks where they came from.
   // The separate collapsed "From Slack" band hid fresh mentions below week-old sessions.
   // A row in the account menu (§26): closes the menu, then runs the destination.
-  const appMenuItem = (
-    icon: IconName,
-    label: string,
-    onClick: () => void,
-    active?: boolean,
-    trailing?: ReactNode,
-  ) => (
-    <button
-      className={
-        "w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] text-left " +
-        (active ? "text-ink bg-paper" : "hover:bg-paper")
-      }
-      onClick={() => {
-        setAppMenuOpen(false);
-        onClick();
-      }}
-    >
-      <Icon name={icon} size={15} className="shrink-0 text-muted" />
-      <span className="flex-1">{label}</span>
-      {/* aria-hidden: the badge/shortcut must not leak into the accessible name (the old
-          Inbox row's name-includes-the-badge-count nuisance, not repeated). */}
-      {trailing != null && <span aria-hidden>{trailing}</span>}
-    </button>
-  );
 
-  // Display identity for the account row: the cloud profile only carries the email, so the
-  // row shows the capitalized local part ("rohit@…" → "Rohit"); the menu header shows it all.
-  const accountEmail = account.signed_in ? account.email || "" : "";
-  const accountName = accountEmail
-    ? accountEmail.split("@")[0].replace(/^./, (c) => c.toUpperCase())
-    : "";
 
   // Roll the per-session attention/liveness up to the persona header and the footer Inbox: the
   // accent count bubbles (sum), the liveness dot aggregates (working wins over sleeping).
@@ -1139,164 +1068,19 @@ export function Sidebar(props: Props) {
         </div>
       </div>
 
-      {/* Bottom (§26): exactly ONE row — the account anchor. The inbox chip on it is
-          state-driven with a sticky unlock (quiet when empty, accent + count when pending);
-          everything else lives in the account menu, which ALWAYS lists Inbox + Connectors. */}
-      <div className="px-2.5 py-2 border-t border-line">
-        <div className="relative">
-          {appMenuOpen && (
-            <>
-              <div className="fixed inset-0 z-30" onClick={() => setAppMenuOpen(false)} />
-              <div
-                className="absolute z-40 bottom-full left-0 right-0 mb-1 rounded-xl border border-line bg-panel shadow-2xl py-1"
-                data-testid="account-menu"
-                role="menu"
-              >
-                {account.signed_in ? (
-                  <div
-                    className="px-3 py-1.5 mb-1 text-[11px] text-faint truncate border-b border-line"
-                    data-testid="account-header"
-                    title={accountEmail ? t("accountOf")(accountEmail) : t("signedInToQumge")}
-                  >
-                    {accountEmail ? t("accountOf")(accountEmail) : t("signedInToQumge")}
-                  </div>
-                ) : (
-                  <>
-                    <div className="px-3 py-1.5 text-[11px] text-faint border-b border-line">
-                      {t("signedOutHint")}
-                    </div>
-                    <button
-                      className="w-full flex items-center gap-2.5 px-3 py-1.5 mb-1 text-[13px] text-left text-accent hover:bg-paper"
-                      data-testid="account-sign-in"
-                      onClick={() => {
-                        setAppMenuOpen(false);
-                        setSignInOpen(true);
-                      }}
-                    >
-                      <Icon name="plug" size={15} className="shrink-0" /> {t("signInToQumge")}
-                    </button>
-                  </>
-                )}
-                {appMenuItem(
-                  "inbox",
-                  t("inbox"),
-                  props.onOpenInbox,
-                  props.inboxActive,
-                  <AttnBadge n={totalAttention} />,
-                )}
-                {appMenuItem("plug", t("connectors"), props.onOpenIntegrations, props.integrationsActive)}
-                <div className="h-px bg-line my-1 mx-2" />
-                {appMenuItem(
-                  "gear",
-                  t("settings"),
-                  props.onManage,
-                  false,
-                  <span className="text-[11px] text-faint">⌘ ,</span>,
-                )}
-                {appMenuItem("clock", t("automations"), props.onOpenScheduled, props.scheduledActive)}
-                {appMenuItem("audit", t("activity"), props.onOpenAudit, props.auditActive)}
-                {account.signed_in && (
-                  <>
-                    <div className="h-px bg-line my-1 mx-2" />
-                    {/* Ends the session the header names. This used to sign the
-                        user out of OpenWorker Cloud while the line above it
-                        showed their Qumge address. */}
-                    {appMenuItem("signOut", t("signOut"), async () => {
-                      await qumgeSignOut();
-                      await refreshAccount();
-                    })}
-                  </>
-                )}
-              </div>
-            </>
-          )}
-
-          <button
-            className={
-              "w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[13px] text-left " +
-              (appMenuOpen ? "bg-paper text-ink" : "hover:bg-paper")
-            }
-            data-testid="account-row"
-            onClick={() => {
-              if (!appMenuOpen) void refreshAccount();
-              setAppMenuOpen((v) => !v);
-            }}
-            aria-haspopup="menu"
-            aria-expanded={appMenuOpen}
-            aria-label={
-              account.signed_in && accountEmail
-                ? t("accountAria")(accountEmail)
-                : account.signed_in
-                  ? t("signedInToQumge")
-                  : t("accountAriaSignedOut")
-            }
-          >
-            <span
-              className={
-                "w-6 h-6 rounded-full grid place-items-center text-[10.5px] font-semibold shrink-0 " +
-                (account.signed_in
-                  ? "bg-accentSoft text-accent"
-                  : "bg-paper text-faint border border-line")
-              }
-              aria-hidden
-            >
-              {account.signed_in ? accountName.slice(0, 1).toUpperCase() : "?"}
-            </span>
-            <span className={"truncate " + (account.signed_in ? "" : "text-muted")}>
-              {account.signed_in
-                ? accountEmail
-                  ? accountName
-                  : t("signedInToQumge")
-                : t("notSignedIn")}
-            </span>
-            {account.signed_in && (
-              <span
-                className="w-[7px] h-[7px] rounded-full bg-ok shrink-0"
-                title={t("signedInToQumge")}
-                aria-hidden
-              />
-            )}
-            <span className="flex-1" />
-              {/* Credit, where someone already looks for account things.
-                  Renders nothing when it cannot be fetched — offline and
-                  server-down read the same to a person. Fed from the account
-                  poll rather than one of its own: two timers asking the same
-                  server the same question is how the row and the number end up
-                  disagreeing on screen. */}
-              <BalanceChip balance={account.balance} />
-            {inboxUnlocked && (
-              <span
-                className={
-                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11.5px] shrink-0 cursor-pointer " +
-                  (totalAttention > 0
-                    ? "bg-accentSoft text-accent font-semibold"
-                    : "text-faint hover:text-ink")
-                }
-                data-testid="inbox-chip"
-                role="button"
-                aria-label={
-                  totalAttention > 0 ? t("inboxNeedsYou")(totalAttention) : t("inbox")
-                }
-                title={totalAttention > 0 ? `Inbox — ${totalAttention} items need you` : "Inbox"}
-                onClick={(e) => {
-                  // The chip goes STRAIGHT to Inbox — the menu is the row's target, not the chip's.
-                  e.stopPropagation();
-                  setAppMenuOpen(false);
-                  props.onOpenInbox();
-                }}
-              >
-                <Icon name="inbox" size={13} />
-                {totalAttention > 0 ? totalAttention : null}
-              </span>
-            )}
-            <Icon
-              name="chevronDown"
-              size={14}
-              className={"text-faint shrink-0 transition-transform " + (appMenuOpen ? "" : "rotate-180")}
-            />
-          </button>
-        </div>
-      </div>
+      <AccountRow
+        onOpenInbox={props.onOpenInbox}
+        inboxActive={!!props.inboxActive}
+        onOpenIntegrations={props.onOpenIntegrations}
+        integrationsActive={!!props.integrationsActive}
+        onManage={props.onManage}
+        onOpenScheduled={props.onOpenScheduled}
+        scheduledActive={!!props.scheduledActive}
+        onOpenAudit={props.onOpenAudit}
+        auditActive={!!props.auditActive}
+        totalAttention={totalAttention}
+        inboxUnlocked={inboxUnlocked}
+      />
 
       {searchModalOpen && (
         <SearchModal
@@ -1310,12 +1094,6 @@ export function Sidebar(props: Props) {
         />
       )}
 
-      {signInOpen && (
-        <QumgeSignInModal
-          onClose={() => setSignInOpen(false)}
-          onConnected={() => void refreshAccount()}
-        />
-      )}
     </div>
   );
 }
