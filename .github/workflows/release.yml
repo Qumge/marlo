@@ -182,13 +182,54 @@ jobs:
             exit 1
           fi
           if ls dist/*.sig >/dev/null 2>&1; then
+            # R2_PUBLIC_BASE 配了，清单里的下载地址就指向镜像。github.com 在国内
+            # 直连不通（30 秒超时），而清单和安装包原本全在 GitHub 上——没有代理的
+            # 用户装不上也更新不了。没配就回落到 GitHub（fork 照常工作）。
             python3 packaging/make_update_manifest.py \
               --version "${TAG#v}" --tag "$TAG" --repo "$GITHUB_REPOSITORY" \
               --dist dist --out dist/latest.json \
+              --base-url "${{ secrets.R2_PUBLIC_BASE }}" \
               --notes "Marlo ${TAG#v}"
           else
             echo "::warning::no updater signatures in dist/ — release ships WITHOUT auto-update manifest"
           fi
+
+      # 把产物推到 R2 镜像。GitHub 那份【照旧保留】——镜像是给够不着 GitHub 的人
+      # 用的第二条路，不是替代；两边都在，任何一边挂了还有另一边。
+      #
+      # 密钥缺失就跳过（和上面 Apple 签名同样的降级方式）：fork 和 scratch 构建
+      # 不该因为拿不到我们的存储凭据而失败。
+      #
+      # 上传【必须在发布之前】：清单里的 URL 已经指向镜像了，先发布再上传的话，
+      # 中间那段时间里所有收到更新提示的人都会下到 404。
+      - name: Mirror the artifacts to R2
+        # 【不要用 if: secrets.X != ''】——`secrets` 上下文在 step 的 if 里不可用，
+        # 那个条件恒为假，这一步会永远被跳过而没有任何提示。在脚本里判断，并且
+        # 缺密钥时打一条 ::warning::，跳过要能被看见。
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [ -z "${AWS_ACCESS_KEY_ID:-}" ] || [ -z "${R2_BUCKET:-}" ]; then
+            echo "::warning::R2 密钥未配置 —— 这次发布【没有镜像】，够不着 GitHub 的用户装不上也更新不了"
+            exit 0
+          fi
+          # 按 tag 归档一份（清单指向这里，版本永远对得上）……
+          aws s3 cp dist/ "s3://$R2_BUCKET/marlo/$TAG/" \
+            --endpoint-url "$R2_ENDPOINT" --recursive --no-progress
+          # ……另一份放在稳定路径下，给网站的下载按钮和 updater 的入口用。
+          for f in dist/Marlo-macos-arm64.dmg dist/Marlo-windows-setup.exe \
+                   dist/Marlo-windows.msi dist/latest.json; do
+            [ -f "$f" ] || continue
+            aws s3 cp "$f" "s3://$R2_BUCKET/marlo/latest/$(basename "$f")" \
+              --endpoint-url "$R2_ENDPOINT" --no-progress
+          done
+          echo "镜像完成：$TAG"
 
       - uses: softprops/action-gh-release@v2
         with:

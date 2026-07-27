@@ -12,9 +12,14 @@ uploads):
     Marlo-macos-arm64.app.tar.gz(.sig)   -> platforms["darwin-aarch64"]
     Marlo-windows-setup.exe(.sig)        -> platforms["windows-x86_64"]
 
-URLs point at the TAG-pinned GitHub download path (releases/download/<tag>/<asset>),
-never at `latest/` — a manifest must reference exactly the artifacts it shipped with,
-or a half-published release would mix versions. Platforms whose artifact or .sig is
+URLs point at the TAG-pinned download path, never at `latest/` — a manifest must
+reference exactly the artifacts it shipped with, or a half-published release would
+mix versions.
+
+`--base-url` 把下载地址换到镜像上（R2 + 自定义域名）。为什么需要：github.com 在
+国内直连不通（实测 30 秒超时），而更新清单和安装包原本【全在 GitHub 上】——对一个
+没有代理的用户，装不上也更新不了。给了 --base-url 就用 <base>/<tag>/<asset>，
+不给就还是 GitHub（fork 和没配镜像的构建照常工作）。 Platforms whose artifact or .sig is
 missing are SKIPPED with a warning (e.g. a mac-only hotfix release), so shipped apps
 on other platforms simply see no update rather than a broken one.
 
@@ -51,6 +56,12 @@ def main() -> int:
     ap.add_argument(
         "--notes", default="", help="release notes line shown in the update prompt"
     )
+    ap.add_argument(
+        "--base-url",
+        default="",
+        help="镜像根地址，如 https://dl.qumge.com/marlo。给了就用 <base>/<tag>/<asset>，"
+        "不给就回落到 GitHub releases。",
+    )
     args = ap.parse_args()
 
     platforms: dict[str, dict[str, str]] = {}
@@ -69,10 +80,13 @@ def main() -> int:
                 file=sys.stderr,
             )
             continue
-        platforms[platform] = {
-            "signature": sig.read_text().strip(),
-            "url": f"https://github.com/{args.repo}/releases/download/{args.tag}/{asset}",
-        }
+        base = args.base_url.rstrip("/")
+        url = (
+            f"{base}/{args.tag}/{asset}"
+            if base
+            else f"https://github.com/{args.repo}/releases/download/{args.tag}/{asset}"
+        )
+        platforms[platform] = {"signature": sig.read_text().strip(), "url": url}
 
     if not platforms:
         print(
