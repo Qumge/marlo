@@ -11,11 +11,9 @@ import {
   getConnectors,
   getCloudStatus,
   setOnboarded,
-  startQumgeDevice,
-  pollQumgeDevice,
   type ProviderInfo,
-  type QumgeDeviceStart,
 } from "../api";
+import { startQumgeDevice, pollQumgeDevice, type QumgeDeviceStart } from "../api.qumge";
 
 vi.mock("../api", () => ({
   getProviders: vi.fn(),
@@ -29,6 +27,11 @@ vi.mock("../api", () => ({
   getRecentChannels: vi.fn(),
   waitForCloudSignIn: vi.fn(),
   setOnboarded: vi.fn(),
+}));
+
+// 设备码那两个搬到了 api.qumge —— 整模块 mock，否则真模块会去被 mock 掉的
+// ../api 里找 httpBase / fetch，那里没有。
+vi.mock("../api.qumge", () => ({
   startQumgeDevice: vi.fn(),
   pollQumgeDevice: vi.fn(),
 }));

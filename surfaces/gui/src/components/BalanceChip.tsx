@@ -1,4 +1,4 @@
-import { type QumgeBalance } from "../api";
+import { type QumgeBalance } from "../api.qumge";
 import { openExternal } from "../tauri";
 import { useT } from "../i18n";
 

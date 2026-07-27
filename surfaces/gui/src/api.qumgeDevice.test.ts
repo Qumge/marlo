@@ -7,7 +7,7 @@
 // unreachable — see device_flow.py), so the component's existing try/catch is the single
 // place that turns a failure into a message.
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { pollQumgeDevice, startQumgeDevice } from "./api";
+import { pollQumgeDevice, startQumgeDevice } from "./api.qumge";
 
 afterEach(() => {
   vi.unstubAllGlobals();

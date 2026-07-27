@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useT } from "../i18n";
-import { pollQumgeDevice, startQumgeDevice, type QumgeDeviceStart, type QumgeDevicePoll } from "../api";
+import { pollQumgeDevice, startQumgeDevice, type QumgeDeviceStart, type QumgeDevicePoll } from "../api.qumge";
 import { openExternal } from "../tauri";
 
 // Marlo's "sign in to Qumge" panel — replaces Marlo's thirteen-provider-picker first

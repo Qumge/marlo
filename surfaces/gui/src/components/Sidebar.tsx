@@ -6,18 +6,16 @@ import {
   CLOUD_CHANGED,
   getAutomations,
   getPersonas,
-  getQumgeAccount,
   getSettings,
   INBOX_UNLOCK,
   PERSONAS_CHANGED,
-  qumgeSignOut,
   setNavLayout,
   type Automation,
   type Persona,
-  type QumgeAccount,
   type RecentWorkspace,
   type SurfaceVisibility,
 } from "../api";
+import { getQumgeAccount, qumgeSignOut, type QumgeAccount } from "../api.qumge";
 import type { SessionInfo } from "../types";
 import { isProjectScoped, shortPersonaName } from "../personaScope";
 import { ConnectorIcon } from "../connectors/ConnectorIcon";

@@ -5,9 +5,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { QumgeConnect } from "./QumgeConnect";
-import { pollQumgeDevice, startQumgeDevice } from "../api";
+import { pollQumgeDevice, startQumgeDevice } from "../api.qumge";
 
-vi.mock("../api", () => ({
+vi.mock("../api.qumge", () => ({
   startQumgeDevice: vi.fn(),
   pollQumgeDevice: vi.fn(),
 }));
