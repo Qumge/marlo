@@ -79,7 +79,11 @@ jobs:
           python -m venv .venv
           if [ "$RUNNER_OS" = "Windows" ]; then VPY=.venv/Scripts/python; else VPY=.venv/bin/python; fi
           "$VPY" -m pip install --upgrade pip
-          "$VPY" -m pip install -e . pyinstaller typer tzdata
+          # pillow: build_dmg.sh redraws the installer background from
+          # make_dmg_background.py rather than trusting a committed PNG — the
+          # product name is inside that picture, and it was wrong for eleven
+          # releases because nothing can read a binary.
+          "$VPY" -m pip install -e . pyinstaller typer tzdata pillow
           "$VPY" -c "import aisuite, coworker"  # fail fast if either import breaks
 
       - name: npm ci
