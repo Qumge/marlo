@@ -274,13 +274,17 @@ export function McpTab() {
 
   return (
     <div className="space-y-3">
+      {/* 内部说法清掉：permission-gated / new sessions 是我们的词汇。用户关心
+          的只有两件事——它会不会未经我同意就动手（不会），以及刚加的什么时候
+          能用。 */}
       <p className="text-[12.5px] text-muted leading-relaxed">
-        Enabled servers' tools are permission-gated. Changes apply to new sessions —{" "}
+        Marlo still asks before using any of these. New ones become available in your next
+        conversation —{" "}
         <button
           className="text-accent font-medium hover:underline"
           onClick={() => reloadMcp().then(refresh)}
         >
-          reload now
+          use them now
         </button>
         .
       </p>

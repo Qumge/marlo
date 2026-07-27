@@ -135,6 +135,19 @@ export const zh: Strings = {
   connectorTitleBrowser: "浏览器",
   connectorTitleEmail: "邮箱",
 
+  // 连接列表的分组标题。分组本身由后端给（descriptors 的 group），
+  // 这里只负责文案。
+  groupMail: "邮件",
+  groupCalendar: "日历",
+  groupChat: "聊天",
+  groupFiles: "文件与网盘",
+  groupWeb: "网页",
+  groupOther: "其他",
+  // 这个版本连不上的连接器上那一行。不说"暂不可用"——用户会以为是我们坏了。
+  connectorWaitingUpstream: "等服务商审核",
+  // 邮件类的死胡同有出路：同一个邮箱用 IMAP 连得上。别让人以为是坏了。
+  connectorUseImapInstead: "改用邮箱（IMAP）→",
+
   accountOf: (email) => `${email} · Qumge`,
   accountAria: (email) => `账号：${email}`,
   accountAriaSignedOut: "账号：未登录",

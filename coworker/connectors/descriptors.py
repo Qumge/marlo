@@ -59,6 +59,14 @@ class ConnectorDescriptor:
     two_way: bool
     fields: list[Field]
     instructions: list[str]
+    # 用户认得的分组：邮件 / 日历 / 聊天 / 文件与网盘 / 网页 / 其他。
+    #
+    # 放在【后端】而不是前端一张映射表：加新连接器时，前端那张表会漏，而漏掉的
+    # 表现是它悄悄掉进"其他"——没人会发现。这里漏了至少还在同一个文件里。
+    #
+    # 分组名是 UI 文案，中文由前端 i18n 给；这里存的是 key。
+    group: str = "other"
+
     # 按邮箱域名给的分步指引：{"qq.com": {"title": …, "steps": [...], "url": …}}。
     #
     # 为什么不是 instructions 那一坨：现在那四条同时讲 Gmail、iCloud、Fastmail 和
@@ -474,6 +482,7 @@ DESCRIPTORS: list[ConnectorDescriptor] = [
     ),
     ConnectorDescriptor(
         name="telegram",
+        group="chat",
         title="Telegram",
         icon="✈",
         blurb="Two-way messaging with a Telegram bot.",
@@ -502,6 +511,7 @@ DESCRIPTORS: list[ConnectorDescriptor] = [
     ),
     ConnectorDescriptor(
         name="slack",
+        group="chat",
         title="Slack",
         icon="💬",
         blurb="Two-way messaging — one-click via OpenWorker Cloud, or a manual Slack app (Socket Mode).",
@@ -544,6 +554,7 @@ DESCRIPTORS: list[ConnectorDescriptor] = [
     ),
     ConnectorDescriptor(
         name="email",
+        group="mail",
         title="Email (IMAP)",
         icon="✉",
         blurb="Read, search, and send mail from any IMAP account — Gmail, iCloud, Fastmail, or custom.",
@@ -651,6 +662,7 @@ DESCRIPTORS: list[ConnectorDescriptor] = [
     ),
     ConnectorDescriptor(
         name="gmail",
+        group="mail",
         title="Gmail",
         icon="✉",
         blurb="Search, summarize, draft, and send email.",
@@ -678,6 +690,7 @@ DESCRIPTORS: list[ConnectorDescriptor] = [
     ),
     ConnectorDescriptor(
         name="google_calendar",
+        group="calendar",
         title="Google Calendar",
         icon="◷",
         blurb="Read availability, summarize schedules, and create events.",
@@ -703,6 +716,7 @@ DESCRIPTORS: list[ConnectorDescriptor] = [
     ),
     ConnectorDescriptor(
         name="browser",
+        group="web",
         title="Browser",
         icon="⌕",
         blurb="Let agents navigate, read, and act on websites with approval.",
@@ -746,6 +760,7 @@ DESCRIPTORS: list[ConnectorDescriptor] = [
     ),
     ConnectorDescriptor(
         name="outlook",
+        group="mail",
         title="Outlook",
         icon="◎",
         blurb="Microsoft 365 mail and calendar: search, draft, and send email; "
@@ -926,6 +941,7 @@ DESCRIPTORS: list[ConnectorDescriptor] = [
     ),
     ConnectorDescriptor(
         name="discord",
+        group="chat",
         title="Discord",
         icon="✦",
         blurb="Read channels and send messages through a Discord bot.",
@@ -1028,6 +1044,7 @@ DESCRIPTORS: list[ConnectorDescriptor] = [
     ),
     ConnectorDescriptor(
         name="dropbox",
+        group="files",
         title="Dropbox",
         icon="▣",
         blurb="Search, browse, and read files in Dropbox.",
@@ -1051,6 +1068,7 @@ DESCRIPTORS: list[ConnectorDescriptor] = [
     ),
     ConnectorDescriptor(
         name="box",
+        group="files",
         title="Box",
         icon="▢",
         blurb="Search, browse, and read files in Box.",
@@ -1074,6 +1092,7 @@ DESCRIPTORS: list[ConnectorDescriptor] = [
     ),
     ConnectorDescriptor(
         name="whatsapp",
+        group="chat",
         title="WhatsApp",
         icon="◌",
         blurb="Send WhatsApp messages through Meta's official Cloud API (outbound only).",
@@ -1221,6 +1240,7 @@ DESCRIPTORS: list[ConnectorDescriptor] = [
     ),
     ConnectorDescriptor(
         name="google_drive",
+        group="files",
         title="Google Drive",
         icon="◬",
         blurb="Search, browse, and read files in Google Drive.",
@@ -1351,6 +1371,7 @@ DESCRIPTORS: list[ConnectorDescriptor] = [
     ),
     ConnectorDescriptor(
         name="notion",
+        group="files",
         title="Notion",
         icon="◰",
         blurb="Search pages, read content, query databases, create pages.",

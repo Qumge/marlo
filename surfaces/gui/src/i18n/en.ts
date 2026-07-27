@@ -176,6 +176,19 @@ export const en = {
   connectorTitleBrowser: "Browser",
   connectorTitleEmail: "Email",
 
+  // 连接列表的分组标题。分组本身由后端给（descriptors 的 group），
+  // 这里只负责文案。
+  groupMail: "Mail",
+  groupCalendar: "Calendar",
+  groupChat: "Chat",
+  groupFiles: "Files & drives",
+  groupWeb: "Web",
+  groupOther: "Everything else",
+  // 这个版本连不上的连接器上那一行。不说"暂不可用"——用户会以为是我们坏了。
+  connectorWaitingUpstream: "Waiting on the provider",
+  // 邮件类的死胡同有出路：同一个邮箱用 IMAP 连得上。别让人以为是坏了。
+  connectorUseImapInstead: "Use Email (IMAP) →",
+
   // -- account (sidebar footer) ---------------------------------------------
   // The footer used to report sign-in to OpenWorker Cloud — a third party whose
   // connectors this build does not support — so someone signed in to Qumge read

@@ -449,6 +449,9 @@ export interface Connector {
   fields: ConnectorField[];
   // 邮箱专用：域名 -> 该服务商的分步指引。其他连接器为空。
   provider_hints?: Record<string, ProviderHint>;
+  // 用户认得的分组：mail / calendar / chat / files / web / other。
+  // 后端老版本不带，所以可选；缺了就当 other。
+  group?: string;
   instructions: string[];
   connected: boolean;
   account: string | null;
