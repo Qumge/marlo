@@ -19,8 +19,8 @@ export const zh: Strings = {
   noConversations: "还没有对话",
   notSignedIn: "未登录",
 
-  introGreeting: "今天想做点什么？",
-  introLede: "挑一件事开始 —— 我来做，做完保存好。也可以直接在下面说你要什么。",
+  introGreeting: "你每周的时间花在哪儿？",
+  introLede: "挑那件你最不想做的告诉我 —— 我来试试。也可以直接在下面说你要什么。",
   taskAnalyzeTitle: "看看一个文件夹里都有什么",
   taskAnalyzeSub: "我读一遍，把要紧的讲给你听",
   taskAnalyzeAct: "选个文件夹 →",

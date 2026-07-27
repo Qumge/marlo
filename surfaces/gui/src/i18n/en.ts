@@ -24,9 +24,11 @@ export const en = {
   notSignedIn: "Not signed in",
 
   // -- session intro --------------------------------------------------------
-  introGreeting: "What should we produce?",
+  // 问他的苦，不是"我能帮你做什么"——后者把负担推回给用户，而一个白领面对
+  // 空白输入框最常见的反应就是关掉。
+  introGreeting: "What takes most of your week?",
   introLede:
-    "Pick a task to start — I'll do the work and save the result. Or just type what you need below.",
+    "Tell me the part you least want to be doing — I'll take a run at it. Or just say what you need below.",
   taskAnalyzeTitle: "Analyze the files in a directory",
   taskAnalyzeSub: "I'll read them and summarize what matters",
   taskAnalyzeAct: "Pick a folder →",

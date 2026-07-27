@@ -12,7 +12,11 @@ import { test } from "./fixtures";
 
 test("three rows, none of them gated behind a connector", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText("What should we produce?")).toBeVisible();
+  // 断言【行为】而不是字面文案：开场是一个可见的问句。原来这里写死了
+  // "What should we produce?"，换一次文案就红一次——而文案是会换的。
+  const greeting = page.locator("h1.greeting");
+  await expect(greeting).toBeVisible();
+  await expect(greeting).toContainText("?");
 
   await expect(page.locator(".task-card")).toHaveCount(3);
   await expect(page.getByText("Set me up (optional)")).toHaveCount(0);
