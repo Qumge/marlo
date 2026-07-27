@@ -119,6 +119,32 @@ describe("the account row names the Qumge account", () => {
   });
 });
 
+describe("the credit chip inside the row", () => {
+  it("is not a button inside a button", async () => {
+    // React warned about this on every render, into a console nothing was
+    // reading — it only surfaces when the app is actually run, which is how it
+    // survived a green unit suite and a green e2e suite.
+    stubFetch(SIGNED_IN);
+    render(<Sidebar {...baseProps} />);
+
+    const chip = await screen.findByTestId("balance-chip");
+    expect(chip.tagName).not.toBe("BUTTON");
+    expect(chip.closest("button")).toBe(await screen.findByTestId("account-row"));
+  });
+
+  it("never swallows a click on the row it sits in", async () => {
+    // The row is the app's primary navigation. The chip lands near its centre
+    // once the inbox badge appears, so a chip that stopped propagation meant
+    // pressing your own account row opened a payment page and no menu — which
+    // is exactly what 89 e2e tests reported when it briefly did.
+    stubFetch(SIGNED_IN);
+    render(<Sidebar {...baseProps} />);
+
+    fireEvent.click(await screen.findByTestId("balance-chip"));
+    expect(await screen.findByTestId("account-menu")).toBeTruthy();
+  });
+});
+
 describe("what the row does when the server cannot be reached", () => {
   it("stays signed in with no balance rather than flipping to signed out", async () => {
     // A key on disk is a signed-in user. Deriving the state from a successful

@@ -25,16 +25,35 @@ export function BalanceChip({ balance }: { balance: QumgeBalance | null }) {
 
   const amount = `$${balance.balance.toFixed(2)}`;
 
+  // A span, not a button: the account row is a <button>, and a button inside a
+  // button is invalid HTML that browsers resolve however they like. React said
+  // so on every render, into a console nothing was reading — it only surfaces
+  // when the app is actually run, which is how it survived a green unit suite
+  // and a green e2e suite. The inbox chip beside it has always been a span.
+  //
+  // Deliberately NOT stopPropagation, unlike that inbox chip. This row is the
+  // app's primary navigation — Settings, Connectors, Inbox and Automations all
+  // live behind it — and it is narrow enough that the chip sits near its centre
+  // once the inbox badge appears. Swallowing the click there means someone
+  // pressing their own account row gets a payment page and no menu. Opening
+  // top-up AND the menu is the lesser of the two.
   return (
-    <button
-      type="button"
+    <span
+      role="button"
+      tabIndex={0}
       className={"balance-chip" + (balance.low ? " is-low" : "")}
       data-testid="balance-chip"
       title={balance.low ? t("balanceLowTitle") : t("balanceTitle")}
       onClick={() => openExternal(balance.topup_url)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openExternal(balance.topup_url);
+        }
+      }}
     >
       <span className="balance-chip__amount">{amount}</span>
       {balance.low && <span className="balance-chip__add">{t("addCredit")}</span>}
-    </button>
+    </span>
   );
 }
