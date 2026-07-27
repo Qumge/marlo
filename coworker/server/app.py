@@ -1301,24 +1301,6 @@ def create_app(manager: SessionManager) -> FastAPI:
     def providers_get() -> list[dict[str, Any]]:
         return manager.get_providers()
 
-    @app.get("/v1/qumge/balance")
-    def qumge_balance() -> dict[str, Any]:
-        """Credit left, and where to add more. `{"balance": null}` when it cannot
-        be known — not signed in, offline, server down. The GUI shows nothing in
-        that case rather than an error in front of someone trying to work."""
-        from ..qumge import balance as qumge_balance_mod
-
-        return {"balance": qumge_balance_mod.fetch(manager.secrets)}
-
-    @app.get("/v1/qumge/account")
-    def qumge_account() -> dict[str, Any]:
-        """Whose account this is, and what it has left — what the sidebar footer
-        renders. `signed_in` is answered from the SecretStore, so going offline
-        never demotes a signed-in user to a signed-out one."""
-        from ..qumge import account as qumge_account_mod
-
-        return qumge_account_mod.status(manager.secrets)
-
     @app.post("/v1/providers")
     def providers_set(body: dict) -> dict[str, Any]:
         name = (body or {}).get("name", "")
@@ -1337,15 +1319,6 @@ def create_app(manager: SessionManager) -> FastAPI:
         return await asyncio.to_thread(
             manager.verify_provider, name, (body or {}).get("fields")
         )
-
-    # -- Qumge device sign-in (RFC 8628) ----------------------------------------
-    @app.post("/v1/qumge/device/start")
-    def qumge_device_start(body: dict | None = None) -> dict[str, Any]:
-        return manager.start_qumge_device((body or {}).get("device_name"))
-
-    @app.get("/v1/qumge/device/poll")
-    def qumge_device_poll() -> dict[str, Any]:
-        return manager.poll_qumge_device()
 
     # -- settings (model API key) -----------------------------------------------
     @app.get("/v1/settings")
@@ -1957,6 +1930,12 @@ def create_app(manager: SessionManager) -> FastAPI:
             pass
         finally:
             manager.unregister_event_client(ws.send_json)
+
+    # Qumge 的四个路由住在 coworker/qumge/routes.py：它们原本散落在上游的
+    # 路由表中间，散着的改动就是散着的 hunk。
+    from ..qumge.routes import qumge_router
+
+    app.include_router(qumge_router(manager))
 
     return app
 
