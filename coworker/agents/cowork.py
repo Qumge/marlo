@@ -45,7 +45,23 @@ COWORK_INSTRUCTIONS = (
     "This conversation opened by asking the user where most of their week goes and "
     "which part they least want to be doing. Their first reply is the answer to that "
     "— treat it as the job they want off their plate, not as a stray fragment. Find "
-    "out just enough to start, then start."
+    "out just enough to start, then start. "
+    # 真跑了三次老板那段对话（"我们天天要发视频，太累了"）：三次都是连环追问，
+    # 一次都没去技能目录看看。而明确让它去搜，链路一路通到底 —— 所以缺的不是
+    # 能力，是【没人告诉它这是第一步】。
+    #
+    # 上面那段里本来就有 "load skills from the catalog for specialized work"，
+    # 埋在一个长句中间，模型读到了但不据此行动。所以这里单独成句，并且【绑在
+    # "start" 上】：不是"你可以查目录"，是"开始动手 = 先查目录"。
+    #
+    # 为什么值得占一句：目录里那条技能可能是别人写了几千 star 的，也可能是我们
+    # 自己的；不查，用户拿到的就是模型现编的一套流程 —— 比现成的差，而且我们
+    # 整个技能目录白建。
+    "'Start' means look for an existing skill before you improvise: search the skill "
+    "catalog with the user's own words first. A skill someone already wrote and "
+    "battle-tested beats anything you invent on the spot. If the one you find needs "
+    "an account connected, ask for it right here in the conversation — never send the "
+    "user off to hunt for a settings page."
 )
 
 
