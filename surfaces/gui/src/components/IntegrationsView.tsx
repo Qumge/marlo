@@ -1,88 +1,49 @@
-import { useEffect, useState } from "react";
-import { getConnectors } from "../api";
+import { useState } from "react";
 import { McpTab } from "./ManageTabs";
 import { ConnectorsSection } from "./connectors/ConnectorsSection";
 import { Icon } from "./Icon";
+import { useT } from "../i18n";
 
-// The Connectors surface (renamed from "Integrations", §26) keeps the left sub-nav, now just
-// Connectors · MCP. The old "Messaging routing" tab (and its ⚠ unrouted badge) moved whole to
-// Inbox ▸ Configure (§28): inbox-delivery config belongs with the Inbox, and Unrouted is
-// "messages that never reached you". The one remaining Activity is the audit log, reached from
-// the account menu.
-type IntTab = "connectors" | "mcp";
-
-// Fixed sub-nav (UX-DECISIONS §21): connector detail lives as a SUBPAGE under
-// Connectors, never as a nav item — the nav must not grow per connector.
-const INT_TABS: { key: IntTab; label: string; icon: "plug" | "code" }[] = [
-  { key: "connectors", label: "Connectors", icon: "plug" },
-  { key: "mcp", label: "MCP servers", icon: "code" },
-];
-
+// 一个页面，一个列表。
+//
+// 这里【曾经】是两个标签：Connectors 和 MCP servers。对我们是两件事（一个是账号，
+// 一个是工具服务器），对用户是同一件事：「Marlo 能用什么」。分成两个标签的代价是
+// 具体的——两段几乎一样的说明文字（"External tool servers…" 在这里和 ManageTabs
+// 里各写了一遍，改一处另一处就漂），以及一个非技术用户会以为自己要在两处各配一次。
+//
+// MCP 收进折叠的「高级」：它有用，但一个刚打开 Marlo 的人不该在这里被 stdio/HTTP
+// 拦住。默认收起 = 默认不存在；想要的人点一下就有。
 export function IntegrationsView() {
-  const [tab, setTab] = useState<IntTab>("connectors");
-  // Sub-nav count: how many connectors exist. Polled so the badge stays live.
-  const [connCount, setConnCount] = useState<number | null>(null);
-
-  useEffect(() => {
-    const load = () => {
-      getConnectors().then((cs) => setConnCount(cs.length)).catch(() => {});
-    };
-    load();
-    const t = setInterval(load, 5000);
-    return () => clearInterval(t);
-  }, []);
+  const t = useT();
+  const [showServers, setShowServers] = useState(false);
 
   return (
     <main className="flex-1 min-w-0 flex bg-paper">
-      <nav className="page-subnav w-[208px] shrink-0 border-r border-line bg-panel/40 px-3 py-4">
-        <div className="px-2 text-[13.5px] font-semibold mb-3 flex items-center gap-2">
-          <Icon name="plug" size={16} /> Connectors
-        </div>
-        {INT_TABS.map((t) => {
-          const active = tab === t.key;
-          return (
-            <button
-              key={t.key}
-              className={
-                "w-full text-left px-2.5 py-2 rounded-lg text-[13px] flex items-center justify-between " +
-                (active
-                  ? "bg-paper text-accent font-medium"
-                  : "text-muted hover:bg-paper hover:text-ink")
-              }
-              onClick={() => setTab(t.key)}
-            >
-              <span className="flex items-center gap-2 min-w-0">
-                <Icon name={t.icon} size={15} /> {t.label}
-              </span>
-              {t.key === "connectors" && connCount != null && (
-                <span className={"text-[11px] shrink-0 " + (active ? "text-accent" : "text-faint")}>
-                  {connCount}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </nav>
-
       <div className="flex-1 min-w-0 overflow-y-auto hairline-scroll">
         <div className="max-w-4xl mx-auto px-7 py-6">
-          {tab === "connectors" ? (
-            <section>
-              <PanelHead
-                title="Connectors"
-                sub="Apps and tools your coworkers can use. Connected ones come first."
-              />
-              <ConnectorsSection />
-            </section>
-          ) : (
-            <section>
-              <PanelHead
-                title="MCP servers"
-                sub="External tool servers (stdio or HTTP), shared across all agents."
-              />
-              <McpTab />
-            </section>
-          )}
+          <PanelHead title={t("connectionsTitle")} sub={t("connectionsSub")} />
+          <ConnectorsSection />
+
+          <section className="mt-8 border-t border-line pt-5">
+            <button
+              className="w-full flex items-center gap-2 text-left text-[13px] text-muted hover:text-ink"
+              data-testid="advanced-tool-servers"
+              aria-expanded={showServers}
+              onClick={() => setShowServers((v) => !v)}
+            >
+              <Icon name="code" size={15} />
+              <span className="font-medium">{t("advancedToolServers")}</span>
+              <span className="ml-auto text-faint text-[16px] leading-none">
+                {showServers ? "−" : "+"}
+              </span>
+            </button>
+            {showServers && (
+              <div className="mt-4">
+                <p className="text-[12.5px] text-muted mb-4">{t("advancedToolServersSub")}</p>
+                <McpTab />
+              </div>
+            )}
+          </section>
         </div>
       </div>
     </main>

@@ -8,7 +8,8 @@ async function openMcpTab(page) {
   await page.goto("/");
   await page.getByTestId("account-row").click();
   await page.getByRole("button", { name: "Connectors", exact: true }).click();
-  await page.getByRole("button", { name: "MCP servers", exact: true }).click();
+  // MCP 不再是一个并列的标签页 —— 它收进了「连接」页底部折叠的「高级」里。
+  await page.getByTestId("advanced-tool-servers").click();
 }
 
 test("granola: quick-add card → sign-in flow → connected → sign out", async ({ page }) => {

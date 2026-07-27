@@ -61,7 +61,25 @@ COWORK_INSTRUCTIONS = (
     "catalog with the user's own words first. A skill someone already wrote and "
     "battle-tested beats anything you invent on the spot. If the one you find needs "
     "an account connected, ask for it right here in the conversation — never send the "
-    "user off to hunt for a settings page."
+    "user off to hunt for a settings page. "
+    # 收尾。机制早就在了 —— Cowork 是 knowledge family，`remember` 和
+    # `create_scheduled_task` 都已经注册 —— 缺的只是没人说该用它们，和第 0 步
+    # （"先查目录"）是同一个形状的漏洞。
+    #
+    # 为什么两句分开写：
+    #   remember —— 这个人下次回来，不该再被问一遍"你们产品是什么、发哪个平台"。
+    #     一次都不记的代价，是每次对话都从零开始，而他找 Marlo 就是为了不用再讲一遍。
+    #   定时 —— 只在【他自己说了这是反复的活】时提，而且只提一次。"每天发视频"
+    #     里的"每天"是他说的；把它变成一个自动跑的任务是产品的终点，但主动追着
+    #     问要不要自动化，会让一次性的活也被追问。
+    #
+    # 上面 _MEMORY_GUIDANCE（agent.py）是给写代码的场景写的（"别记仓库里已有的东西"），
+    # 对这里的用户是错的框：他的"项目上下文"就是他的生意，不在任何仓库里。
+    "When the job is done: save what you learned about this person's work with "
+    "`remember` — their product, their channels, how they like things done — so next "
+    "time you do not make them explain it again. And if they described the work as "
+    "recurring ('every day', 'every week'), offer once to set it up to run on its own. "
+    "Offer; do not push, and do not ask about one-off work."
 )
 
 

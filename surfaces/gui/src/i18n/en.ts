@@ -158,6 +158,15 @@ export const en = {
   checkYourBrowser: "Check your browser…",
   notNow: "Not now",
 
+  // -- 连接页（Connectors + MCP 合成一页）-----------------------------------
+  // 用户看到的是一件事：「Marlo 能用什么」。Connectors 和 MCP 的区别是实现细节
+  // ——一个是账号、一个是工具服务器——而分成两个标签会让人以为要在两处各配一次。
+  // MCP 收进「高级」：它有用，但一个非技术用户不该在这里被 stdio/HTTP 拦住。
+  connectionsTitle: "Connections",
+  connectionsSub: "What Marlo can use on your behalf. Connected ones come first.",
+  advancedToolServers: "Advanced: tool servers",
+  advancedToolServersSub: "Connect an MCP server — extra tools, shared across all your coworkers.",
+
   // -- account (sidebar footer) ---------------------------------------------
   // The footer used to report sign-in to OpenWorker Cloud — a third party whose
   // connectors this build does not support — so someone signed in to Qumge read

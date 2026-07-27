@@ -21,6 +21,12 @@ class Field:
     required: bool = True
     help: str = ""
     placeholder: str = ""
+    # 折进表单底部「高级设置」里，默认不显示。
+    #
+    # required=False 只是说"可以不填"，界面上照样占一行 —— 而一个想连自己邮箱的人
+    # 看到 IMAP host / SMTP port 就走了。这个标志说的是另一件事：【这一行的存在
+    # 本身】就是劝退。凡是我们能自动探测、只有少数供应商才需要手填的，都归这里。
+    advanced: bool = False
 
     def to_dict(self) -> dict:
         return {
@@ -30,6 +36,7 @@ class Field:
             "required": self.required,
             "help": self.help,
             "placeholder": self.placeholder,
+            "advanced": self.advanced,
         }
 
 
@@ -541,22 +548,24 @@ DESCRIPTORS: list[ConnectorDescriptor] = [
             ),
             Field(
                 "imap_host",
-                "IMAP host (advanced)",
+                "IMAP host",
                 required=False,
+                advanced=True,
                 help="Only needed for providers we don't auto-detect.",
                 placeholder="imap.example.com",
             ),
             Field(
-                "imap_port", "IMAP port (advanced)", required=False, placeholder="993"
+                "imap_port", "IMAP port", required=False, advanced=True, placeholder="993"
             ),
             Field(
                 "smtp_host",
-                "SMTP host (advanced)",
+                "SMTP host",
                 required=False,
+                advanced=True,
                 placeholder="smtp.example.com",
             ),
             Field(
-                "smtp_port", "SMTP port (advanced)", required=False, placeholder="587"
+                "smtp_port", "SMTP port", required=False, advanced=True, placeholder="587"
             ),
         ],
         instructions=[

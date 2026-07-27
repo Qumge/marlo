@@ -22,6 +22,7 @@ import {
   updateConnectorTools,
   type CloudStatus,
   type Connector,
+  type ConnectorField,
   type Subscription,
   type McpServer,
   type ModelSettings,
@@ -274,8 +275,7 @@ export function McpTab() {
   return (
     <div className="space-y-3">
       <p className="text-[12.5px] text-muted leading-relaxed">
-        External tool servers (stdio or HTTP), shared across all agents. Enabled servers' tools are
-        permission-gated. Changes apply to new sessions —{" "}
+        Enabled servers' tools are permission-gated. Changes apply to new sessions —{" "}
         <button
           className="text-accent font-medium hover:underline"
           onClick={() => reloadMcp().then(refresh)}
@@ -762,6 +762,34 @@ export function ConnectorTools({ c, onChanged }: { c: Connector; onChanged: () =
   );
 }
 
+// 一行输入。普通字段和高级字段共用它 —— 分成两处渲染的话，两边迟早长得不一样。
+function ConnField({
+  f,
+  values,
+  setValues,
+}: {
+  f: ConnectorField;
+  values: Record<string, string>;
+  setValues: (v: Record<string, string>) => void;
+}) {
+  return (
+    <label className="conn-field">
+      <span className="conn-field-label">
+        {f.label}
+        {!f.required && <em> (optional)</em>}
+      </span>
+      <input
+        type={f.secret ? "password" : "text"}
+        placeholder={f.placeholder}
+        value={values[f.key] || ""}
+        spellCheck={false}
+        onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
+      />
+      {f.help && <span className="conn-field-help">{f.help}</span>}
+    </label>
+  );
+}
+
 // Exported: also hosted inside the SourcesDrawer's connect-in-context child panel, so a
 // recommended connector can be connected without leaving the session (owner ask, 2026-07-03).
 export function ConnectSetup({
@@ -778,6 +806,7 @@ export function ConnectSetup({
   manualOnly?: boolean;
 }) {
   const [values, setValues] = useState<Record<string, string>>({});
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [busy, setBusy] = useState(false);
   const [waiting, setWaiting] = useState(false); // managed flow: browser is open
   const [error, setError] = useState<string | null>(null);
@@ -863,22 +892,32 @@ export function ConnectSetup({
           ))}
         </ol>
       )}
-      {c.fields.map((f) => (
-        <label className="conn-field" key={f.key}>
-          <span className="conn-field-label">
-            {f.label}
-            {!f.required && <em> (optional)</em>}
-          </span>
-          <input
-            type={f.secret ? "password" : "text"}
-            placeholder={f.placeholder}
-            value={values[f.key] || ""}
-            spellCheck={false}
-            onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
-          />
-          {f.help && <span className="conn-field-help">{f.help}</span>}
-        </label>
+      {c.fields.filter((f) => !f.advanced).map((f) => (
+        <ConnField key={f.key} f={f} values={values} setValues={setValues} />
       ))}
+      {/* 高级字段折起来。邮箱那张表单原来一次摊开 7 行，其中 4 行是 IMAP/SMTP
+          主机端口 —— 我们对 Gmail / iCloud / Fastmail 本来就能自动探测，而一个
+          想连自己邮箱的人看到这些就走了。默认收起 = 对绝大多数人默认不存在。 */}
+      {c.fields.some((f) => f.advanced) && (
+        <div>
+          <button
+            className="text-[12px] text-muted hover:text-ink"
+            data-testid="conn-advanced-toggle"
+            aria-expanded={showAdvanced}
+            onClick={() => setShowAdvanced((v) => !v)}
+          >
+            {showAdvanced ? "− " : "+ "}
+            Advanced server settings
+          </button>
+          {showAdvanced && (
+            <div className="mt-2 space-y-2">
+              {c.fields.filter((f) => f.advanced).map((f) => (
+                <ConnField key={f.key} f={f} values={values} setValues={setValues} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       <div>
         <button className={BTN_ACCENT} onClick={submit} disabled={busy}>
           {busy ? "Validating…" : "Connect"}

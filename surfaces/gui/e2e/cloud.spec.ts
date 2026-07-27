@@ -16,7 +16,7 @@ async function openConnectors(page) {
   await page.goto("/");
   await page.getByTestId("account-row").click();
   await page.getByTestId("account-menu").getByRole("button", { name: "Connectors", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Connectors" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Connections" })).toBeVisible();
 }
 
 /** Sign in to the cloud the way a user now does: from the pane that needs it. */

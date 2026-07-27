@@ -125,6 +125,12 @@ export const zh: Strings = {
   checkYourBrowser: "去浏览器里完成…",
   notNow: "先不要",
 
+  // -- 连接页（Connectors + MCP 合成一页）-----------------------------------
+  connectionsTitle: "连接",
+  connectionsSub: "Marlo 可以替你用的东西。已连接的排在前面。",
+  advancedToolServers: "高级：工具服务器",
+  advancedToolServersSub: "接入一个 MCP 服务器 —— 额外的工具，所有同事共用。",
+
   accountOf: (email) => `${email} · Qumge`,
   accountAria: (email) => `账号：${email}`,
   accountAriaSignedOut: "账号：未登录",

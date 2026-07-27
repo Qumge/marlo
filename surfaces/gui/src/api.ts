@@ -338,6 +338,9 @@ export interface ConnectorField {
   required: boolean;
   help: string;
   placeholder: string;
+  // 折进「高级设置」，默认不显示 —— 见 descriptors.py 里 Field.advanced 的注释。
+  // 后端老版本不带这个字段，所以是可选的。
+  advanced?: boolean;
 }
 
 // A message from a sender not (yet) on the allow-list — parked instead of dropped (§19).
