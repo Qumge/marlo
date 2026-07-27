@@ -55,4 +55,24 @@ describe("对话里的授权卡片", () => {
     expect(onRespond).toHaveBeenCalledTimes(1);
     expect((connect as HTMLButtonElement).disabled).toBe(true);
   });
+
+  it("自家服务把验证码印在卡片上", () => {
+    // 用户要在浏览器打开的页面里核对同一串码 —— 这是防"点开的是另一个
+    // 授权请求"的唯一手段。
+    render(
+      <ConnectorRequestCard
+        item={{ ...base, connector: "autowhisper", title: "AutoWhisper",
+                brokered_by: "", user_code: "K7M2-QP4X" }}
+        onRespond={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("connector-user-code").textContent).toContain("K7M2-QP4X");
+    // 自家服务没有第三方经手，不该出现中转方那一行
+    expect(screen.queryByTestId("connector-broker")).toBeNull();
+  });
+
+  it("没有验证码时不留一个空框", () => {
+    render(<ConnectorRequestCard item={base} onRespond={vi.fn()} />);
+    expect(screen.queryByTestId("connector-user-code")).toBeNull();
+  });
 });

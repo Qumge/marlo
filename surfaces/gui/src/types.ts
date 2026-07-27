@@ -110,6 +110,9 @@ export type Item =
       title: string;
       reason: string;
       brokered_by: string;
+      // 自家服务的设备码：卡片直接把码印出来，用户在浏览器里核对。
+      user_code?: string;
+      verification_uri?: string;
       resolved?: "connected" | "declined";
     }
   | {

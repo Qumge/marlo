@@ -1567,6 +1567,7 @@ def create_app(manager: SessionManager) -> FastAPI:
             """
             import asyncio as _asyncio
 
+            from ..connectors import device_connect
             from ..connectors.descriptors import get_descriptor
 
             name = str(args.get("connector", "")).strip()
@@ -1581,20 +1582,38 @@ def create_app(manager: SessionManager) -> FastAPI:
             ):
                 return {"connected": True, "already": True}
 
+            # 两条授权路径，卡片上要说的话不一样，所以在【发卡之前】就分岔。
+            #
+            #   device_auth_base 非空  → 我们自己的服务。先起设备码流程，把
+            #                            user_code 印在卡片上，没有第三方经手。
+            #   managed=True          → 借道 OpenWorker Cloud。卡片必须写明
+            #                            中转方，用户点头之前就该知道。
+            #
+            # 凭空说"由 X 中转"而实际没有，是自己制造一个不信任的理由；反过来
+            # 该说不说，是把一件用户有权知道的事藏起来。
+            device_base = getattr(d, "device_auth_base", "")
+            flow = None
+            data: dict[str, Any] = {"connector": name, "title": d.title, "brokered_by": ""}
+
+            if device_base:
+                try:
+                    flow = await _asyncio.to_thread(
+                        device_connect.start, device_base, name
+                    )
+                except Exception as exc:  # 起不来就别发一张点了没用的卡片
+                    return {"connected": False, "error": f"could not start sign-in: {exc}"}
+                data["user_code"] = flow.user_code
+                data["verification_uri"] = flow.verification_uri_complete
+            elif getattr(d, "managed", False):
+                data["brokered_by"] = "OpenWorker Cloud"
+
             item = manager.inbox.add_connector(
                 session_id,
                 f"Connect {d.title}?",
                 body=str(args.get("reason", "")),
                 inbox=_route(),
                 visibility=_visibility(),
-                data={
-                    "connector": name,
-                    "title": d.title,
-                    # 中转方写进卡片数据，界面【在用户点头之前】就得说清楚
-                    # token 经谁的手。managed=True 的走 OpenWorker Cloud；
-                    # 其余是本机直连，不能凭空说"由 X 中转"。
-                    "brokered_by": "OpenWorker Cloud" if getattr(d, "managed", False) else "",
-                },
+                data=data,
                 tool_call_id=tool_call_id,
             )
             if item.state == "pending":
@@ -1606,16 +1625,44 @@ def create_app(manager: SessionManager) -> FastAPI:
             if not resp.get("connected"):
                 return {"connected": False, "reason": "the user declined the request"}
 
-            # 第二次等待：浏览器那一趟。轮询 list_connectors —— 和 GUI 用的
-            # 是同一个完成信号，不另发明一套。
+            # 第二次等待：浏览器那一趟。点头之后【才】开浏览器 —— 提前开等于
+            # 在用户同意之前就把他推去一个授权页。
+            import webbrowser
+
             deadline = _asyncio.get_event_loop().time() + CONNECT_TIMEOUT_S
-            while _asyncio.get_event_loop().time() < deadline:
-                if any(
-                    c.get("name") == name and c.get("connected")
-                    for c in manager.list_connectors()
-                ):
-                    return {"connected": True}
-                await _asyncio.sleep(CONNECT_POLL_S)
+
+            if flow is not None:
+                webbrowser.open(flow.verification_uri_complete)
+                interval = flow.interval
+                while _asyncio.get_event_loop().time() < deadline:
+                    await _asyncio.sleep(interval)
+                    state, token = await _asyncio.to_thread(
+                        device_connect.exchange, device_base, flow.device_code
+                    )
+                    if state == "connected" and token:
+                        res = await _asyncio.to_thread(
+                            manager.connect_connector, name, {"api_token": token}
+                        )
+                        if not res.get("ok"):
+                            return {"connected": False, "error": res.get("error", "could not store the token")}
+                        return {"connected": True}
+                    if state == "slow_down":
+                        # RFC 8628 §3.5：加宽，不是照原速再来一次。
+                        interval += 5
+                    elif state in ("denied", "expired", "error"):
+                        return {"connected": False, "reason": f"sign-in {state}"}
+            else:
+                res = await connector_connect_managed(name, {})
+                if not res.get("ok"):
+                    return {"connected": False, "error": res.get("error", "could not start the connect")}
+                while _asyncio.get_event_loop().time() < deadline:
+                    if any(
+                        c.get("name") == name and c.get("connected")
+                        for c in manager.list_connectors()
+                    ):
+                        return {"connected": True}
+                    await _asyncio.sleep(CONNECT_POLL_S)
+
             # 超时不是"失败"，是"还没回来"——说清楚，别让 agent 以为用户拒绝了。
             return {
                 "connected": False,

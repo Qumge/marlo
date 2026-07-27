@@ -59,6 +59,14 @@ ABOUT: dict[str, str] = {
 # What connecting actually grants, as short honest bullets. Write powers always
 # name themselves; reads state their boundary ("…your account can see").
 ACCESS: dict[str, list[str]] = {
+    # 我们自己的产品。这几行仍然要写全 —— "是自家的"不是省略说明的理由，
+    # 用户交出的权限一样真实。
+    "autowhisper": [
+        "Reads your products, posts and publishing schedule.",
+        "Creates and edits content, and publishes it to the platforms you connected there.",
+        "Spends credit from your AutoWhisper account.",
+        "Reads your wallet balance and analytics.",
+    ],
     "telegram": [
         "Reads messages sent to your bot — never your personal chats.",
         "Sends messages as the bot.",

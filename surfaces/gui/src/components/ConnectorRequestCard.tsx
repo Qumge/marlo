@@ -39,6 +39,13 @@ export function ConnectorRequestCard({
           {t("connectBrokeredBy")(item.brokered_by)}
         </div>
       )}
+      {item.user_code && (
+        // 自家服务的设备码。把码印在卡片上，用户在浏览器打开的页面里核对
+        // 同一串 —— 这一步是防"点开的是另一个授权请求"的唯一手段。
+        <div className="connreq-code" data-testid="connector-user-code">
+          {item.user_code}
+        </div>
+      )}
       <div className="connreq-actions">
         <span className="spacer" />
         <button className="btn" data-testid="connector-decline" onClick={() => onRespond(false)}>

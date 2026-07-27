@@ -658,6 +658,8 @@ export function App() {
               title: d.title || d.connector || "",
               reason: d.reason || "",
               brokered_by: d.brokered_by || "",
+              user_code: d.user_code || "",
+              verification_uri: d.verification_uri || "",
             },
           ]);
           break;

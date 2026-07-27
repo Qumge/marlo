@@ -795,6 +795,10 @@ button.btn.danger { color: var(--accent); }
    token 经谁的手。做成 faint 是因为它是事实陈述不是警告，做成警告色会
    让一次正常的授权看起来像出了事。 */
 .connreq-broker { font-size: 12px; color: var(--faint); margin-bottom: 10px; }
+.connreq-code {
+  font-size: 20px; font-weight: 600; letter-spacing: 0.14em;
+  text-align: center; margin: 10px 0; color: var(--ink); user-select: all;
+}
 .connreq-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .connreq-actions .spacer { flex: 1; }
 
