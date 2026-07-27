@@ -67,6 +67,9 @@ class TurnEngine:
         directory_requester: Optional[
             Callable[[dict[str, Any]], "Awaitable[dict[str, Any]]"]
         ] = None,
+        connector_requester: Optional[
+            Callable[[dict[str, Any]], "Awaitable[dict[str, Any]]"]
+        ] = None,
         plan_approver: Optional[
             Callable[[dict[str, Any]], "Awaitable[dict[str, Any]]"]
         ] = None,
@@ -95,6 +98,11 @@ class TurnEngine:
         # user to grant/decline a folder out-of-band, applies the grant to this live session, and
         # returns the outcome. None on surfaces that can't prompt (the tool then no-ops).
         self.directory_requester = directory_requester
+        # Handles `request_connector`: emits CONNECTOR_REQUESTED, waits for the user to
+        # approve the connect out-of-band (the GUI card + a browser round-trip), returns
+        # the outcome. None on surfaces that can't prompt (the tool then reports failure
+        # rather than pretending it connected).
+        self.connector_requester = connector_requester
         # Handles the `propose_plan` tool: emits PLAN_PROPOSED, waits for the user's decision.
         # An approving result flips the live PermissionEngine out of plan mode (same session,
         # context kept). None on surfaces that can't prompt (the tool then no-ops).
@@ -458,6 +466,10 @@ class TurnEngine:
                 async for event in self._handle_directory_request(tool_call):
                     yield event
                 continue
+            if tool_call.name == "request_connector":
+                async for event in self._handle_connector_request(tool_call):
+                    yield event
+                continue
             if tool_call.name == "propose_plan":
                 async for event in self._handle_plan_proposal(tool_call):
                     yield event
@@ -751,6 +763,64 @@ class TurnEngine:
             }
 
         status = "ok" if result.get("approved") else "denied"
+        self.messages.append(_tool_result_message(tool_call, result))
+        self._audit(
+            tool_call,
+            stage="finished",
+            status=status,
+            result=result,
+            result_preview=_preview(result),
+        )
+        yield Event(
+            EventType.TOOL_FINISHED,
+            {
+                "name": tool_call.name,
+                "status": status,
+                "result_preview": _preview(result),
+            },
+        )
+
+    async def _handle_connector_request(
+        self, tool_call: ToolCall
+    ) -> AsyncIterator[Event]:
+        """Emit the connect prompt, await the user's out-of-band decision, and return the
+        outcome as the tool result.
+
+        Mirrors _handle_directory_request deliberately. That path is proven and the GUI
+        already has a card for its shape; keeping them identical means the card can be
+        copied rather than reinvented, and means "a skill declares the connection it
+        needs" can reuse this instead of inventing a third mechanism.
+        """
+        args = tool_call.arguments or {}
+        if self.connector_requester is None:
+            # No requester wired: report failure. Returning connected=True here would send
+            # the agent off to call an API it has no credentials for.
+            result: dict[str, Any] = {
+                "connected": False,
+                "error": "connector requests aren't available here",
+            }
+        else:
+            yield Event(
+                EventType.CONNECTOR_REQUESTED,
+                {
+                    "connector": str(args.get("connector", "")),
+                    "reason": str(args.get("reason", "")),
+                },
+            )
+            self._audit(
+                tool_call,
+                stage="connector_requested",
+                reason=str(args.get("reason", "")),
+            )
+            result = await self._interruptible(
+                self.connector_requester(dict(args), tool_call.id),
+                interrupted={"connected": False, "error": "interrupted by user"},
+            ) or {
+                "connected": False,
+                "error": "no response",
+            }
+
+        status = "ok" if result.get("connected") else "denied"
         self.messages.append(_tool_result_message(tool_call, result))
         self._audit(
             tool_call,

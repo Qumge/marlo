@@ -21,6 +21,7 @@ import aisuite as ai
 
 from .agents.base import AgentContext
 from .risk import RiskClass
+from .tools.connect import request_connector_tool
 from .tools.documents import document_tools
 from .tools.files import file_tools
 from .tools.git import git_tools
@@ -82,6 +83,22 @@ def _files(context: AgentContext) -> list:
     ]
 
 
+def _connect(context: AgentContext) -> list:
+    """request_connector —— 在对话里要一个账号的授权。
+
+    连接器页不是主路径：一般用户在聊天里一步步推进，推到需要他的邮箱时，
+    Marlo 该就地要，而不是让他自己走到设置页去找开关。
+
+    允许集从真实目录取，不手抄：手抄的一串字符串会和 descriptors.py 漂移，
+    然后模型点名一个已经改名的连接器，用户看到一张说不通的卡片。
+    available=False 的（占位/未上线）不进来——要一个连不上的东西是死胡同。
+    """
+    from .connectors.descriptors import DESCRIPTORS
+
+    names = [d.name for d in DESCRIPTORS if getattr(d, "available", True)]
+    return [request_connector_tool(names)]
+
+
 def _documents(context: AgentContext) -> list:
     """write_docx / write_xlsx — the formats a deliverable is actually handed over in.
 
@@ -133,6 +150,14 @@ _CAPS: list[Capability] = [
         build=_documents,
         requires=("workspace",),
         risk=(RiskClass.WRITE_LOCAL,),
+    ),
+    Capability(
+        id="connect",
+        name="Connect accounts",
+        description="Ask the user, in the conversation, to connect an account you need.",
+        build=_connect,
+        requires=(),
+        risk=(RiskClass.READ,),
     ),
     Capability(
         id="git",

@@ -73,7 +73,16 @@ def test_persona_detail_endpoint(tmp_path, monkeypatch):
     assert "anthropic:claude-opus-4-8" in detail["recommended_models"]
     # `documents` (write_docx / write_xlsx) rides with the knowledge toolset: an ops
     # deliverable is a report someone reads, not a markdown file.
-    assert set(detail["tools"]) == {"files", "documents", "search", "shell", "todo"}
+    # `connect` likewise: the connectors page is not the main path — a knowledge
+    # persona that needs an account asks for it in the conversation.
+    assert set(detail["tools"]) == {
+        "files",
+        "documents",
+        "connect",
+        "search",
+        "shell",
+        "todo",
+    }
     assert detail["description"]  # the manifest description is surfaced
 
     # recommends annotated with `connected` (github connected; slack/datadog not)

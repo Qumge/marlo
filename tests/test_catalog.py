@@ -34,6 +34,7 @@ CODE_TOOLS = {
     "todo_write",
 }
 COWORK_TOOLS = {
+    "request_connector",  # 在对话里要账号授权：连接器页不是主路径
     "list_files",
     "read_file",  # aisuite (multi-root)
     "read_file_lines",
