@@ -131,6 +131,10 @@ export const zh: Strings = {
   advancedToolServers: "高级：工具服务器",
   advancedToolServersSub: "接入一个 MCP 服务器 —— 额外的工具，所有同事共用。",
 
+  // 只翻普通名词 —— Gmail / Slack 这些专名不翻。
+  connectorTitleBrowser: "浏览器",
+  connectorTitleEmail: "邮箱",
+
   accountOf: (email) => `${email} · Qumge`,
   accountAria: (email) => `账号：${email}`,
   accountAriaSignedOut: "账号：未登录",

@@ -44,13 +44,36 @@ class EmailServers:
     smtp_port: int = 587  # 587 → STARTTLS, 465 → implicit TLS
 
 
+# 域名 -> 服务器。命中了用户就只填地址和密码；没命中就得自己去查 IMAP 主机和
+# 端口 —— 而那正是一个非技术用户会放弃的地方。
+#
+# 【2026-07-27 补上国内邮箱】：这张表原来只有 Gmail / iCloud / Fastmail。Marlo
+# 面向的是国内白领，而他们用的是 QQ、163、126、Outlook —— 这些人打开表单看到的
+# 是"IMAP 主机（高级）"，等于把主力用户挡在门外。
+#
+# 465 vs 587：网易系和 QQ 走隐式 TLS（465），Gmail/Outlook 走 STARTTLS（587）。
+# 填错端口的表现是连接卡住而不是报错，所以宁可在这里写死。
 _PRESETS: dict[str, EmailServers] = {
+    # 海外
     "gmail.com": EmailServers("imap.gmail.com", 993, "smtp.gmail.com", 587),
     "googlemail.com": EmailServers("imap.gmail.com", 993, "smtp.gmail.com", 587),
     "icloud.com": EmailServers("imap.mail.me.com", 993, "smtp.mail.me.com", 587),
     "me.com": EmailServers("imap.mail.me.com", 993, "smtp.mail.me.com", 587),
     "mac.com": EmailServers("imap.mail.me.com", 993, "smtp.mail.me.com", 587),
     "fastmail.com": EmailServers("imap.fastmail.com", 993, "smtp.fastmail.com", 465),
+    "outlook.com": EmailServers("outlook.office365.com", 993, "smtp-mail.outlook.com", 587),
+    "hotmail.com": EmailServers("outlook.office365.com", 993, "smtp-mail.outlook.com", 587),
+    "live.com": EmailServers("outlook.office365.com", 993, "smtp-mail.outlook.com", 587),
+    # 国内。QQ / 网易系要在网页端先开 IMAP 并生成【授权码】——那串码就是这里的
+    # "app password"，不是登录密码。
+    "qq.com": EmailServers("imap.qq.com", 993, "smtp.qq.com", 465),
+    "foxmail.com": EmailServers("imap.qq.com", 993, "smtp.qq.com", 465),
+    "163.com": EmailServers("imap.163.com", 993, "smtp.163.com", 465),
+    "126.com": EmailServers("imap.126.com", 993, "smtp.126.com", 465),
+    "yeah.net": EmailServers("imap.yeah.net", 993, "smtp.yeah.net", 465),
+    "sina.com": EmailServers("imap.sina.com", 993, "smtp.sina.com", 465),
+    "sina.cn": EmailServers("imap.sina.cn", 993, "smtp.sina.cn", 465),
+    "aliyun.com": EmailServers("imap.aliyun.com", 993, "smtp.aliyun.com", 465),
 }
 
 

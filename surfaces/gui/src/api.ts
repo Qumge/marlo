@@ -1,4 +1,5 @@
 import type { SessionInfo, WsEvent } from "./types";
+import { t } from "./i18n";
 
 declare const __COWORKER_DEV_TOKEN__: string;
 
@@ -343,6 +344,14 @@ export interface ConnectorField {
   advanced?: boolean;
 }
 
+/** 某一家邮箱服务商的分步指引（见 descriptors.py 的 provider_hints）。 */
+export interface ProviderHint {
+  title: string;
+  url: string;
+  steps: string[];
+  warn?: string;
+}
+
 // A message from a sender not (yet) on the allow-list — parked instead of dropped (§19).
 export interface ParkedMessage {
   id: string;
@@ -438,6 +447,8 @@ export interface Connector {
   channels: boolean;
   available: boolean;
   fields: ConnectorField[];
+  // 邮箱专用：域名 -> 该服务商的分步指引。其他连接器为空。
+  provider_hints?: Record<string, ProviderHint>;
   instructions: string[];
   connected: boolean;
   account: string | null;
@@ -572,9 +583,26 @@ export interface ConnectorTool {
   requires_approval: boolean;
 }
 
+// 普通名词的连接器名要跟着界面语言走。
+//
+// 后端 descriptors.py 里的 title 是【数据】（一份服务清单），Gmail / Slack /
+// Notion 是专名，翻译它们只会让人对不上自己在别处见到的那个东西。但 Browser、
+// Email 是普通名词——中文界面里留着英文就是本地化没做完。
+//
+// 【在数据进门的这一层改，不在渲染处改】：title 在 69 个地方被渲染，一处处包
+// i18n 既漏得掉又会随新界面继续漏。这里改一次，所有下游自动正确。
+const COMMON_NOUN_TITLES: Record<string, "connectorTitleBrowser" | "connectorTitleEmail"> = {
+  browser: "connectorTitleBrowser",
+  email: "connectorTitleEmail",
+};
+
 export async function getConnectors(): Promise<Connector[]> {
   const res = await fetch(`${httpBase()}/v1/connectors`);
-  return (await res.json()).connectors ?? [];
+  const list: Connector[] = (await res.json()).connectors ?? [];
+  return list.map((c) => {
+    const key = COMMON_NOUN_TITLES[c.name];
+    return key ? { ...c, title: t(key) } : c;
+  });
 }
 
 export async function connectConnector(

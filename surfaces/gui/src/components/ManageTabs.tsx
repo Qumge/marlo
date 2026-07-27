@@ -762,6 +762,40 @@ export function ConnectorTools({ c, onChanged }: { c: Connector; onChanged: () =
   );
 }
 
+// 按用户填的邮箱域名，显示那一家的分步指引。
+//
+// 没填地址 / 域名不认识 -> 什么都不显示，而不是退回一段"通用说明"：认不出来的
+// 服务商，我们给不出准确的步骤，编一段泛泛的话只会让人照着做不通。那种情况下
+// 上面的通用两条 + 高级设置里的 IMAP 字段才是对的路。
+function ProviderSteps({ c, address }: { c: Connector; address: string }) {
+  const hints = c.provider_hints;
+  if (!hints) return null;
+  const domain = address.includes("@") ? address.split("@").pop()!.trim().toLowerCase() : "";
+  const hint = domain ? hints[domain] : undefined;
+  if (!hint) return null;
+
+  return (
+    <div className="rounded-lg border border-line bg-panel/50 p-3 space-y-2" data-testid="provider-steps">
+      <div className="text-[12.5px] font-medium">{hint.title}</div>
+      <ol className="list-decimal pl-4 text-[12.5px] text-muted leading-relaxed space-y-1">
+        {hint.steps.map((s, i) => (
+          <li key={i}>{s}</li>
+        ))}
+      </ol>
+      {hint.warn && <div className="text-[11.5px] text-warnInk">{hint.warn}</div>}
+      <a
+        className="inline-block text-[12.5px] text-accent hover:underline"
+        href={hint.url}
+        target="_blank"
+        rel="noreferrer"
+        data-testid="provider-steps-link"
+      >
+        {hint.title} →
+      </a>
+    </div>
+  );
+}
+
 // 一行输入。普通字段和高级字段共用它 —— 分成两处渲染的话，两边迟早长得不一样。
 function ConnField({
   f,
@@ -895,6 +929,11 @@ export function ConnectSetup({
       {c.fields.filter((f) => !f.advanced).map((f) => (
         <ConnField key={f.key} f={f} values={values} setValues={setValues} />
       ))}
+      {/* 用户填完地址，只显示【他那家】的步骤。
+          这一屏是整个上手流程里唯一要求用户离开 Marlo 去别的网站操作的地方，
+          也是最容易放弃的一处。同时摆出 Gmail/QQ/网易/Outlook 四家的说明，用户
+          得先判断哪条是说自己的 —— 那层判断本身就在劝退。 */}
+      <ProviderSteps c={c} address={values.address || ""} />
       {/* 高级字段折起来。邮箱那张表单原来一次摊开 7 行，其中 4 行是 IMAP/SMTP
           主机端口 —— 我们对 Gmail / iCloud / Fastmail 本来就能自动探测，而一个
           想连自己邮箱的人看到这些就走了。默认收起 = 对绝大多数人默认不存在。 */}

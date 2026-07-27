@@ -167,6 +167,15 @@ export const en = {
   advancedToolServers: "Advanced: tool servers",
   advancedToolServersSub: "Connect an MCP server — extra tools, shared across all your coworkers.",
 
+  // 连接器名里【只有普通名词】需要翻译。Gmail / Slack / Notion 是专名，翻译它们
+  // 只会让人对不上自己在别处见到的那个东西；Browser、Email 是普通名词，在中文
+  // 界面里保持英文就是没做完本地化。
+  //
+  // 放在这里而不是 descriptors.py：那边是【数据】（一份服务清单），这里是【界面
+  // 文案】。同一个字段两种身份，分界就在"它是不是专名"。
+  connectorTitleBrowser: "Browser",
+  connectorTitleEmail: "Email",
+
   // -- account (sidebar footer) ---------------------------------------------
   // The footer used to report sign-in to OpenWorker Cloud — a third party whose
   // connectors this build does not support — so someone signed in to Qumge read

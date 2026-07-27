@@ -88,6 +88,7 @@ def connector_list(secrets: SecretStore) -> list[dict[str, Any]]:
             "mcp": bool(d.mcp_url),
             "fields": [f.to_dict() for f in d.fields],
             "instructions": d.instructions,
+            "provider_hints": d.provider_hints,
             "connected": connected,
             "account": profile.get("account"),
             "enabled": bool(profile.get("enabled", True)) and connected,

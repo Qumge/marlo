@@ -59,6 +59,15 @@ class ConnectorDescriptor:
     two_way: bool
     fields: list[Field]
     instructions: list[str]
+    # 按邮箱域名给的分步指引：{"qq.com": {"title": …, "steps": [...], "url": …}}。
+    #
+    # 为什么不是 instructions 那一坨：现在那四条同时讲 Gmail、iCloud、Fastmail 和
+    # 企业管理员限制，用户要先判断哪条与自己有关。而这一屏是【第一期最大的产品
+    # 风险】——它是唯一一处我们要求用户离开 Marlo 去别的网站操作的地方，多一层
+    # "这几条哪条是说我"的判断，就多一批人在这里放弃。
+    #
+    # 用户填完地址，前端按域名取出对应的一条，其余不显示。
+    provider_hints: dict[str, dict] = field(default_factory=dict)
     available: bool = True  # False → shown as "soon"
     # Chat-platform capability, narrower than two_way: sessions can SUBSCRIBE to this
     # connector's channels (Sources ▸ Channels, listening-sessions block). GitHub is
@@ -569,11 +578,66 @@ DESCRIPTORS: list[ConnectorDescriptor] = [
             ),
         ],
         instructions=[
-            "Gmail: turn on 2-Step Verification, then create an app password at myaccount.google.com/apppasswords.",
-            "iCloud: generate an app-specific password at account.apple.com → Sign-In and Security.",
-            "Enter your address and the app password below. Gmail, iCloud, and Fastmail servers are detected automatically; for other providers fill in the IMAP/SMTP hosts.",
-            "Note: Google Workspace and Microsoft 365 accounts often have IMAP or app passwords disabled by the org admin.",
+            # 只留【与所有人都相关】的两条。服务商各自的步骤在 provider_hints 里，
+            # 按用户填的域名单独显示 —— 一屏四条同时讲四家，用户得先判断哪条是
+            # 说自己的，而这一屏本来就是最容易放弃的地方。
+            "Enter your email address first — the setup steps for your provider will appear.",
+            "You need an app password (not your login password). Your provider issues it, and it only works for mail.",
         ],
+        # 按域名给的分步指引。写的是【用户要做的动作】，不是协议名词：一个非技术
+        # 用户不需要知道什么是 IMAP，只需要知道去哪儿点、复制什么回来。
+        #
+        # 国内三家（QQ / 网易 / 阿里）发的叫"授权码"，不叫 app password —— 用错词
+        # 会让人在设置页里找一个不存在的东西。这里跟着各家自己的叫法走。
+        provider_hints={
+            "gmail.com": {
+                "title": "Gmail",
+                "url": "https://myaccount.google.com/apppasswords",
+                "steps": [
+                    "Google 账号需要先开启两步验证，否则下面这个页面打不开。",
+                    "打开应用专用密码页面，随便起个名字（比如 Marlo），生成。",
+                    "把生成的 16 位密码复制回来 —— 它只显示一次。",
+                ],
+                "warn": "公司的 Google Workspace 账号可能被管理员禁用了应用专用密码。",
+            },
+            "qq.com": {
+                "title": "QQ 邮箱",
+                "url": "https://wx.mail.qq.com/list/readtemplate?name=app_intro.html#/agreement/authorizationCode",
+                "steps": [
+                    "在 QQ 邮箱网页版：设置 → 账号 → POP3/IMAP/SMTP 服务。",
+                    "开启「IMAP/SMTP 服务」，按提示用手机验证。",
+                    "复制它给出的【授权码】填到下面 —— 不是你的 QQ 密码。",
+                ],
+            },
+            "163.com": {
+                "title": "网易邮箱",
+                "url": "https://mail.163.com",
+                "steps": [
+                    "在网页版：设置 → POP3/SMTP/IMAP。",
+                    "开启「IMAP/SMTP 服务」，按提示验证。",
+                    "复制【客户端授权码】填到下面 —— 不是登录密码。",
+                ],
+            },
+            "outlook.com": {
+                "title": "Outlook",
+                "url": "https://account.microsoft.com/security",
+                "steps": [
+                    "Microsoft 账号需要先开启两步验证。",
+                    "在安全设置里创建一个应用密码。",
+                    "复制回来填到下面。",
+                ],
+                "warn": "公司的 Microsoft 365 账号常被管理员关掉 IMAP，那样就连不上。",
+            },
+            "icloud.com": {
+                "title": "iCloud",
+                "url": "https://account.apple.com",
+                "steps": [
+                    "登录 Apple 账户 → 登录与安全。",
+                    "生成一个 App 专用密码。",
+                    "复制回来填到下面。",
+                ],
+            },
+        },
         validate=_validate_email,
     ),
     ConnectorDescriptor(
