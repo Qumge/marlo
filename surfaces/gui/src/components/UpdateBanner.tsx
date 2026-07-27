@@ -24,6 +24,16 @@ import {
 
 const FIRST_CHECK_MS = 15_000;
 const RECHECK_MS = 30 * 60_000;
+// 一次失败之后不要干等 30 分钟。
+//
+// 0.3.3 发出去后没人收到提示，而设置页里【手动点一下就找到了】——两条路调的是
+// 同一个命令，差别只在时机。最合得上全部证据的机制是：15 秒那次首检撞上启动
+// （updater 插件还没就绪 / 网络还没起来）失败了，错误被 catch 吞掉，然后下一次
+// 尝试在 30 分钟之后。这半小时里，用户看到的就是"没有自动更新"。
+//
+// 失败后按 1 分钟、5 分钟重试两次，再回到 30 分钟的节奏。重试次数有限：这是补
+// 启动竞态的，不是拿来对付真正连不上网的——那种情况下每分钟敲一次没有意义。
+const RETRY_MS = [60_000, 5 * 60_000];
 
 // downloading: background pre-fetch in flight (button locked).
 // ready: bytes cached in the shell — install is instant.
@@ -57,16 +67,24 @@ export function UpdateBanner() {
     // 【不要再吞掉】。这里原来是 `.catch(() => {})`：0.3.3 发出去之后没人收到
     // 提示，而排查时发现失败在任何地方都没有留下记录——Rust 返回了错误字符串，
     // 这一行把它扔了。控制台至少是一个能看的地方。
+    // 定时器都记下来，卸载时一个不漏 —— 重试是动态排的。
+    const timers: any[] = [];
+    let retries = 0;
     const check = () =>
       checkForUpdate()
-        .then((u) => u && offer(u))
-        .catch((e) => console.error("[updater] 检查更新失败：", e));
-    const t = setTimeout(check, FIRST_CHECK_MS);
-    const i = setInterval(check, RECHECK_MS);
-    return () => {
-      clearTimeout(t);
-      clearInterval(i);
-    };
+        .then((u) => {
+          retries = 0; // 通了就把重试预算还回去
+          if (u) offer(u);
+        })
+        .catch((e) => {
+          // 【不要再吞掉】。原来这里是 `.catch(() => {})`，于是"没检查"、"检查
+          // 失败"、"已是最新"三种情况长得完全一样，排查时一点线索都没有。
+          console.error("[updater] 检查更新失败：", e);
+          if (retries < RETRY_MS.length) timers.push(setTimeout(check, RETRY_MS[retries++]));
+        });
+    timers.push(setTimeout(check, FIRST_CHECK_MS));
+    timers.push(setInterval(check, RECHECK_MS));
+    return () => timers.forEach((t) => { clearTimeout(t); clearInterval(t); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

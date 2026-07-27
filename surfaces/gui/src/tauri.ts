@@ -107,8 +107,18 @@ export async function listenDictationDownloadProgress(
 export type UpdateInfo = { version: string; notes: string };
 
 /** Ask the shell whether a newer release exists (verified manifest; see lib.rs).
- * null = up to date, unreachable endpoint, or not the desktop app. */
-export const checkForUpdate = () => invoke<UpdateInfo | null>("check_for_update");
+ *
+ * null = 已是最新。【失败会抛】，不再退化成 null。
+ *
+ * 原来这里用的是宽松的 `invoke`，它 catch 一切并返回 null —— 于是"检查失败"和
+ * "已是最新"在这一层就成了同一个东西。代价是具体的：0.3.3 发出去之后排查为什么
+ * 没人收到提示，横幅那边的 catch 永远不触发（错误在这里就没了），设置页会显示
+ * "You're on the latest version" —— 检查根本没成功时，这是一句假话。
+ *
+ * 上面那句 doc 当时写的是 "null = up to date, unreachable endpoint, or not the
+ * desktop app"：混淆是【写下来的、被接受的】，然后正好在需要它的那天让人抓瞎。
+ * 调用方都在 isTauri() 之后，浏览器构建走不到这里。 */
+export const checkForUpdate = () => invokeStrict<UpdateInfo | null>("check_for_update");
 
 /** Pre-fetch + verify the update bytes in the background so the install is instant.
  * The shell caches them keyed by version; calling again for the same version is a no-op.

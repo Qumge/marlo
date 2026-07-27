@@ -34,6 +34,69 @@ afterEach(() => {
 const advance = (ms: number) => act(() => vi.advanceTimersByTimeAsync(ms));
 
 describe("UpdateBanner", () => {
+  // 0.3.3 发出去后没人收到提示，而设置页手动点一下就找到了。两条路调的是同一个
+  // 命令，差别只在时机——最合得上证据的机制是首检撞上启动失败了，然后干等 30 分钟。
+  it("首检失败后 1 分钟就重试，而不是干等 30 分钟", async () => {
+    let calls = 0;
+    invoke = vi.fn(async (cmd: string) => {
+      if (cmd === "check_for_update") {
+        calls++;
+        if (calls === 1) throw new Error("updater not ready");
+        return available;
+      }
+      return null;
+    });
+    (globalThis as any).__TAURI__ = { core: { invoke } };
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    render(<UpdateBanner />);
+    await advance(FIRST_CHECK_MS + 100);
+    expect(screen.queryByTestId("update-banner")).toBeNull(); // 第一次失败了
+
+    await advance(60_000);
+    expect(screen.getByTestId("update-banner")).toBeTruthy();
+  });
+
+  it("重试有上限 —— 真的连不上网时不会每分钟敲一次", async () => {
+    invoke = vi.fn(async (cmd: string) => {
+      if (cmd === "check_for_update") throw new Error("offline");
+      return null;
+    });
+    (globalThis as any).__TAURI__ = { core: { invoke } };
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    render(<UpdateBanner />);
+    await advance(FIRST_CHECK_MS + 100);
+    await advance(60_000);
+    await advance(5 * 60_000);
+    const afterRetries = invoke.mock.calls.length;
+    await advance(10 * 60_000); // 还没到 30 分钟那一轮
+    expect(invoke.mock.calls.length).toBe(afterRetries);
+    expect(afterRetries).toBe(3); // 首检 + 两次重试
+  });
+
+  it("成功之后重试预算还回来 —— 长期开着的实例不该只有一次机会", async () => {
+    let calls = 0;
+    invoke = vi.fn(async (cmd: string) => {
+      if (cmd === "check_for_update") {
+        calls++;
+        if (calls === 1) return null;      // 首检：已是最新
+        if (calls === 2) throw new Error("blip"); // 30 分钟后抖了一下
+        return available;
+      }
+      return null;
+    });
+    (globalThis as any).__TAURI__ = { core: { invoke } };
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    render(<UpdateBanner />);
+    await advance(FIRST_CHECK_MS + 100);
+    await advance(RECHECK_MS);
+    expect(screen.queryByTestId("update-banner")).toBeNull();
+    await advance(60_000);
+    expect(screen.getByTestId("update-banner")).toBeTruthy();
+  });
+
   it("shows after the boot-settle check finds an update", async () => {
     render(<UpdateBanner />);
     expect(screen.queryByTestId("update-banner")).toBeNull();
