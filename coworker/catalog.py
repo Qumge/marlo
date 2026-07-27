@@ -68,18 +68,41 @@ def _code_files(context: AgentContext) -> list:
     return [*files, *file_tools(ws)]
 
 
+# 知识工作角色【不给】补丁类工具。
+#
+# 理由是用户看到什么：一个白领点开审批卡片，看到的是
+#
+#     @@ -12,7 +12,7 @@
+#     -　　本合同自双方签署之日起生效
+#     +　　本合同自双方盖章之日起生效
+#
+# 这是给程序员看的东西。改成整文件重写（write_file）之后，卡片能说
+# 「我要改 合同概览.docx」并给出结果摘要 —— 这才是他能判断该不该点的形式。
+#
+# 代价说清楚：整文件重写要把全文重新吐一遍，长文档更费 token，而且模型
+# 复述时可能改动没打算改的地方。对白领的文档场景（几页纸）这个代价可以接受；
+# 对一个几千行的源文件不行 —— 所以 `code` 角色走的是 code_files，补丁工具
+# 原样保留（见 _code_files）。
+#
+# .docx / .xlsx 本来就不走这条路：它们由 documents 能力的 write_docx /
+# write_xlsx 生成，补丁对二进制格式从来就没意义。
+_PATCH_TOOLS = {"apply_patch", "apply_unified_diff", "replace_in_file"}
+
+
 def _files(context: AgentContext) -> list:
     """Knowledge-work files: multi-root aware (reads/writes across the session's roots), keeps
-    aisuite's `read_file`/`read_file_lines`. Only our `grep` replaces the slow `search_files`.
+    aisuite's `read_file`/`read_file_lines`. Our `grep` replaces the slow `search_files`, and
+    the patch tools are dropped entirely — see _PATCH_TOOLS above.
     """
     ws = str(context.workspace)
     file_kwargs = (
         {"roots": context.roots} if context.roots else {"root": ws, "allow_write": True}
     )
+    dropped = {"search_files", *_PATCH_TOOLS}
     return [
         t
         for t in ai.toolkits.files(**file_kwargs)
-        if getattr(t, "__name__", "") != "search_files"
+        if getattr(t, "__name__", "") not in dropped
     ]
 
 

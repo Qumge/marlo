@@ -39,9 +39,9 @@ COWORK_TOOLS = {
     "read_file",  # aisuite (multi-root)
     "read_file_lines",
     "write_file",
-    "apply_unified_diff",
-    "apply_patch",
-    "replace_in_file",
+    # 【没有补丁工具】。一个白领在审批卡片上看到 @@ -12,7 +12,7 @@ 是给程序员
+    # 看的东西；整文件重写让卡片能说"我要改 合同概览.docx"并给结果摘要。
+    # code 角色仍然有（见 CODE_TOOLS）——几千行的源文件重写不起。
     "grep",
     "run_shell",
     "shell_task_output",
@@ -84,6 +84,34 @@ def test_agents_use_catalog(tmp_path):
     ctx = _full_context(tmp_path)
     assert _names(code_agent().build_tools(ctx)) == CODE_TOOLS
     assert _names(cowork_agent().build_tools(ctx)) == COWORK_TOOLS
+
+
+PATCH_TOOLS = {"apply_patch", "apply_unified_diff", "replace_in_file"}
+
+
+def test_patch_tools_are_for_code_only(tmp_path):
+    """补丁工具只给 code 角色。
+
+    上面两个常量是【期望值】——单独改它们，等于把测试改成迎合代码。这一条守的是
+    分界本身：知识工作角色一个补丁工具都不能有，code 角色三个都得在。
+
+    理由是用户看到什么。一个白领点开审批卡片，看到
+
+        @@ -12,7 +12,7 @@
+        -　　本合同自双方签署之日起生效
+        +　　本合同自双方盖章之日起生效
+
+    这是给程序员看的。整文件重写之后，卡片才能说"我要改 合同概览.docx"。
+    """
+    ctx = _full_context(tmp_path)
+    cowork = _names(cowork_agent().build_tools(ctx))
+    code = _names(code_agent().build_tools(ctx))
+
+    assert not (PATCH_TOOLS & cowork), f"Marlo 又拿到补丁工具了: {PATCH_TOOLS & cowork}"
+    assert PATCH_TOOLS <= code, f"code 角色丢了补丁工具: {PATCH_TOOLS - code}"
+    # 拿掉之后必须还有【写】的手段，否则这个角色只能读。
+    assert "write_file" in cowork
+    assert {"write_docx", "write_xlsx"} <= cowork
 
 
 def test_file_capability_distinction(tmp_path):
