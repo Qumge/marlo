@@ -2,7 +2,7 @@
 // one-click pane, exercised via Notion — the pattern all batch-2 connectors
 // share (accounts.py layer: AccountRow shape, Default badge, per-account ×).
 import { expect } from "@playwright/test";
-import { test } from "./fixtures";
+import { seedCloudSignedIn, test } from "./fixtures";
 
 async function openConnectors(page) {
   await page.goto("/");
@@ -11,10 +11,11 @@ async function openConnectors(page) {
 }
 
 async function signInAndConnectFirstWorkspace(page) {
+  // Cloud sign-in is a precondition here, not the subject: the account row
+  // belongs to the Qumge account now, and the cloud's own sign-in lives on the
+  // connector panes that need it (driven for real in cloud.spec.ts).
+  seedCloudSignedIn();
   await openConnectors(page);
-  await page.getByTestId("account-row").click();
-  await page.getByTestId("account-sign-in").click();
-  await expect(page.getByTestId("account-row")).toContainText("Rohit", { timeout: 10_000 });
   // Available row → modal with One click | Manual pills → generic one-click
   await page
     .getByTestId("connector-notion")

@@ -40,6 +40,18 @@ def _api_key(secrets: SecretStore) -> Optional[str]:
     return key or None
 
 
+def signed_in(secrets: SecretStore) -> bool:
+    """Whether a Qumge key is stored — decided locally, never by asking the server.
+
+    The account row is drawn from this. Deriving it from a successful balance
+    call instead would make every offline moment look like a signed-out one,
+    which is the bug this whole module exists downstream of: the row reported a
+    third party's sign-in state and told people who had just signed in that they
+    had not.
+    """
+    return _api_key(secrets) is not None
+
+
 def fetch(secrets: SecretStore) -> Optional[dict[str, Any]]:
     """Current balance, or None when it cannot be known.
 
@@ -67,6 +79,10 @@ def fetch(secrets: SecretStore) -> Optional[dict[str, Any]]:
 
     micro = int(data.get("balance_micro_usd") or 0)
     return {
+        # Whose key this is. The device flow returns a token and nothing else, so
+        # the server naming it here is the only way the app can show an account
+        # row that says anything more useful than "signed in".
+        "email": (data.get("email") or "").strip() or None,
         "balance_micro_usd": micro,
         "balance": micro / 1_000_000.0,
         "currency": data.get("currency") or "USD",

@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { getQumgeBalance, type QumgeBalance } from "../api";
+import { type QumgeBalance } from "../api";
 import { openExternal } from "../tauri";
 import { useT } from "../i18n";
 
@@ -13,29 +12,12 @@ import { useT } from "../i18n";
 // hides, so the line read "Not signed in" to people who had just signed in to
 // Qumge.
 //
-// Refreshed on a timer rather than pushed. The number moves as work happens, and
-// a poll that fails changes nothing on screen; a socket for this would be more
-// machinery than a figure in a corner is worth.
-const REFRESH_MS = 60_000;
-
-export function BalanceChip() {
+// The figure arrives from the account poll that already drives the row this chip
+// sits in, rather than from a timer of its own. Two components polling the same
+// endpoint on independent clocks is how a row and the number beside it end up
+// disagreeing on screen for up to a minute.
+export function BalanceChip({ balance }: { balance: QumgeBalance | null }) {
   const t = useT();
-  const [balance, setBalance] = useState<QumgeBalance | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    const load = () => {
-      getQumgeBalance().then((b) => {
-        if (alive) setBalance(b);
-      });
-    };
-    load();
-    const timer = setInterval(load, REFRESH_MS);
-    return () => {
-      alive = false;
-      clearInterval(timer);
-    };
-  }, []);
 
   // Signed out, offline, or the server is down — all the same here. Showing
   // nothing is the honest state; an error would be about us, not about them.

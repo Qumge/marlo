@@ -34,15 +34,13 @@ test("Add workspace opens the modal; signed out shows the sign-in hint, signed i
   // Manual pane is right there too — both modes, one entry point
   await modal.getByTestId("modal-pane-manual").click();
   await expect(modal.getByPlaceholder("Bot token · xoxb-…")).toBeVisible();
-  await page.keyboard.press("Escape");
+  await modal.getByTestId("modal-pane-one").click();
 
-  // sign in from the list's cloud strip, then install one-click
-  await page.getByTestId("connectors-breadcrumb").click();
-  await page.getByTestId("account-row").click();
-  await page.getByTestId("account-sign-in").click();
-  await expect(page.getByTestId("account-row")).toContainText("Rohit", { timeout: 10_000 });
-  await page.getByTestId("connector-slack").click();
-  await page.getByTestId("add-workspace-btn").click();
+  // Sign in from the pane that needs it — the button the assertion above just
+  // read. It used to mean leaving the modal for the sidebar account row, which
+  // is the Qumge account's now.
+  await modal.getByTestId("inline-cloud-sign-in").click();
+  await expect(modal.getByTestId("inline-cloud-sign-in")).toHaveCount(0, { timeout: 10_000 });
   await page.getByTestId("modal-add-to-slack").click();
   // the mock completes the browser install instantly; the page's poll shows it
   await expect(page.getByTestId("slack-workspace-T3NEW")).toContainText("new-workspace", {

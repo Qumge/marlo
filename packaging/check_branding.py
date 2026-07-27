@@ -53,7 +53,18 @@ ROOTS = [
 # behalf of a product you never installed is what malware looks like, and no
 # check reached the file.
 SUFFIXES = {".ts", ".tsx", ".css", ".rs", ".py", ".plist"}
-EXEMPT_FILES = {"Sidebar.test.tsx"}  # persona fixture, not copy
+
+
+def _is_test(path: Path) -> bool:
+    """Test files ship to nobody, so nothing in one is a user-facing string.
+
+    They were scanned at first, with a named exemption per offender — a persona
+    fixture, then a test whose whole job is asserting the account menu never says
+    OpenWorker, which the guard read as the app saying it. A guard that has to be
+    told about each test as it is written trains the next person to widen ALLOWED
+    instead, which is the one list that must stay expensive to add to.
+    """
+    return ".test." in path.name
 
 # Everything under components/connectors/ describes OpenWorker Cloud's brokered
 # OAuth: which service holds the client secret, which app the user approves on
@@ -100,7 +111,7 @@ def main() -> int:
         for path in sorted(src.rglob("*")):
             if path.suffix not in SUFFIXES or not path.is_file():
                 continue
-            if path.name in EXEMPT_FILES:
+            if _is_test(path):
                 continue
             if "__pycache__" in path.parts:
                 continue

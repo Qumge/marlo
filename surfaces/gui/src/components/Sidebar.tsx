@@ -2,22 +2,19 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { BalanceChip } from "./BalanceChip";
 import { useT } from "../i18n";
 import {
-  announceCloudChanged,
   AUTOMATIONS_CHANGED,
   CLOUD_CHANGED,
-  cloudLogin,
-  cloudLogout,
   getAutomations,
-  getCloudStatus,
   getPersonas,
+  getQumgeAccount,
   getSettings,
   INBOX_UNLOCK,
   PERSONAS_CHANGED,
+  qumgeSignOut,
   setNavLayout,
-  waitForCloudSignIn,
   type Automation,
-  type CloudStatus,
   type Persona,
+  type QumgeAccount,
   type RecentWorkspace,
   type SurfaceVisibility,
 } from "../api";
@@ -27,8 +24,13 @@ import { ConnectorIcon } from "../connectors/ConnectorIcon";
 import { Icon, type IconName } from "./Icon";
 import { PersonaGlyph, personaGlyph } from "./personaIcon";
 import { SearchModal } from "./SearchModal";
+import { QumgeSignInModal } from "./QumgeSignInModal";
 import { baseName } from "../paths";
 import { showPersonas } from "../flags";
+
+// The credit figure in the account row moves as work happens; without a timer it
+// would show whatever was true when the window was last focused.
+const ACCOUNT_REFRESH_MS = 60_000;
 
 // Session surfaces shown as accordions, in display order. The surfaced personas drive this list
 // (so third-party / Ops personas appear); the hardcoded set is the fallback before personas load.
@@ -177,26 +179,38 @@ export function Sidebar(props: Props) {
   const t = useT();
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [appMenuOpen, setAppMenuOpen] = useState(false);
-  // The account row (§26): cloud sign-in status drives the avatar/name/dot; refreshed on
-  // focus and whenever the menu opens (sign-in completes out-of-band in the browser).
-  const [cloud, setCloud] = useState<CloudStatus | null>(null);
+  // The account row (§26): the QUMGE account drives the avatar/name/dot/credit.
+  // It used to be OpenWorker Cloud's sign-in state — a third party whose
+  // connectors this build does not support — so the row said "Not signed in" to
+  // someone whose own balance was rendered two centimetres to its right.
+  // Refreshed on focus, when the menu opens, and on a timer for the balance.
+  const [account, setAccount] = useState<QumgeAccount>({
+    signed_in: false,
+    email: null,
+    balance: null,
+  });
+  const [signInOpen, setSignInOpen] = useState(false);
   // Inbox chip sticky unlock (§26): absent until the product first parks an item (or a
   // session first goes Unattended), then permanent. Per-device, like nav collapse.
   const [inboxUnlocked, setInboxUnlocked] = useState(
     () => localStorage.getItem("ocw:inbox-unlocked") === "1",
   );
-  const refreshCloud = () => getCloudStatus().then(setCloud).catch(() => {});
+  const refreshAccount = () => getQumgeAccount().then(setAccount).catch(() => {});
   useEffect(() => {
-    refreshCloud();
-    const onFocus = () => refreshCloud();
+    refreshAccount();
+    const onFocus = () => refreshAccount();
     window.addEventListener("focus", onFocus);
     window.addEventListener(CLOUD_CHANGED, onFocus);
+    // The credit figure moves as work happens, so the row would otherwise sit on
+    // whatever it read when the window was last focused.
+    const timer = window.setInterval(refreshAccount, ACCOUNT_REFRESH_MS);
     const unlock = () => {
       localStorage.setItem("ocw:inbox-unlocked", "1");
       setInboxUnlocked(true);
     };
     window.addEventListener(INBOX_UNLOCK, unlock);
     return () => {
+      window.clearInterval(timer);
       window.removeEventListener("focus", onFocus);
       window.removeEventListener(CLOUD_CHANGED, onFocus);
       window.removeEventListener(INBOX_UNLOCK, unlock);
@@ -374,7 +388,7 @@ export function Sidebar(props: Props) {
 
   // Display identity for the account row: the cloud profile only carries the email, so the
   // row shows the capitalized local part ("rohit@…" → "Rohit"); the menu header shows it all.
-  const accountEmail = cloud?.signed_in ? cloud.account : "";
+  const accountEmail = account.signed_in ? account.email || "" : "";
   const accountName = accountEmail
     ? accountEmail.split("@")[0].replace(/^./, (c) => c.toUpperCase())
     : "";
@@ -1140,63 +1154,58 @@ export function Sidebar(props: Props) {
                 data-testid="account-menu"
                 role="menu"
               >
-                {cloud?.signed_in ? (
+                {account.signed_in ? (
                   <div
                     className="px-3 py-1.5 mb-1 text-[11px] text-faint truncate border-b border-line"
-                    title={`${accountEmail} · OpenWorker Cloud`}
+                    data-testid="account-header"
+                    title={accountEmail ? t("accountOf")(accountEmail) : t("signedInToQumge")}
                   >
-                    {accountEmail} · OpenWorker Cloud
+                    {accountEmail ? t("accountOf")(accountEmail) : t("signedInToQumge")}
                   </div>
                 ) : (
                   <>
                     <div className="px-3 py-1.5 text-[11px] text-faint border-b border-line">
-                      Not signed in — one-click connections need OpenWorker Cloud
+                      {t("signedOutHint")}
                     </div>
                     <button
                       className="w-full flex items-center gap-2.5 px-3 py-1.5 mb-1 text-[13px] text-left text-accent hover:bg-paper"
                       data-testid="account-sign-in"
-                      onClick={async () => {
+                      onClick={() => {
                         setAppMenuOpen(false);
-                        // Opens the system browser server-side; completion lands out-of-band,
-                        // so poll until it flips (refocusing the window also refetches).
-                        await cloudLogin().catch(() => {});
-                        waitForCloudSignIn((s) => {
-                          if (s) setCloud(s);
-                          // Other always-mounted consumers (Settings' telemetry card,
-                          // connector panes) refetch on this.
-                          if (s?.signed_in) announceCloudChanged();
-                        });
+                        setSignInOpen(true);
                       }}
                     >
-                      <Icon name="plug" size={15} className="shrink-0" /> Sign in to OpenWorker Cloud
-                      Cloud
+                      <Icon name="plug" size={15} className="shrink-0" /> {t("signInToQumge")}
                     </button>
                   </>
                 )}
                 {appMenuItem(
                   "inbox",
-                  "Inbox",
+                  t("inbox"),
                   props.onOpenInbox,
                   props.inboxActive,
                   <AttnBadge n={totalAttention} />,
                 )}
-                {appMenuItem("plug", "Connectors", props.onOpenIntegrations, props.integrationsActive)}
+                {appMenuItem("plug", t("connectors"), props.onOpenIntegrations, props.integrationsActive)}
                 <div className="h-px bg-line my-1 mx-2" />
                 {appMenuItem(
                   "gear",
-                  "Settings",
+                  t("settings"),
                   props.onManage,
                   false,
                   <span className="text-[11px] text-faint">⌘ ,</span>,
                 )}
-                {appMenuItem("clock", "Automations", props.onOpenScheduled, props.scheduledActive)}
-                {appMenuItem("audit", "Activity", props.onOpenAudit, props.auditActive)}
-                {cloud?.signed_in && (
+                {appMenuItem("clock", t("automations"), props.onOpenScheduled, props.scheduledActive)}
+                {appMenuItem("audit", t("activity"), props.onOpenAudit, props.auditActive)}
+                {account.signed_in && (
                   <>
                     <div className="h-px bg-line my-1 mx-2" />
-                    {appMenuItem("signOut", "Sign out", async () => {
-                      await cloudLogout().catch(() => {});
-                      announceCloudChanged();
+                    {/* Ends the session the header names. This used to sign the
+                        user out of OpenWorker Cloud while the line above it
+                        showed their Qumge address. */}
+                    {appMenuItem("signOut", t("signOut"), async () => {
+                      await qumgeSignOut();
+                      await refreshAccount();
                     })}
                   </>
                 )}
@@ -1211,39 +1220,52 @@ export function Sidebar(props: Props) {
             }
             data-testid="account-row"
             onClick={() => {
-              if (!appMenuOpen) refreshCloud();
+              if (!appMenuOpen) void refreshAccount();
               setAppMenuOpen((v) => !v);
             }}
             aria-haspopup="menu"
             aria-expanded={appMenuOpen}
-            aria-label={cloud?.signed_in ? `Account: ${accountEmail}` : "Account: not signed in"}
+            aria-label={
+              account.signed_in && accountEmail
+                ? t("accountAria")(accountEmail)
+                : account.signed_in
+                  ? t("signedInToQumge")
+                  : t("accountAriaSignedOut")
+            }
           >
             <span
               className={
                 "w-6 h-6 rounded-full grid place-items-center text-[10.5px] font-semibold shrink-0 " +
-                (cloud?.signed_in
+                (account.signed_in
                   ? "bg-accentSoft text-accent"
                   : "bg-paper text-faint border border-line")
               }
               aria-hidden
             >
-              {cloud?.signed_in ? accountName.slice(0, 1).toUpperCase() : "?"}
+              {account.signed_in ? accountName.slice(0, 1).toUpperCase() : "?"}
             </span>
-            <span className={"truncate " + (cloud?.signed_in ? "" : "text-muted")}>
-              {cloud?.signed_in ? accountName : "Not signed in"}
+            <span className={"truncate " + (account.signed_in ? "" : "text-muted")}>
+              {account.signed_in
+                ? accountEmail
+                  ? accountName
+                  : t("signedInToQumge")
+                : t("notSignedIn")}
             </span>
-            {cloud?.signed_in && (
+            {account.signed_in && (
               <span
                 className="w-[7px] h-[7px] rounded-full bg-ok shrink-0"
-                title="Signed in to OpenWorker Cloud"
+                title={t("signedInToQumge")}
                 aria-hidden
               />
             )}
             <span className="flex-1" />
               {/* Credit, where someone already looks for account things.
-                  Renders nothing when it cannot be fetched — signed out,
-                  offline and server-down all read the same to a person. */}
-              <BalanceChip />
+                  Renders nothing when it cannot be fetched — offline and
+                  server-down read the same to a person. Fed from the account
+                  poll rather than one of its own: two timers asking the same
+                  server the same question is how the row and the number end up
+                  disagreeing on screen. */}
+              <BalanceChip balance={account.balance} />
             {inboxUnlocked && (
               <span
                 className={
@@ -1255,7 +1277,7 @@ export function Sidebar(props: Props) {
                 data-testid="inbox-chip"
                 role="button"
                 aria-label={
-                  totalAttention > 0 ? `Inbox — ${totalAttention} items need you` : "Inbox"
+                  totalAttention > 0 ? t("inboxNeedsYou")(totalAttention) : t("inbox")
                 }
                 title={totalAttention > 0 ? `Inbox — ${totalAttention} items need you` : "Inbox"}
                 onClick={(e) => {
@@ -1287,6 +1309,13 @@ export function Sidebar(props: Props) {
             props.onSelectSession(id, ws, ag);
           }}
           onClose={() => setSearchModalOpen(false)}
+        />
+      )}
+
+      {signInOpen && (
+        <QumgeSignInModal
+          onClose={() => setSignInOpen(false)}
+          onConnected={() => void refreshAccount()}
         />
       )}
     </div>

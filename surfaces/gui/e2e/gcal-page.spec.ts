@@ -1,7 +1,7 @@
 // The Google Calendar detail page: gmail-parity multi-account (Default badge,
 // Make default, per-account disconnect, direct one-click add — no modal).
 import { expect } from "@playwright/test";
-import { test } from "./fixtures";
+import { seedCloudSignedIn, test } from "./fixtures";
 
 async function openConnectors(page) {
   await page.goto("/");
@@ -10,10 +10,8 @@ async function openConnectors(page) {
 }
 
 async function signInAndConnectFirstAccount(page) {
+  seedCloudSignedIn();
   await openConnectors(page);
-  await page.getByTestId("account-row").click();
-  await page.getByTestId("account-sign-in").click();
-  await expect(page.getByTestId("account-row")).toContainText("Rohit", { timeout: 10_000 });
   // starts disconnected → Available row → one click (mock connects instantly)
   await page
     .getByTestId("connector-google_calendar")

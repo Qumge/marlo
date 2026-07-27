@@ -115,6 +115,25 @@ export const en = {
   balanceLowTitle: "Running low on credit — click to top up",
   addCredit: "Add credit",
 
+  // -- account (sidebar footer) ---------------------------------------------
+  // The footer used to report sign-in to OpenWorker Cloud — a third party whose
+  // connectors this build does not support — so someone signed in to Qumge read
+  // "Not signed in" beside their own balance. It names the account that pays for
+  // the models now, and every string here says Qumge because that is what it is.
+  accountOf: (email: string) => `${email} · Qumge`,
+  accountAria: (email: string) => `Account: ${email}`,
+  accountAriaSignedOut: "Account: not signed in",
+  signedInToQumge: "Signed in to Qumge",
+  signInToQumge: "Sign in to Qumge",
+  signedOutHint: "Not signed in — the models and skills come with a Qumge account",
+  signOut: "Sign out",
+  signOutOfQumge: "Sign out of Qumge",
+  inbox: "Inbox",
+  connectors: "Connectors",
+  settings: "Settings",
+  activity: "Activity",
+  inboxNeedsYou: (n: number) => `Inbox — ${n} items need you`,
+
   language: "Language",
   languageSub: "Marlo's own text. What you write to it, and what it writes back, is up to you.",
   langEnglish: "English",

@@ -3,7 +3,7 @@
 // via the header MODAL (One click | Manual), and the park → allow & deliver flow
 // that admits a new sender login into that installation's allow-list.
 import { expect } from "@playwright/test";
-import { test } from "./fixtures";
+import { seedCloudSignedIn, test } from "./fixtures";
 
 async function openGithubPage(page) {
   await page.goto("/");
@@ -46,15 +46,13 @@ test("add installation opens the modal; signed in installs a second org", async 
   // Manual PAT pane is right there too — both modes, one entry point
   await modal.getByTestId("modal-pane-manual").click();
   await expect(modal).toContainText("Personal access token");
-  await page.keyboard.press("Escape");
+  await modal.getByTestId("modal-pane-one").click();
 
-  // sign in from the list's cloud strip, then install one-click
-  await page.getByTestId("connectors-breadcrumb").click();
-  await page.getByTestId("account-row").click();
-  await page.getByTestId("account-sign-in").click();
-  await expect(page.getByTestId("account-row")).toContainText("Rohit", { timeout: 10_000 });
-  await page.getByTestId("connector-github").click();
-  await page.getByTestId("add-installation-btn").click();
+  // Sign in from the pane that needs it — the button the assertion above just
+  // read. It used to mean leaving the modal for the sidebar account row, which
+  // is the Qumge account's now.
+  await modal.getByTestId("inline-cloud-sign-in").click();
+  await expect(modal.getByTestId("inline-cloud-sign-in")).toHaveCount(0, { timeout: 10_000 });
   await page.getByTestId("modal-install-github-app").click();
   // the mock completes the browser install instantly; the page's poll shows it
   await expect(page.getByTestId("github-install-202")).toContainText("hooli", {
@@ -70,12 +68,8 @@ test("modal has ONE connect button and sends no flow — authorize-first lives i
   // The broker's default github flow user-authorizes first (links existing installations,
   // redirects to the install page only when there are none) — so the modal's old
   // "Already installed? Link it" secondary and its flow=authorize are gone.
+  seedCloudSignedIn();
   await openGithubPage(page);
-  await page.getByTestId("connectors-breadcrumb").click();
-  await page.getByTestId("account-row").click();
-  await page.getByTestId("account-sign-in").click();
-  await expect(page.getByTestId("account-row")).toContainText("Rohit", { timeout: 10_000 });
-  await page.getByTestId("connector-github").click();
 
   let flowSent: string | null = null;
   await page.route("**/v1/connectors/github/connect-managed", async (route) => {
@@ -89,13 +83,8 @@ test("modal has ONE connect button and sends no flow — authorize-first lives i
 });
 
 test("disconnect removes one installation and keeps the rest", async ({ page }) => {
-  await openGithubPage(page);
-  // add a second installation first (signed-in one-click)
-  await page.getByTestId("connectors-breadcrumb").click();
-  await page.getByTestId("account-row").click();
-  await page.getByTestId("account-sign-in").click();
-  await expect(page.getByTestId("account-row")).toContainText("Rohit", { timeout: 10_000 });
-  await page.getByTestId("connector-github").click();
+  seedCloudSignedIn();
+  await openGithubPage(page); // add a second installation first (signed-in one-click)
   await page.getByTestId("add-installation-btn").click();
   await page.getByTestId("modal-install-github-app").click();
   await expect(page.getByTestId("github-install-202")).toBeVisible({ timeout: 10_000 });

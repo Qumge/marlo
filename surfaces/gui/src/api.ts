@@ -507,6 +507,40 @@ export async function getQumgeBalance(): Promise<QumgeBalance | null> {
   }
 }
 
+/** Whose account this is, and what it has left — the sidebar footer's whole
+ * model. `signed_in` is decided from the key on disk, not from a successful
+ * call, so going offline cannot demote a signed-in user to a signed-out one:
+ * the footer used to report a third party's sign-in state and told people
+ * holding a working Qumge key that they were not signed in. */
+export interface QumgeAccount {
+  signed_in: boolean;
+  email: string | null;
+  balance: QumgeBalance | null;
+}
+
+const SIGNED_OUT: QumgeAccount = { signed_in: false, email: null, balance: null };
+
+export async function getQumgeAccount(): Promise<QumgeAccount> {
+  try {
+    const res = await fetch(`${httpBase()}/v1/qumge/account`);
+    if (!res.ok) return SIGNED_OUT;
+    const body = await res.json();
+    // An older sidecar has no such route and a proxy can hand back anything;
+    // treating a shape we do not recognise as signed-out keeps the footer from
+    // rendering `undefined` at someone.
+    return typeof body?.signed_in === "boolean" ? body : SIGNED_OUT;
+  } catch {
+    return SIGNED_OUT;
+  }
+}
+
+/** Sign out of Qumge: drop the stored key. The account row's sign-out has to
+ * end the session the row is naming — it used to sign the user out of a
+ * different service than the one written above it. */
+export async function qumgeSignOut(): Promise<void> {
+  await fetch(`${httpBase()}/v1/providers/qumge`, { method: "DELETE" }).catch(() => {});
+}
+
 export async function getCloudStatus(): Promise<CloudStatus> {
   const res = await fetch(`${httpBase()}/v1/cloud/status`);
   return res.json();

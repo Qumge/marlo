@@ -2,7 +2,7 @@
 // Default badge, per-account disconnect, direct one-click add (no modal — Gmail
 // has one connect mode), and the "Never show agents" filter lists.
 import { expect } from "@playwright/test";
-import { test } from "./fixtures";
+import { seedCloudSignedIn, test } from "./fixtures";
 
 async function openConnectors(page) {
   await page.goto("/");
@@ -11,10 +11,8 @@ async function openConnectors(page) {
 }
 
 async function signInAndConnectFirstAccount(page) {
+  seedCloudSignedIn();
   await openConnectors(page);
-  await page.getByTestId("account-row").click();
-  await page.getByTestId("account-sign-in").click();
-  await expect(page.getByTestId("account-row")).toContainText("Rohit", { timeout: 10_000 });
   // gmail starts disconnected → Available row → modal → one click (mock connects instantly)
   await page.getByTestId("connector-gmail").getByRole("button", { name: "Connect", exact: true }).click();
   await page.getByRole("button", { name: /Connect Gmail with one click/i }).click();

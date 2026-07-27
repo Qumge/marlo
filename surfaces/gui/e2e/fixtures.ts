@@ -208,6 +208,42 @@ export const CLOUD_STATE = {
   telemetry_enabled: true,
 };
 
+/** Start a test with OpenWorker Cloud sign-in already done.
+ *
+ * Cloud sign-in used to hang off the sidebar account row, so any spec needing a
+ * signed-in cloud opened the account menu and clicked through it. That row is
+ * the QUMGE account's now — the account that pays for the models, and the one a
+ * user is actually signed in to — and cloud sign-in lives inside Connectors,
+ * on the pane for a connector that needs it.
+ *
+ * The sign-in flow itself is still driven through the real UI, once, in
+ * cloud.spec.ts. Every other spec here is testing something else and states this
+ * as a precondition rather than re-driving a four-click flow to reach it.
+ *
+ * Call before `page.goto`. */
+export function seedCloudSignedIn() {
+  Object.assign(CLOUD_STATE, {
+    signed_in: true,
+    account: "rohit@openworker.com",
+    user_id: "usr_e2e",
+  });
+}
+
+// The Qumge account behind the sidebar footer: who is signed in, and what is
+// left. `signed_in` comes from a key on disk in the real sidecar, so it stays
+// true here even where the balance is absent.
+export const QUMGE_STATE = {
+  signed_in: true,
+  email: "someone@example.com",
+  balance: {
+    balance_micro_usd: 19_120_000,
+    balance: 19.12,
+    currency: "USD",
+    topup_url: "https://qumge.com/en/gateway/topup/new",
+    low: false,
+  } as Record<string, unknown> | null,
+};
+
 const GALLERY_PERSONAS = [
   {
     slug: "sales",
@@ -554,6 +590,17 @@ export async function mockApi(page: import("@playwright/test").Page) {
     account: "",
     user_id: "",
     telemetry_enabled: true,
+  });
+  Object.assign(QUMGE_STATE, {
+    signed_in: true,
+    email: "someone@example.com",
+    balance: {
+      balance_micro_usd: 19_120_000,
+      balance: 19.12,
+      currency: "USD",
+      topup_url: "https://qumge.com/en/gateway/topup/new",
+      low: false,
+    },
   });
 
   // The scripted fake agent behind the session WebSocket. Speaks the real event protocol
@@ -1129,6 +1176,14 @@ export async function mockApi(page: import("@playwright/test").Page) {
           ),
         ],
       });
+    if (p.endsWith("/v1/qumge/account")) return json({ ...QUMGE_STATE });
+    if (p.endsWith("/v1/qumge/balance")) return json({ balance: QUMGE_STATE.balance });
+    if (p.endsWith("/v1/providers/qumge") && m === "DELETE") {
+      // What the account row's Sign out does: drop the key. Everything about
+      // the account goes with it, including the balance.
+      Object.assign(QUMGE_STATE, { signed_in: false, email: null, balance: null });
+      return json({ ok: true });
+    }
     if (p.endsWith("/v1/cloud/status")) return json({ ...CLOUD_STATE });
     if (p.endsWith("/v1/cloud/login") && m === "POST") {
       Object.assign(CLOUD_STATE, { signed_in: true, account: "rohit@openworker.com", user_id: "usr_e2e" });
