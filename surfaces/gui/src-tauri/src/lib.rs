@@ -538,8 +538,26 @@ struct UpdateInfo {
 #[tauri::command]
 async fn check_for_update(app: tauri::AppHandle) -> Result<Option<UpdateInfo>, String> {
     use tauri_plugin_updater::UpdaterExt;
-    let updater = app.updater().map_err(|e| e.to_string())?;
-    let update = updater.check().await.map_err(|e| e.to_string())?;
+    // 更新检查失败过一次，而【任何地方都没有留下记录】：Rust 把错误字符串交给
+    // 前端，前端 `.catch(() => {})` 扔掉，日志里一个字都没有。于是"没检查"、
+    // "检查失败"、"检查成功但没有新版本"三种情况长得完全一样，只能靠猜。
+    //
+    // 打到 stderr —— 这条流会进 shell 日志，是这一层唯一落盘的地方。
+    let updater = app.updater().map_err(|e| {
+        eprintln!("[updater] 拿不到 updater：{e}");
+        e.to_string()
+    })?;
+    let update = updater.check().await.map_err(|e| {
+        eprintln!("[updater] 检查失败：{e}");
+        e.to_string()
+    })?;
+    eprintln!(
+        "[updater] 检查完成：{}",
+        match &update {
+            Some(u) => format!("有新版本 {}", u.version),
+            None => "已是最新".into(),
+        }
+    );
     Ok(update.map(|u| UpdateInfo {
         version: u.version.clone(),
         notes: u.body.clone().unwrap_or_default(),

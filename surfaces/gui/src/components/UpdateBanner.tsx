@@ -54,7 +54,13 @@ export function UpdateBanner() {
 
   useEffect(() => {
     if (!isTauri()) return;
-    const check = () => checkForUpdate().then((u) => u && offer(u)).catch(() => {});
+    // 【不要再吞掉】。这里原来是 `.catch(() => {})`：0.3.3 发出去之后没人收到
+    // 提示，而排查时发现失败在任何地方都没有留下记录——Rust 返回了错误字符串，
+    // 这一行把它扔了。控制台至少是一个能看的地方。
+    const check = () =>
+      checkForUpdate()
+        .then((u) => u && offer(u))
+        .catch((e) => console.error("[updater] 检查更新失败：", e));
     const t = setTimeout(check, FIRST_CHECK_MS);
     const i = setInterval(check, RECHECK_MS);
     return () => {

@@ -532,9 +532,14 @@ function TrustedWorkspacesCard() {
 function UpdateInline() {
   const [state, setState] = useState<"idle" | "checking" | "none" | "found" | "installing" | "error">("idle");
   const [version, setVersion] = useState("");
+  // 真正的失败原因。原来只留一个 "error" 状态、显示一句"稍后再试"——0.3.3 发出去
+  // 之后没人收到提示，而这个按钮是【唯一】能问出原因的地方，它却把原因扔了。
+  // 网络不通和签名不对，用户要做的事完全不同。
+  const [err, setErr] = useState("");
 
   const check = async () => {
     setState("checking");
+    setErr("");
     try {
       const u = await checkForUpdate();
       if (u) {
@@ -543,7 +548,8 @@ function UpdateInline() {
       } else {
         setState("none");
       }
-    } catch {
+    } catch (e: any) {
+      setErr(String(e?.message || e));
       setState("error");
     }
   };
@@ -578,7 +584,7 @@ function UpdateInline() {
           {state === "none"
             ? "You're on the latest version."
             : state === "error"
-              ? "Couldn't check right now — try again later."
+              ? `Couldn't check: ${err || "unknown error"}`
               : "Downloading — Marlo restarts by itself when it's ready."}
         </span>
       )}
