@@ -119,6 +119,12 @@ export const zh: Strings = {
   nFolders: (n) => `${n} 个文件夹`,
   giveFolderAccess: "+ 授权一个文件夹…",
 
+  connectRequestTitle: (title) => `要连一下 ${title} 吗？`,
+  connectBrokeredBy: (who) => `这次登录由 ${who} 中转。`,
+  connectNow: "连接",
+  checkYourBrowser: "去浏览器里完成…",
+  notNow: "先不要",
+
   accountOf: (email) => `${email} · Qumge`,
   accountAria: (email) => `账号：${email}`,
   accountAriaSignedOut: "账号：未登录",

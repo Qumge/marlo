@@ -1856,6 +1856,10 @@ def create_app(manager: SessionManager) -> FastAPI:
                             }
                         )
                     )
+                elif kind == "connector_response":
+                    _resolve_pending(
+                        json.dumps({"connected": bool(message.get("connected"))})
+                    )
                 elif kind == "plan_response":
                     _resolve_pending(
                         json.dumps(

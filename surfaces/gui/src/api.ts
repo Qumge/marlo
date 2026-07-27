@@ -1814,6 +1814,12 @@ export class Session {
     this.send({ type: "directory_response", granted, ...(path ? { path } : {}), writable: !!writable });
   }
 
+  // Reply to a `request_connector` prompt: connect the account, or decline.
+  // 服务端在这之后还要等浏览器那一趟——见 app.py 的 connector_requester。
+  respondConnector(connect: boolean) {
+    this.send({ type: "connector_response", connected: connect });
+  }
+
   // Reply to a `propose_plan` prompt: approve (choosing the execution mode) or reject with feedback.
   respondPlan(approved: boolean, mode?: string, feedback?: string) {
     this.send({

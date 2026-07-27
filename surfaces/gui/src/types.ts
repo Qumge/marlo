@@ -8,6 +8,7 @@ export type EventType =
   | "tool_proposed"
   | "permission_required"
   | "directory_requested"
+  | "connector_requested"
   | "question_requested"
   | "plan_proposed"
   | "tool_started"
@@ -102,6 +103,14 @@ export type Item =
       path?: string;
       writable?: boolean;
       resolved?: "granted" | "denied";
+    }
+  | {
+      kind: "connreq";
+      connector: string;
+      title: string;
+      reason: string;
+      brokered_by: string;
+      resolved?: "connected" | "declined";
     }
   | {
       kind: "planreq";

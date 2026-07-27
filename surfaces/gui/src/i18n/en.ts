@@ -150,6 +150,14 @@ export const en = {
   nFolders: (n: number) => `${n} folder${n === 1 ? "" : "s"}`,
   giveFolderAccess: "+ Give access to a folder…",
 
+  // -- 对话里的授权卡片 -----------------------------------------------------
+  connectRequestTitle: (title: string) => `Connect ${title}?`,
+  // 中转方那一行只在真有第三方时渲染 —— 见 ConnectorRequestCard 的注释。
+  connectBrokeredBy: (who: string) => `The sign-in is handled by ${who}.`,
+  connectNow: "Connect",
+  checkYourBrowser: "Check your browser…",
+  notNow: "Not now",
+
   // -- account (sidebar footer) ---------------------------------------------
   // The footer used to report sign-in to OpenWorker Cloud — a third party whose
   // connectors this build does not support — so someone signed in to Qumge read

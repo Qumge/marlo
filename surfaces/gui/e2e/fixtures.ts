@@ -601,9 +601,34 @@ export async function mockApi(page: import("@playwright/test").Page) {
     let hadTurn = false; // a user_message landed — set_model is now a mid-session switch
     ws.onMessage((raw) => {
       const msg = JSON.parse(String(raw));
+      if (msg.type === "connector_response") {
+        // 真实服务端在这里【还要等】浏览器那一趟（最多 180 秒，见 app.py 的
+        // connector_requester）。立刻回 tool_finished 会把"去浏览器里完成…"
+        // 那个状态跳过去，测不到它。
+        setTimeout(() => {
+          send("tool_finished", {
+            name: "request_connector",
+            status: msg.connected ? "ok" : "denied",
+          });
+          send("turn_done", { status: "completed" });
+        }, 800);
+        return;
+      }
       if (msg.type === "user_message") {
         hadTurn = true;
         send("turn_start", { input: msg.text });
+        // 需要一个账号：发 connector_requested，然后挂起等用户在卡片上决定。
+        // 和 permission_required 一样是"暂停等人"的形状。
+        if (/邮件|mail/i.test(msg.text)) {
+          send("connector_requested", {
+            connector: "outlook",
+            title: "Outlook",
+            reason: "读你上周的邮件",
+            brokered_by: "OpenWorker Cloud",
+          });
+          return;
+        }
+        if (msg.type === "connector_response") return;
         if (/run a tool/i.test(msg.text)) {
           pendingTool = "run_shell";
           send("tool_proposed", { name: "run_shell", arguments: { command: "ls" } });

@@ -54,6 +54,7 @@ import { AuditView } from "./components/AuditView";
 import { InboxView } from "./components/InboxView";
 import { ApprovalCard } from "./components/ApprovalCard";
 import { DirectoryRequestCard } from "./components/DirectoryRequestCard";
+import { ConnectorRequestCard } from "./components/ConnectorRequestCard";
 import { PlanCard } from "./components/PlanCard";
 import { WorkspaceTrustPrompt } from "./components/WorkspaceTrustPrompt";
 import { useT } from "./i18n";
@@ -647,6 +648,19 @@ export function App() {
             { kind: "dirreq", reason: d.reason || "", path: d.path || "", writable: !!d.writable },
           ]);
           break;
+        case "connector_requested":
+          if (unattendedRef.current) break;
+          setItems((p) => [
+            ...p,
+            {
+              kind: "connreq",
+              connector: d.connector || "",
+              title: d.title || d.connector || "",
+              reason: d.reason || "",
+              brokered_by: d.brokered_by || "",
+            },
+          ]);
+          break;
         case "plan_proposed":
           if (unattendedRef.current) break;
           setItems((p) => [...p, { kind: "planreq", plan: d.plan || "" }]);
@@ -665,6 +679,9 @@ export function App() {
           ]);
           break;
         case "tool_finished":
+          if (d.name === "request_connector") {
+            setItems((p) => resolveLastConnReq(p, d.status === "ok" ? "connected" : "declined"));
+          }
           setItems((p) =>
             updateLastTool(
               p,
@@ -852,6 +869,15 @@ export function App() {
     setItems((p) => resolveLastDirReq(p, granted ? "granted" : "denied"));
     dropSessionInbox("directory");
     sessionRef.current?.respondDirectory(granted, path, writable);
+  };
+  const respondConnector = (connect: boolean) => {
+    // 拒绝是终局，立刻解决。同意【不是】—— 浏览器那一趟还没走完，卡片要
+    // 留在原地显示"去浏览器里完成…"，等服务端的 tool_finished 回来才解决。
+    // 文件夹授权是瞬时的所以能立刻消失，连一个账号不是：点完就消失会让用户
+    // 盯着一个什么都没有的界面，不知道该去哪。
+    if (!connect) setItems((p) => resolveLastConnReq(p, "declined"));
+    dropSessionInbox("connector");
+    sessionRef.current?.respondConnector(connect);
   };
   const answerQuestion = (answer: string) => {
     setItems((p) => resolveLastQuestion(p, answer));
@@ -1091,6 +1117,7 @@ export function App() {
   const idle = items.length === 0 && !streaming;
   const pendingApproval = [...items].reverse().find((i) => i.kind === "approval" && !i.resolved);
   const pendingDirReq = [...items].reverse().find((i) => i.kind === "dirreq" && !i.resolved);
+  const pendingConnReq = [...items].reverse().find((i) => i.kind === "connreq" && !i.resolved);
   const pendingPlan = [...items].reverse().find((i) => i.kind === "planreq" && !i.resolved);
   const pendingQuestion = [...items].reverse().find((i) => i.kind === "question" && !i.resolved);
   // Facts subtitle (§22): the session's FIXED facts, not controls — model (+ the
@@ -1545,6 +1572,8 @@ export function App() {
                 // parked in the Inbox and surfaced via the answer-in-context card below.
                 !unattended && pendingPlan?.kind === "planreq" ? (
                   <PlanCard item={pendingPlan} onRespond={respondPlan} />
+                ) : !unattended && pendingConnReq?.kind === "connreq" ? (
+                  <ConnectorRequestCard item={pendingConnReq} onRespond={respondConnector} />
                 ) : !unattended && pendingDirReq?.kind === "dirreq" ? (
                   <DirectoryRequestCard item={pendingDirReq} onRespond={respondDirectory} />
                 ) : !unattended && pendingApproval?.kind === "approval" ? (
@@ -1698,6 +1727,18 @@ function resolveLastDirReq(items: Item[], resolved: "granted" | "denied"): Item[
   for (let i = copy.length - 1; i >= 0; i--) {
     const it = copy[i];
     if (it.kind === "dirreq" && !it.resolved) {
+      copy[i] = { ...it, resolved };
+      break;
+    }
+  }
+  return copy;
+}
+
+function resolveLastConnReq(items: Item[], resolved: "connected" | "declined"): Item[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i >= 0; i--) {
+    const it = copy[i];
+    if (it.kind === "connreq" && !it.resolved) {
       copy[i] = { ...it, resolved };
       break;
     }
