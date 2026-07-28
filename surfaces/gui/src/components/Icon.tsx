@@ -74,10 +74,16 @@ export function Icon({
         </svg>
       );
     case "logo":
-      // The Marlo mark — a 6-point star, matching the app + macOS tray icon.
+      // Marlo 的标记 —— 环 + 箭头。和应用图标（实心版）、托盘图标、以及 qumge.com
+      // 导航栏是【同一套几何】：一个标记，两个产品。
+      //
+      // 旧版这里是一个六角星，注释写着"matching the app + macOS tray icon" ——
+      // 而当时的应用图标是一张人像插画，托盘是那张插画的剪影。三个地方三个样子，
+      // 注释却说它们一致。这次一起换了。
       return (
-        <svg {...s} fill="currentColor" stroke="none">
-          <path d="M12.00 1.80 L13.35 9.66 L20.83 6.90 L14.70 12.00 L20.83 17.10 L13.35 14.34 L12.00 22.20 L10.65 14.34 L3.17 17.10 L9.30 12.00 L3.17 6.90 L10.65 9.66 Z" />
+        <svg {...s} strokeWidth={3.3}>
+          <circle cx="12" cy="12" r="7.65" />
+          <path d="M 10.43 9.08 L 13.58 12 L 10.43 14.93" strokeWidth={2.71} />
         </svg>
       );
     case "sidebar":
