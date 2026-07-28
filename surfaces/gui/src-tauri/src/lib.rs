@@ -105,7 +105,7 @@ fn default_state_dir(name: &str) -> PathBuf {
 /// Windows: `%APPDATA%\marlo`; POSIX: `~/.config/marlo`.
 /// `MARLO_STATE_DIR`（其次 `COWORKER_STATE_DIR`）覆盖。
 ///
-/// 老目录（coworker，fork 自 OpenWorker 时留下的）存在而新的不存在 -> 搬过去。
+/// 老目录（coworker —— fork 时从上游继承的名字）存在而新的不存在 -> 搬过去。
 /// 【两侧必须一致】：shell 和 sidecar 各有一份实现，只改一边等于把状态搬走一半。
 /// 谁先起来谁搬，rename 在同一个文件系统上是原子的；失败就继续用老目录 ——
 /// 一个迁移失败还坚持返回新路径的程序，会让用户打开来看到空的，以为东西没了。
