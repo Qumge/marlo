@@ -108,6 +108,10 @@ SENTENCE_LEAKS = [
     re.compile(r"[a-z]{3,}\s+openworker-(?:server|desktop)\s+[a-z]{2,}"),
 ]
 
+# 两个检查器互查会打起来：check_i18n.py 的白名单里列着一串专名（含 OpenWorker），
+# 那是判据不是界面文案。跳过 packaging/ 自己。
+SELF_CHECKS = {"check_i18n.py", "check_branding.py"}
+
 ALLOWED = [
     re.compile(r"OpenWorker Cloud"),
     re.compile(r"openworker\.com"),
@@ -156,6 +160,8 @@ def main() -> int:
 
 
 def _scan(path: Path, src: Path, offenders: list) -> None:
+    if path.name in SELF_CHECKS:
+        return
     for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         # 注释不是用户可见字符串 —— 它们解释 fork 历史时会正当地提到上游的名字。
         stripped = line.strip()

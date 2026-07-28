@@ -65,7 +65,7 @@ interface Props {
 }
 
 export function ScheduledView({ onOpenRun, onRunNow, initialOpenId }: Props) {
-  const t = useT();
+  const tr = useT();
   const [tasks, setTasks] = useState<Automation[]>([]);
   const [openId, setOpenId] = useState<string | null>(initialOpenId ?? null);
   const [showForm, setShowForm] = useState(false);
@@ -125,7 +125,7 @@ export function ScheduledView({ onOpenRun, onRunNow, initialOpenId }: Props) {
     <Shell>
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <PanelHead title="Automations" sub="Recurring tasks Marlo runs on a schedule." />
+          <PanelHead title={tr("autoTitle")} sub="Recurring tasks Marlo runs on a schedule." />
         </div>
         <button
           className="text-[12.5px] px-3 py-1.5 rounded-lg border border-lineStrong bg-panel hover:border-accent hover:text-accent shrink-0"
@@ -137,7 +137,7 @@ export function ScheduledView({ onOpenRun, onRunNow, initialOpenId }: Props) {
 
       <div className="text-[12px] text-faint flex gap-1.5 mb-4">
         <span aria-hidden>ⓘ</span>
-        <span>{t("scheduledOnlyWhileOpen")}</span>
+        <span>{tr("scheduledOnlyWhileOpen")}</span>
       </div>
 
       {showForm && (
@@ -171,7 +171,7 @@ export function ScheduledView({ onOpenRun, onRunNow, initialOpenId }: Props) {
                 <span className="text-[13.5px] font-semibold truncate">{t.title}</span>
                 <button
                   className="sched-card-del"
-                  title="Delete automation"
+                  title={tr("autoDelete")}
                   aria-label={`Delete ${t.title}`}
                   onClick={async (e) => {
                     e.stopPropagation();
@@ -204,6 +204,7 @@ function NewAutomationForm({
   onCancel: () => void;
   onCreate: (p: { title: string; instructions: string; cron?: string }) => void;
 }) {
+  const tr = useT();
   const [title, setTitle] = useState("");
   const [instructions, setInstructions] = useState("");
   const [time, setTime] = useState("09:00");
@@ -218,13 +219,13 @@ function NewAutomationForm({
       </div>
       <input
         className="tmpl-input"
-        placeholder="Title (e.g. Daily standup notes)"
+        placeholder={tr("autoTitlePlaceholder")}
         value={title}
         onChange={(e) => setTitle(e.target.value)}
       />
       <textarea
         className="tmpl-input tmpl-textarea"
-        placeholder="What should it do each run? (e.g. Summarize today's calendar and open tasks.)"
+        placeholder={tr("autoInstructionsPlaceholder")}
         value={instructions}
         onChange={(e) => setInstructions(e.target.value)}
       />
@@ -239,15 +240,15 @@ function NewAutomationForm({
           />
         </label>
         <label className="tmpl-field">
-          <span>Repeat</span>
+          <span>{tr("autoRepeat")}</span>
           <select
             className="tmpl-input tmpl-select"
             value={freq}
             onChange={(e) => setFreq(e.target.value)}
           >
-            <option value="daily">Every day</option>
-            <option value="weekdays">Weekdays</option>
-            <option value="weekends">Weekends</option>
+            <option value="daily">{tr("autoEveryDay")}</option>
+            <option value="weekdays">{tr("autoWeekdays")}</option>
+            <option value="weekends">{tr("autoWeekends")}</option>
           </select>
         </label>
       </div>
@@ -287,6 +288,7 @@ function TaskDetail({
   ) => void;
   onRunNow: (taskId: string, title?: string) => void;
 }) {
+  const tr = useT();
   const [task, setTask] = useState<Automation | null>(null);
   const [runs, setRuns] = useState<AutomationRun[]>([]);
   const [editing, setEditing] = useState(false);
@@ -375,7 +377,7 @@ function TaskDetail({
               className="tmpl-input sched-edit-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Title"
+              placeholder={tr("autoTitleField")}
             />
           ) : (
             <h2 className="text-[18px] font-semibold tracking-tight">{task.title}</h2>
@@ -393,7 +395,7 @@ function TaskDetail({
                 <button className="btn-primary sm" onClick={() => onRunNow(id, task.title)}>
                   ▶ Run now
                 </button>
-                <button className="btn sm" onClick={startEdit}>Edit</button>
+                <button className="btn sm" onClick={startEdit}>{tr("autoEdit")}</button>
                 <button className="btn sm danger-btn" onClick={remove}>
                   <Icon name="trash" size={14} /> Delete
                 </button>
@@ -409,11 +411,11 @@ function TaskDetail({
               <input type="time" className="tmpl-input tmpl-time" value={time} onChange={(e) => setTime(e.target.value)} />
             </label>
             <label className="tmpl-field">
-              <span>Repeat</span>
+              <span>{tr("autoRepeat")}</span>
               <select className="tmpl-input tmpl-select" value={freq} onChange={(e) => setFreq(e.target.value)}>
-                <option value="daily">Every day</option>
-                <option value="weekdays">Weekdays</option>
-                <option value="weekends">Weekends</option>
+                <option value="daily">{tr("autoEveryDay")}</option>
+                <option value="weekdays">{tr("autoWeekdays")}</option>
+                <option value="weekends">{tr("autoWeekends")}</option>
               </select>
             </label>
           </div>
@@ -427,7 +429,7 @@ function TaskDetail({
           </div>
         )}
 
-        <div className="sa-sub">Instructions</div>
+        <div className="sa-sub">{tr("autoInstructions")}</div>
         {editing ? (
           <textarea
             className="tmpl-input tmpl-textarea sched-edit-instr"
@@ -440,7 +442,7 @@ function TaskDetail({
 
         {(task.always_allowed || []).length > 0 && (
           <>
-            <div className="sa-sub">Allowed without asking</div>
+            <div className="sa-sub">{tr("autoAllowedNoAsk")}</div>
             <div className="dim" style={{ marginBottom: 8, fontSize: 12.5 }}>
               Standing approvals this automation may use — everything else still asks first.
             </div>
@@ -453,7 +455,7 @@ function TaskDetail({
                   </span>
                   <button
                     className="link"
-                    title="This automation will ask for approval again"
+                    title={tr("autoWillAskAgain")}
                     onClick={async () => {
                       await updateAutomation(id, { revoke: rule.entry });
                       refresh();
@@ -467,11 +469,11 @@ function TaskDetail({
           </>
         )}
 
-        <div className="sa-sub">Runs</div>
+        <div className="sa-sub">{tr("autoRuns")}</div>
         <div className="dim" style={{ marginBottom: 8, fontSize: 12.5 }}>
           Each run is a live conversation — open one to see what the agent did and ask a follow-up.
         </div>
-        {runs.length === 0 && <div className="dim">No runs yet.</div>}
+        {runs.length === 0 && <div className="dim">{tr("autoNoRuns")}</div>}
         {runs.map((r) => (
           <div
             className="sched-run open"
@@ -483,7 +485,7 @@ function TaskDetail({
                 title: task.title,
               })
             }
-            title="Open this run's conversation"
+            title={tr("autoOpenRun")}
           >
             <div className="sched-run-row">
               <span>

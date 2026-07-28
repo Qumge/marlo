@@ -76,6 +76,7 @@ fi
 echo "==> [0/5] checking bundled icons and product name"
 python3 "$HERE/check_icons.py"
 python3 "$HERE/check_branding.py"
+python3 "$HERE/check_i18n.py"
 
 echo "==> [1/5] PyInstaller: bundling openworker-server ($TRIPLE)"
 "$PLATFORM/.venv/bin/pyinstaller" --noconfirm --clean \
