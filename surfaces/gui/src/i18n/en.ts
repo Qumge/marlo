@@ -208,6 +208,7 @@ export const en = {
   abilitiesNeeds: "needs a connection:",
   abilitiesNoResults: "Nothing found. Try describing the job instead of naming a tool.",
   abilitiesVetted: "Vetted by Qumge",
+  scheduledOnlyWhileOpen: "Runs only while Marlo is open — a missed schedule catches up once when you next open it.",
   abilitiesSearchFailed: "Couldn't reach the catalog:",
 
   // -- account (sidebar footer) ---------------------------------------------

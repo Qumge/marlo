@@ -167,6 +167,7 @@ export const zh: Strings = {
   abilitiesNeeds: "需要先连：",
   abilitiesNoResults: "没搜到。试试直接说你要做的事，而不是工具的名字。",
   abilitiesVetted: "Qumge 精选",
+  scheduledOnlyWhileOpen: "只在 Marlo 开着的时候跑 —— 错过的那次会在你下次打开时补上一遍。",
   abilitiesSearchFailed: "连不上目录：",
 
   accountOf: (email) => `${email} · Qumge`,

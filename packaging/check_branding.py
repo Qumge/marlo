@@ -83,7 +83,8 @@ def _is_test(path: Path) -> bool:
     told about each test as it is written trains the next person to widen ALLOWED
     instead, which is the one list that must stay expensive to add to.
     """
-    return ".test." in path.name
+    # testing/ 下的是测试替身和夹具，docstring 里写着 "not shipped to users"。
+    return ".test." in path.name or "testing" in path.parts
 
 # Everything under components/connectors/ describes OpenWorker Cloud's brokered
 # OAuth: which service holds the client secret, which app the user approves on
@@ -94,6 +95,18 @@ def _is_test(path: Path) -> bool:
 # OAuth for 20+ tools" became "Marlo handles the OAuth for 20+ tools", one screen
 # before the app sends the user to opencoworker.us.auth0.com.
 EXEMPT_DIRS = {"connectors"}
+
+# 白名单管不到的一类：字符串本身合法，但【用错了地方】。
+#
+# 2026-07-28：自动化页对用户说 "Runs only while openworker-server is up"。
+# openworker-server 在 ALLOWED 里（它是 sidecar 的二进制名和进程间协议名，改了
+# 会断握手），所以上面那套检查一路放行——可用户不知道那是什么，也不该知道。
+#
+# 判据是【它出现在一句给人读的话里】：前后有普通英文单词围着，而不是作为一个
+# 路径/命令/常量独立出现。
+SENTENCE_LEAKS = [
+    re.compile(r"[a-z]{3,}\s+openworker-(?:server|desktop)\s+[a-z]{2,}"),
+]
 
 ALLOWED = [
     re.compile(r"OpenWorker Cloud"),
@@ -144,11 +157,22 @@ def main() -> int:
 
 def _scan(path: Path, src: Path, offenders: list) -> None:
     for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        # 注释不是用户可见字符串 —— 它们解释 fork 历史时会正当地提到上游的名字。
+        stripped = line.strip()
+        is_comment = stripped.startswith(("//", "///", "#", "*"))
+
+        # ALLOWED 管不到的一类：字符串本身合法，但出现在一句给人读的话里。
+        if not is_comment and any(p.search(line) for p in SENTENCE_LEAKS):
+            offenders.append(
+                f"  {path.relative_to(src)}:{lineno}  [内部名字出现在句子里] {stripped}"
+            )
+            continue
+
         if "OpenWorker" not in line:
             continue
         if any(p.search(line) for p in ALLOWED):
             continue
-        offenders.append(f"  {path.relative_to(src)}:{lineno}  {line.strip()}")
+        offenders.append(f"  {path.relative_to(src)}:{lineno}  {stripped}")
 
 
 def _report(scanned: int, offenders: list) -> int:
