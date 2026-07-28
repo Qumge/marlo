@@ -34,6 +34,13 @@ import re
 import sys
 from pathlib import Path
 
+# 同上：这个检查器也会打中文（"内部名字出现在句子里"），Windows 控制台是 cp1252。
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
+
 ROOT = Path(__file__).resolve().parent.parent
 
 # The first version of this check scanned only surfaces/gui/src, so the rename it

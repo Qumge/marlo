@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import sys
 from pathlib import Path
 
@@ -44,6 +45,28 @@ def test_paths_are_recorded_with_forward_slashes():
 
     for entry in mod.scan():
         assert "\\" not in entry.split(":", 1)[0], entry
+
+
+def test_the_guards_survive_a_cp1252_console():
+    """守卫会打中文，而 Windows 控制台默认 cp1252。
+
+    CI 上实测挂过一次：路径的 bug 修好后，它换成因为【自己的提示语】编码不了而
+    崩掉，报 UnicodeEncodeError —— 和它要检查的事情毫无关系。一个因为打印失败而
+    挂掉的检查器，比没有检查器更让人困惑。
+
+    在 macOS 上直接跑验不了（这里是 UTF-8），得把子进程的编码真的换掉。
+    """
+    import subprocess
+
+    root = Path(__file__).resolve().parent.parent
+    for script in ("check_i18n.py", "check_branding.py"):
+        r = subprocess.run(
+            [sys.executable, str(root / "packaging" / script)],
+            env={**os.environ, "PYTHONIOENCODING": "cp1252"},
+            capture_output=True, text=True, cwd=root,
+        )
+        assert r.returncode == 0, f"{script} 在 cp1252 下挂了：{r.stderr[-400:]}"
+        assert "UnicodeEncodeError" not in r.stderr, script
 
 
 def test_the_baseline_matches_what_the_scan_finds_today():

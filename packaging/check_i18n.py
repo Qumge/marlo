@@ -21,6 +21,15 @@ import re
 import sys
 from pathlib import Path
 
+# Windows 的控制台默认 cp1252，编码不了中文 —— 守卫会因为【自己的提示语】崩掉，
+# 报出来的是 UnicodeEncodeError，和它要检查的事情毫无关系（CI 上实测过一次）。
+# 一个因为打印失败而挂掉的检查器，比没有检查器更让人困惑。
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):  # 非 TTY / 老版本
+        pass
+
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "surfaces" / "gui" / "src"
 BASELINE = Path(__file__).resolve().parent / "i18n_baseline.txt"
