@@ -1,15 +1,33 @@
 // 「能力」页 —— 分类里的另一半。
 //
 // 用户看到的是两类：能力（技能）和连接。「连接」早就有页面，能力一个界面都没有。
-// 这一页回答的是「它现在会什么、这些哪来的」，不是「去哪儿挑技能」——挑技能这件
-// 事按规格根本不该由用户做（规格 D'：发现发生在对话里）。
+//
+// 这一页回答两个问题：它现在会什么，以及还能会什么。规格 D' 说发现发生在对话里
+// （用户说要做什么，Marlo 自己去找），那仍然是主路径；但 owner 的判断是用户也要
+// 能自己搜、自己看——一个东西你完全看不见里面有什么，是很难信任它的。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { AbilitiesView } from "./AbilitiesView";
 import { setLocale } from "../i18n";
 
-const serve = (skills: any[]) =>
-  vi.stubGlobal("fetch", vi.fn(async () => ({ json: async () => ({ skills }) })));
+// 一个按 URL 分发的假后端：装了什么 / 搜到什么 / 装和卸的结果。
+const serve = (skills: any[], results: any[] = [], opts: any = {}) =>
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init?: any) => {
+      if (String(url).includes("/v1/skills/search"))
+        return { json: async () => ({ results, error: opts.searchError }) };
+      if (String(url).includes("/v1/skills/install")) {
+        opts.installed?.push(JSON.parse(init.body).slug);
+        return { json: async () => ({ ok: !opts.installFails, error: opts.installError }) };
+      }
+      if (String(url).includes("/v1/skills/uninstall")) {
+        opts.removed?.push(JSON.parse(init.body).name);
+        return { json: async () => ({ ok: true }) };
+      }
+      return { json: async () => ({ skills }) };
+    }),
+  );
 
 beforeEach(() => setLocale("zh"));
 afterEach(() => {
@@ -42,6 +60,50 @@ describe("能力页", () => {
     }));
     render(<AbilitiesView />);
     await waitFor(() => expect(screen.getByTestId("abilities-empty")).toBeTruthy());
+  });
+
+  it("能搜目录，结果里带来源和「需要先连」", async () => {
+    // owner 的判断：用户也要能自己看。一个东西你完全看不见里面有什么，是很难
+    // 信任它的。
+    serve([], [
+      { name: "autowhisper", summary: "社交媒体内容创作与发布", slug: "x/y/autowhisper",
+        meta: "vetted by qumge · first-party", needs: "autowhisper" },
+    ]);
+    render(<AbilitiesView />);
+    fireEvent.change(screen.getByTestId("abilities-search"), { target: { value: "视频" } });
+    await waitFor(() => expect(screen.getByTestId("catalog-autowhisper")).toBeTruthy(), { timeout: 2000 });
+    expect(screen.getByText(/vetted by qumge/)).toBeTruthy();
+    // 装之前就说清楚它要账号 —— 装完才发现连不上是最差的顺序。
+    expect(screen.getByText(/需要先连/)).toBeTruthy();
+  });
+
+  it("已经装了的不再显示「添加」", async () => {
+    serve(
+      [{ name: "autowhisper", description: "已装的那条" }],
+      [{ name: "autowhisper", summary: "s", slug: "x/y/autowhisper", meta: "m", needs: "" }],
+    );
+    render(<AbilitiesView />);
+    fireEvent.change(screen.getByTestId("abilities-search"), { target: { value: "auto" } });
+    await waitFor(() => expect(screen.getByTestId("catalog-autowhisper")).toBeTruthy(), { timeout: 2000 });
+    expect(screen.queryByTestId("install-autowhisper")).toBeNull();
+  });
+
+  it("点添加会把 slug 发过去", async () => {
+    const installed: string[] = [];
+    serve([], [{ name: "a", summary: "s", slug: "o/r/a", meta: "m", needs: "" }], { installed });
+    render(<AbilitiesView />);
+    fireEvent.change(screen.getByTestId("abilities-search"), { target: { value: "a" } });
+    await waitFor(() => expect(screen.getByTestId("install-a")).toBeTruthy(), { timeout: 2000 });
+    fireEvent.click(screen.getByTestId("install-a"));
+    await waitFor(() => expect(installed).toEqual(["o/r/a"]));
+  });
+
+  it("目录连不上要说原因 —— 空列表会被读成「什么都没搜到」", async () => {
+    serve([], [], { searchError: "connection refused" });
+    render(<AbilitiesView />);
+    fireEvent.change(screen.getByTestId("abilities-search"), { target: { value: "视频" } });
+    await waitFor(() => expect(screen.getByTestId("abilities-error")).toBeTruthy(), { timeout: 2000 });
+    expect(screen.getByText(/connection refused/)).toBeTruthy();
   });
 
   it("英文界面用英文文案", async () => {

@@ -558,6 +558,37 @@ def create_app(manager: SessionManager) -> FastAPI:
     def skills() -> dict[str, Any]:
         return {"skills": manager.list_skills()}
 
+    # 「能力」页里的搜索 / 安装 / 卸载。对话里 Marlo 自己找技能走的是 MCP；
+    # 这是同一个目录的另一个入口，给想自己看看的用户。
+    @app.get("/v1/skills/search")
+    def search_skills(q: str = "") -> dict[str, Any]:
+        from ..skills import qumge_catalog
+
+        try:
+            return {"results": qumge_catalog.search(q)}
+        except Exception as exc:  # noqa: BLE001
+            # 目录不可达是常事（没网、被墙、qumge 在部署）。把原因带回界面 ——
+            # 一个空列表会被读成"什么都没搜到"，那是另一回事。
+            return {"results": [], "error": str(exc)}
+
+    @app.post("/v1/skills/install")
+    def install_skill(body: dict) -> dict[str, Any]:
+        from ..skills import qumge_catalog
+
+        try:
+            return qumge_catalog.install(str((body or {}).get("slug", "")))
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "error": str(exc)}
+
+    @app.post("/v1/skills/uninstall")
+    def uninstall_skill(body: dict) -> dict[str, Any]:
+        from ..skills import qumge_catalog
+
+        try:
+            return qumge_catalog.uninstall(str((body or {}).get("name", "")))
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "error": str(exc)}
+
     @app.get("/v1/workspaces/recent")
     def recent_workspaces() -> dict[str, Any]:
         return {"workspaces": manager.recent_workspaces()}

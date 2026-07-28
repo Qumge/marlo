@@ -610,6 +610,38 @@ export async function getSkills(): Promise<InstalledSkill[]> {
   return (await res.json()).skills ?? [];
 }
 
+/** Qumge 目录里的一条技能（搜索结果）。 */
+export interface CatalogSkill {
+  name: string;
+  summary: string;
+  slug: string;
+  meta: string;   // "vetted by qumge · first-party · …" 或 "category: … · N stars on …"
+  needs: string;  // 需要先连的账号，逗号分隔；没有就是空串
+}
+
+export async function searchSkills(q: string): Promise<{ results: CatalogSkill[]; error?: string }> {
+  const res = await fetch(`${httpBase()}/v1/skills/search?q=${encodeURIComponent(q)}`);
+  return res.json();
+}
+
+export async function installSkill(slug: string): Promise<{ ok: boolean; error?: string }> {
+  const res = await fetch(`${httpBase()}/v1/skills/install`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ slug }),
+  });
+  return res.json();
+}
+
+export async function uninstallSkill(name: string): Promise<{ ok: boolean; error?: string }> {
+  const res = await fetch(`${httpBase()}/v1/skills/uninstall`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  return res.json();
+}
+
 export async function getConnectors(): Promise<Connector[]> {
   const res = await fetch(`${httpBase()}/v1/connectors`);
   const list: Connector[] = (await res.json()).connectors ?? [];

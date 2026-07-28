@@ -196,6 +196,15 @@ export const en = {
   abilitiesEmpty: "Nothing installed yet.",
   abilitiesEmptyHow: "You don't pick these from a list — tell Marlo what you need done and it looks for one.",
   abilitiesWhere: "Installed to ~/.config/coworker/skills",
+  abilitiesSearch: "Search Qumge's catalog…",
+  abilitiesInstalled: "Installed",
+  abilitiesFound: "From the catalog",
+  abilitiesInstall: "Add",
+  abilitiesInstalling: "Adding…",
+  abilitiesRemove: "Remove",
+  abilitiesNeeds: "needs a connection:",
+  abilitiesNoResults: "Nothing found. Try describing the job instead of naming a tool.",
+  abilitiesSearchFailed: "Couldn't reach the catalog:",
 
   // -- account (sidebar footer) ---------------------------------------------
   // The footer used to report sign-in to OpenWorker Cloud — a third party whose
