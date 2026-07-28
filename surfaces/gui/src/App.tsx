@@ -1209,7 +1209,7 @@ export function App() {
         >
           <div className="flex items-center gap-2 text-[12.5px] font-semibold">
             <span className="w-[7px] h-[7px] rounded-full bg-faint toast-pulse" />
-            Automation started
+            {t("appAutomationStarted")}
           </div>
           <div className="text-[12.5px] text-muted mt-0.5 ml-[15px] truncate">
             {runToast.title} · {runToast.time} run
@@ -1223,12 +1223,12 @@ export function App() {
                 setRunToast(null);
               }}
             >
-              View run ›
+              {t("appViewRun")}
             </button>
             <button
               className="text-[12px] text-faint px-0.5"
               data-testid="toast-dismiss"
-              title="Dismiss"
+              title={t("uiDismiss")}
               onClick={() => setRunToast(null)}
             >
               ✕
@@ -1255,8 +1255,8 @@ export function App() {
           className="nav-reveal-btn"
           onClick={toggleNav}
           onMouseEnter={() => setNavPeek(true)}
-          title="Show sidebar (⌘B)"
-          aria-label="Show sidebar"
+          title={t("appShowSidebarKb")}
+          aria-label={t("appShowSidebar")}
         >
           <Icon name="sidebar" size={16} />
         </button>
@@ -1365,8 +1365,8 @@ export function App() {
                 <button
                   className="topbar-icon-btn"
                   onClick={toggleNav}
-                  aria-label="Show sidebar"
-                  title="Show sidebar (⌘B)"
+                  aria-label={t("appShowSidebar")}
+                  title={t("appShowSidebarKb")}
                 >
                   <Icon name="sidebar" size={16} />
                 </button>
@@ -1485,7 +1485,7 @@ export function App() {
                     </h1>
                     {needsWorkspace(agent) && (
                       <div className="suggestions">
-                        <div className="suggest-head">Try a task</div>
+                        <div className="suggest-head">{t("appTryATask")}</div>
                         {SUGGESTIONS.map((s, i) => (
                           <div className="suggest" key={i} onClick={() => workspace && send(s.text)}>
                             <span className="ico">{s.ico}</span>
@@ -1544,7 +1544,7 @@ export function App() {
                   onClick={followLatest}
                 >
                   <Icon name="chevronDown" size={13} />
-                  Jump to latest
+                  {t("appJumpToLatest")}
                 </button>
               </div>
             )}
@@ -1684,11 +1684,12 @@ function lastItemIsAssistant(items: Item[]): boolean {
 }
 
 function WaitingForAgent() {
+  const t = useT();
   return (
     <div className="waiting-transcript">
       <div className="waiting-row" aria-live="polite">
         <span className="waiting-spinner" />
-        <span>Waiting for agent...</span>
+        <span>{t("appWaitingForAgent")}</span>
       </div>
     </div>
   );

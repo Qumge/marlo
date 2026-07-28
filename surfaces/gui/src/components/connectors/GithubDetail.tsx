@@ -149,7 +149,7 @@ export function GithubDetail({ c, cloud, onChanged }: DetailProps) {
         <AddConnectionModal
           c={c}
           cloud={cloud}
-          title="Add an installation"
+          title={t("cxAddInstallation")}
           onClose={() => setAdding(false)}
           onChanged={changed}
         />
@@ -169,6 +169,7 @@ function InstallationGroup({
   tokenOk: boolean;
   onChanged: () => void;
 }) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const parked = (c.unauthorized ?? []).filter((m) => m.team_id === inst.installation_id);
   const empty = inst.allowed_users.length === 0 && parked.length === 0;
@@ -199,7 +200,7 @@ function InstallationGroup({
         {empty ? (
           <div className={ROW}>
             <span className="min-w-0 flex-1 text-[12.5px] text-muted">
-              No one allowed yet — @ocw-agent mentions show up here for your OK.
+              {t("cxNoOneAllowed")}
             </span>
             <DisconnectBtn id={inst.installation_id} busy={busy} onClick={disconnect} />
           </div>
@@ -293,18 +294,18 @@ function WaitingRow({ m, onChanged }: { m: ParkedMessage; onChanged: () => void 
       <button
         className={PILL_ACCENT + " !py-1"}
         data-testid={`parked-allow-deliver-${m.id}`}
-        title="Allow the sender and deliver this mention now"
+        title={t("cxAllowDeliverMention")}
         onClick={() => act("allow_deliver")}
       >
-        Allow & deliver
+        {t("mtAllowDeliver")}
       </button>
       <button
         className={PILL_LINE + " !py-1"}
         data-testid={`parked-allow-${m.id}`}
-        title="Allow the sender; this mention is discarded"
+        title={t("cxAllowDropMention")}
         onClick={() => act("allow")}
       >
-        Allow
+        {t("uiAllow")}
       </button>
       <button className={XBTN + " px-1"} data-testid={`parked-dismiss-${m.id}`} title={t("connDismiss")} onClick={() => act("dismiss")}>
         ×

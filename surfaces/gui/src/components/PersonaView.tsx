@@ -85,7 +85,7 @@ export function PersonaView({
             className="inline-flex items-center gap-1 text-[12.5px] text-muted hover:text-ink"
             onClick={onBack}
           >
-            <Icon name="arrowLeft" size={15} /> Back
+            <Icon name="arrowLeft" size={15} /> {t("uiBack")}
           </button>
           <span className="text-faint">·</span>
         </>
@@ -120,7 +120,7 @@ export function PersonaView({
               <p className="text-[13px] text-muted mt-0.5">{detail.tagline}</p>
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <span className="text-[12px] text-muted">{detail.enabled ? "Enabled" : "Disabled"}</span>
+              <span className="text-[12px] text-muted">{detail.enabled ? t("uiEnabled") : "Disabled"}</span>
               <Toggle checked={detail.enabled} onChange={toggleEnabled} title={t("uiEnablePersona")} />
             </div>
           </header>
@@ -190,7 +190,7 @@ export function PersonaView({
                           className={r.tier === "core" && !isMcp ? BTN_ACCENT : BTN_BORDERED}
                           onClick={onOpenIntegrations}
                         >
-                          {isMcp ? "Add" : "Connect"}
+                          {isMcp ? t("uiAdd") : t("uiConnect")}
                         </button>
                       )}
                     </div>

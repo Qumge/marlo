@@ -167,14 +167,14 @@ export function GalleryModal({
 
       {unavailable && cloud?.signed_in && (
         <div className="text-[12.5px] text-muted">
-          The gallery is unreachable right now — try again in a moment.
+          {t("glUnreachable")}
         </div>
       )}
 
       {featured.length > 0 && (
         <>
           <div className="text-[11px] uppercase tracking-[0.05em] text-faint font-semibold mb-2">
-            Featured
+            {t("glFeatured")}
           </div>
           <div className="flex gap-3 overflow-x-auto hairline-scroll pb-2 mb-5" data-testid="gallery-featured">
             {featured.map((p) => (
@@ -200,7 +200,7 @@ export function GalleryModal({
       )}
 
       <div className="text-[11px] uppercase tracking-[0.05em] text-faint font-semibold mb-2">
-        All personas
+        {t("glAllPersonas")}
       </div>
       <div className="space-y-2">
         {visible.map((p) => {
@@ -252,7 +252,7 @@ export function GalleryModal({
 
       {source !== "team" && teamCount === 0 && (
         <div className="mt-5 pt-3 border-t border-line text-[12px] text-faint" data-testid="gallery-team-teaser">
-          From your team — nothing shared yet. Publishing a persona to your teammates is coming soon.
+          {t("glTeamEmpty")}
         </div>
       )}
     </div>
@@ -300,10 +300,10 @@ export function GalleryModal({
           {justInstalled && (
             <div className="rounded-lg border border-okLine bg-okSoft px-3.5 py-2.5 flex items-center gap-3">
               <span className="flex-1 text-[12.5px] text-ok">
-                Installed — it&rsquo;s waiting in Personas, disabled until you approve and enable it.
+                {t("glInstalled")}
               </span>
               <button className={BTN_ACCENT} onClick={onClose}>
-                Done
+                {t("uiDone")}
               </button>
             </div>
           )}
@@ -319,7 +319,7 @@ export function GalleryModal({
           {caps && (
             <div className={CARD + " p-4"} data-testid="gallery-capabilities">
               <div className="text-[13px] font-semibold mb-2">
-                What it can do — verified from its manifest
+                {t("glWhatItCanDo")}
               </div>
               <div className="text-[12px] text-faint mb-3">
                 Read by this app&rsquo;s own parser, so it matches exactly what the install
@@ -376,7 +376,7 @@ export function GalleryModal({
           <div className="min-w-0 flex-1">
             <div className="text-[15px] font-semibold">{t("uiPersonaGallery")}</div>
             <div className="text-[12px] text-muted">
-              Curated coworkers · installs stay disabled until you approve them
+              {t("glCuratedNote")}
             </div>
           </div>
           {cloud?.signed_in && !detailSlug && (

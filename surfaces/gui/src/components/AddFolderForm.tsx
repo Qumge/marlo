@@ -74,14 +74,14 @@ export function AddFolderForm({
       <div className="addfolder-actions">
         <label className="addfolder-write" title={t("uiWriteToggle")}>
           <input type="checkbox" checked={writable} onChange={(e) => setWritable(e.target.checked)} />
-          Allow writes
+          {t("acAllowWrites")}
         </label>
         <span className="spacer" />
         <button className="btn" onClick={reset}>
-          Cancel
+          {t("uiCancel")}
         </button>
         <button className="btn primary" disabled={busy || !path.trim()} onClick={submit}>
-          Add
+          {t("uiAdd")}
         </button>
       </div>
     </div>

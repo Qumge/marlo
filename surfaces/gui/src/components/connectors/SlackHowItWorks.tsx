@@ -25,6 +25,7 @@ function readCollapsed(): boolean {
 }
 
 export function SlackHowItWorks({ workspaces }: { workspaces: SlackWorkspace[] }) {
+  const t = useT();
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [tab, setTab] = useState(0);
   const [cycle, setCycle] = useState(0); // bump = remount the scene = restart its animations
@@ -75,7 +76,7 @@ export function SlackHowItWorks({ workspaces }: { workspaces: SlackWorkspace[] }
     <div className="mb-5" data-testid="slack-howitworks">
       <div className="flex items-baseline gap-2.5">
         <h3 className="text-[13.5px] font-semibold tracking-tight">
-          Getting started with Slack &amp; OpenWorker
+          {t("cxSlackGettingStarted")}
         </h3>
         <button
           className="ml-auto shrink-0 inline-flex items-center gap-1.5 text-[12px] text-muted hover:text-ink"
@@ -177,7 +178,7 @@ function SlackRail({ active }: { active: string }) {
       <div className="hiw-ws">{WS_NAME} ▾</div>
       <div className="hiw-slnav"><ThreadsIcon /> {t("connThreads")}</div>
       <div className="hiw-slnav"><SendIcon /> Drafts &amp; sent</div>
-      <div className="hiw-sect">Channels</div>
+      <div className="hiw-sect">{t("cxChannels")}</div>
       <div className={"hiw-ch" + (active === "general" ? " on" : "")}># general</div>
       <div className={"hiw-ch" + (active === "launch-room" ? " on" : "")}># launch-room</div>
       <div className="hiw-sect">{t("connDirectMessages")}</div>
@@ -283,6 +284,7 @@ function Msg({
 
 /* ---- scene 1: mention in a channel → new session, reply via thread panel ---- */
 function SceneMention({ meFirst, meInitial }: { meFirst: string; meInitial: string }) {
+  const t = useT();
   return (
     <>
       <span className="hiw-spark" style={d("1.9s")} />
@@ -318,7 +320,7 @@ function SceneMention({ meFirst, meInitial }: { meFirst: string; meInitial: stri
               </Msg>
               <div className="hiw-cnt">1 reply</div>
               <Msg av="OW" avBg="#4a154b" name="OpenWorker" app ts="6:34 PM">
-                Launch traction: signups up 3.4× since the post…
+                {t("cxDemoMsgLong")}
               </Msg>
             </div>
             <div className="hiw-treply">Reply…</div>
@@ -382,13 +384,13 @@ function SceneThread({ meFirst, meInitial }: { meFirst: string; meInitial: strin
               </Msg>
               <div className="hiw-cnt">2 replies</div>
               <Msg av="OW" avBg="#4a154b" name="OpenWorker" app ts="6:34 PM">
-                Launch traction: signups up 3.4×…
+                {t("cxDemoMsgShort")}
               </Msg>
               <Msg av="P" avBg="#7c6cd0" name="Priya N" ts="6:36 PM" delay=".8s">
                 <span className="hiw-men">@OpenWorker</span> break it down by country?
               </Msg>
               <Msg av="OW" avBg="#4a154b" name="OpenWorker" app ts="6:36 PM" delay="4.8s">
-                Top: US 41% · India 22% · Germany 9%…
+                {t("cxDemoReplyShort")}
               </Msg>
             </div>
             <div className="hiw-treply">Reply…</div>
@@ -415,7 +417,7 @@ function SceneThread({ meFirst, meInitial }: { meFirst: string; meInitial: strin
             <div className="hiw-bub agent hiw-stay">…signups up 3.4×, top referrer is the press page.</div>
             <div className="hiw-bub user hiw-k" style={d("2.6s")}>break it down by country?</div>
             <div className="hiw-bub agent hiw-k" style={d("3.8s")}>
-              Top countries: US 41%, India 22%, Germany 9% — context kept from the whole thread.
+              {t("cxDemoReplyLong")}
             </div>
           </div>
           <div className="hiw-owcomposer">Message OpenWorker…</div>

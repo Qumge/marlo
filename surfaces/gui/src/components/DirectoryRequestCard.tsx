@@ -45,14 +45,14 @@ export function DirectoryRequestCard({
       <div className="dirreq-actions">
         <label className="dirreq-access">
           <input type="checkbox" checked={writable} onChange={(e) => setWritable(e.target.checked)} />
-          Allow writing (read-write)
+          {t("drAllowWriting")}
         </label>
         <span className="spacer" />
         <button className="btn" onClick={() => onRespond(false)}>
-          Decline
+          {t("drDecline")}
         </button>
         <button className="btn primary" disabled={!path.trim()} onClick={() => onRespond(true, path.trim(), writable)}>
-          Grant access
+          {t("drGrantAccess")}
         </button>
       </div>
     </div>

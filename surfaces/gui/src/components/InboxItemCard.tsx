@@ -104,7 +104,7 @@ export function InboxItemCard({
             className={item.data?.tool ? BTN_ACCENT : BTN_PRIMARY}
             onClick={() => onResolve(item.id, "allow")}
           >
-            {item.data?.tool ? "Allow once" : "Approve"}
+            {item.data?.tool ? "Allow once" : t("uiApprove")}
           </button>
           {/* Task-persistent standing grant (§25) — present only when the approval was
               raised inside an automation run AND the call can carry a tool+target rule.
@@ -115,14 +115,14 @@ export function InboxItemCard({
               title={`Always allow against ${item.data.standing_target} for “${item.data.task_title || "this automation"}” — revoke any time on its Automations page`}
               onClick={() => onResolve(item.id, "always_task")}
             >
-              Allow every time
+              {t("apAllowEveryTime")}
             </button>
           )}
           <button
             className={item.data?.tool ? BTN_QUIET : BTN_BORDERED}
             onClick={() => onResolve(item.id, "deny")}
           >
-            Deny
+            {t("apDeny")}
           </button>
         </div>
       ) : item.kind === "question" ? (
@@ -178,7 +178,7 @@ export function InboxItemCard({
             {item.data?.path ? "Grant" : "Grant (no folder)"}
           </button>
           <button className={BTN_BORDERED} onClick={() => onResolve(item.id, JSON.stringify({ granted: false }))}>
-            Deny
+            {t("apDeny")}
           </button>
         </div>
       ) : item.kind === "plan" ? (
@@ -187,13 +187,13 @@ export function InboxItemCard({
             className={BTN_PRIMARY}
             onClick={() => onResolve(item.id, JSON.stringify({ approved: true, mode: "interactive" }))}
           >
-            Approve
+            {t("uiApprove")}
           </button>
           <button
             className={BTN_BORDERED}
             onClick={() => onResolve(item.id, JSON.stringify({ approved: false, feedback: "" }))}
           >
-            Reject
+            {t("uiReject")}
           </button>
         </div>
       ) : (

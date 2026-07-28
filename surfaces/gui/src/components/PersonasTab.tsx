@@ -123,7 +123,7 @@ export function PersonasTab({ onOpenPersona }: { onOpenPersona?: (id: string) =>
                   e.target.checked ? toggle(p.id, { enabled: true }) : requestDisable(p)
                 }
               />
-              Enabled
+              {t("uiEnabled")}
             </label>
             <label className={CHECK + (p.enabled ? "" : " opacity-40")}>
               <input
@@ -132,14 +132,14 @@ export function PersonasTab({ onOpenPersona }: { onOpenPersona?: (id: string) =>
                 disabled={!p.enabled}
                 onChange={(e) => toggle(p.id, { surfaced: e.target.checked })}
               />
-              In picker
+              {t("psInPicker")}
             </label>
             <button
               className={BTN_BORDERED}
               disabled={p.default || !p.enabled}
               onClick={() => toggle(p.id, { default: true })}
             >
-              Set default
+              {t("psSetDefault")}
             </button>
             {onOpenPersona && (
               <button
@@ -160,10 +160,10 @@ export function PersonasTab({ onOpenPersona }: { onOpenPersona?: (id: string) =>
                     data-testid={`persona-delete-confirm-${p.id}`}
                     onClick={() => remove(p.id)}
                   >
-                    Delete
+                    {t("uiDelete")}
                   </button>
                   <button className={BTN_BORDERED} onClick={() => setConfirmDel(null)}>
-                    Keep
+                    {t("uiKeep")}
                   </button>
                 </span>
               ) : (
@@ -196,10 +196,10 @@ export function PersonasTab({ onOpenPersona }: { onOpenPersona?: (id: string) =>
                     toggle(p.id, { enabled: false });
                   }}
                 >
-                  Disable
+                  {t("uiDisable")}
                 </button>
                 <button className={BTN_BORDERED} onClick={() => setConfirmOff(null)}>
-                  Keep enabled
+                  {t("psKeepEnabled")}
                 </button>
               </div>
             )}

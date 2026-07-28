@@ -9,6 +9,7 @@ import {
 import { openExternal } from "../tauri";
 import { PROVIDER_LOGOS, providerRank } from "./logos";
 
+import { useT } from "../i18n";
 // The provider gallery ⇄ key form, shared by Onboarding step 1 (§39) and
 // Settings ▸ Models (UX-021) so the two can never drift apart visually. The hook
 // owns the interaction state machine; ProviderCards/ProviderForm own the shared
@@ -92,6 +93,7 @@ export interface ProviderSetupState {
 }
 
 export function useProviderSetup(opts?: { onSaved?: () => void }): ProviderSetupState {
+  const t = useT();
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
   // null = the gallery; a provider name = that provider's key form.
   const [sel, setSel] = useState<string | null>(null);
@@ -226,7 +228,7 @@ export function useProviderSetup(opts?: { onSaved?: () => void }): ProviderSetup
           {keylessOk.has(p.name) ? <span className="text-ok font-medium">✓ Running</span> : "No key needed"}
         </span>
       );
-    return <span className="block text-[11.5px] text-faint truncate">Not set up</span>;
+    return <span className="block text-[11.5px] text-faint truncate">{t("prNotSetUp")}</span>;
   };
 
   return {
@@ -319,6 +321,7 @@ export function ProviderForm({
   tp: string;
   footer?: ReactNode;
 }) {
+  const t = useT();
   const { info, sel } = ps;
   const label = "block text-[12px] text-muted mt-3 mb-1";
   const input =
@@ -421,7 +424,7 @@ export function ProviderForm({
             className="text-muted underline decoration-line underline-offset-2 hover:text-ink"
             onClick={() => openExternal("https://ollama.com/download")}
           >
-            Install Ollama ↗
+            {t("prInstallOllama")}
           </button>
         </p>
       )}
@@ -440,7 +443,7 @@ export function ProviderForm({
               onClick={() => ps.setShowEndpoint(true)}
               data-testid={`${tp}-endpoint-link`}
             >
-              Custom endpoint ⌄
+              {t("prCustomEndpoint")}
             </button>
           );
         return (

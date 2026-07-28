@@ -287,7 +287,7 @@ export function AccessSection({
                 <div className={`${SEC_H} mb-1.5`}>{t("uiSources")}</div>
                 {connected.length === 0 && (
                   <div className="text-[12px] text-faint py-0.5">
-                    No connectors enabled for this session.
+                    {t("acNoneEnabled")}
                   </div>
                 )}
                 <div className="space-y-1">
@@ -348,7 +348,7 @@ export function AccessSection({
                       // Also covers a failed/empty catalog fetch: an open picker must never
                       // be silently blank — point at the Connectors page either way.
                       <div className="text-[11.5px] text-faint mt-1.5 px-0.5">
-                        No match — see all on the Connectors page below.
+                        {t("acNoMatch")}
                       </div>
                     )}
                     <div className="mt-1 max-h-64 overflow-y-auto">
@@ -413,7 +413,7 @@ export function AccessSection({
                             else onOpenIntegrations?.();
                           }}
                         >
-                          Connect
+                          {t("uiConnect")}
                         </button>
                       </div>
                     ))}
@@ -463,7 +463,7 @@ export function AccessSection({
                 className="text-[12px] text-accent font-medium hover:underline text-left"
                 onClick={() => onOpenIntegrations?.()}
               >
-                Manage all connectors (global) →
+                {t("acManageAll")}
               </button>
             </div>
           )}
@@ -592,7 +592,7 @@ function ChannelsInline({
       <div className="flex items-center gap-1.5">
         <ChannelPicker value={draft} onChange={onDraft} recent={recent} onSubmit={onAdd} />
         <button className={BTN_ACCENT} disabled={!draft.trim()} onClick={onAdd}>
-          Add
+          {t("uiAdd")}
         </button>
       </div>
       {error && (

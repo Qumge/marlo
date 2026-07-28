@@ -106,6 +106,13 @@ ALLOWED = [
     # 全小写、无空格的：连接器 id / provider key（gmail、google_calendar、slack）。
     # 它们出现在 name: "gmail" 这种字段里 —— 是 key 不是文案，翻了会让查找失败。
     re.compile(r"^[a-z][a-z0-9_-]*$"),
+    # 路径和快捷键：翻了就不对了。~/Marlo 是真实目录名，/path/to/your/project 是
+    # 让人照着替换的样例，Esc 是键帽上印的字。
+    re.compile(r"^(~/Marlo|/path/to/your/project|Esc)$"),
+    # SlackHowItWorks 里那张【模拟 Slack 截图】的外壳：人名、频道输入框、APP 徽章。
+    # 消息正文已经翻了（那是在演示 Marlo 做什么，中文用户要读得懂）；外壳保留英文
+    # 是因为它要看起来像一张 Slack 截图 —— 组件注释里写着这是刻意的。
+    re.compile(r"^(Emma W|Priya N|APP|Message #launch-room)$"),
     re.compile(r"^(Clay|Close|Descript|Docusign|Salesforce|Together AI|Fireworks AI|"
                r"Z AI \(GLM\)|Kimi \(Moonshot AI\)|Qwen \(Alibaba\)|xAI \(Grok\)|"
                r"MiniMax|Meta \(Muse Spark\)|Connector)$"),
@@ -143,11 +150,20 @@ def scan() -> list[str]:
 
 
 def main() -> int:
-    found = scan()
-    # 路径改动让它扫不到东西时必须失败，不能静默通过（和 check_branding 同一条）。
-    if len(found) < 20:
-        print(f"只扫出 {len(found)} 条 —— 这个检查形同虚设，先看路径对不对", file=sys.stderr)
+    # 【验扫描器，不是验数量】。
+    #
+    # 原来这里写的是"扫出的条数 < 20 就报错"，用来抓"SRC 路径改了、什么都没扫到"。
+    # 但它把【没东西可找】和【找的方式坏了】当成同一件事 —— 2026-07-28 把欠账从
+    # 162 条清到 1 条时，这个检查立刻把构建挂掉了，理由是"形同虚设"。
+    #
+    # 要防的失效是"路径不对"，而它直接表现为【一个文件都没读到】。所以量文件数，
+    # 不量命中数：命中数归零是这个守卫成功的样子，不该是它失败的样子。
+    files = [p for p in SRC.rglob("*.tsx") if not _is_test(p)]
+    if len(files) < 50:
+        print(f"只扫到 {len(files)} 个 .tsx —— 路径大概不对（SRC={SRC}）", file=sys.stderr)
         return 1
+
+    found = scan()
 
     if not BASELINE.exists():
         BASELINE.write_text("\n".join(found) + "\n", encoding="utf-8")

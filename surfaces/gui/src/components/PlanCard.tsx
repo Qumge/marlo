@@ -42,27 +42,27 @@ export function PlanCard({
             }}
           />
           <button className="btn" onClick={() => setRejecting(false)}>
-            Back
+            {t("uiBack")}
           </button>
           <button
             className="btn primary"
             disabled={!feedback.trim()}
             onClick={() => onRespond(false, undefined, feedback.trim())}
           >
-            Send feedback
+            {t("plSendFeedback")}
           </button>
         </div>
       ) : (
         <div className="dirreq-actions">
           <button className="btn" onClick={() => setRejecting(true)}>
-            Request changes
+            {t("plRequestChanges")}
           </button>
           <span className="spacer" />
           <button className="btn" onClick={() => onRespond(true, "interactive")}>
-            Approve — ask per step
+            {t("plApprovePerStep")}
           </button>
           <button className="btn primary" onClick={() => onRespond(true, "auto")}>
-            Approve & run
+            {t("plApproveRun")}
           </button>
         </div>
       )}

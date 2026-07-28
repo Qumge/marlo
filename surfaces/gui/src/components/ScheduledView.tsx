@@ -204,6 +204,7 @@ function NewAutomationForm({
   onCancel: () => void;
   onCreate: (p: { title: string; instructions: string; cron?: string }) => void;
 }) {
+  const t = useT();
   const tr = useT();
   const [title, setTitle] = useState("");
   const [instructions, setInstructions] = useState("");
@@ -215,7 +216,7 @@ function NewAutomationForm({
   return (
     <div className={CARD + " tmpl-form p-4 mb-4"}>
       <div className="text-[11px] uppercase tracking-[0.05em] text-faint mb-2.5">
-        New automation
+        {t("svNewAutomation")}
       </div>
       <input
         className="tmpl-input"
@@ -288,6 +289,7 @@ function TaskDetail({
   ) => void;
   onRunNow: (taskId: string, title?: string) => void;
 }) {
+  const t = useT();
   const tr = useT();
   const [task, setTask] = useState<Automation | null>(null);
   const [runs, setRuns] = useState<AutomationRun[]>([]);
@@ -397,7 +399,7 @@ function TaskDetail({
                 </button>
                 <button className="btn sm" onClick={startEdit}>{tr("autoEdit")}</button>
                 <button className="btn sm danger-btn" onClick={remove}>
-                  <Icon name="trash" size={14} /> Delete
+                  <Icon name="trash" size={14} /> {t("uiDelete")}
                 </button>
               </>
             )}
@@ -444,7 +446,7 @@ function TaskDetail({
           <>
             <div className="sa-sub">{tr("autoAllowedNoAsk")}</div>
             <div className="dim" style={{ marginBottom: 8, fontSize: 12.5 }}>
-              Standing approvals this automation may use — everything else still asks first.
+              {t("svStandingApprovals")}
             </div>
             <div className="sched-grants" data-testid="task-grants">
               {(task.always_allowed || []).map((rule) => (
@@ -461,7 +463,7 @@ function TaskDetail({
                       refresh();
                     }}
                   >
-                    Revoke
+                    {t("uiRevoke")}
                   </button>
                 </div>
               ))}
@@ -471,7 +473,7 @@ function TaskDetail({
 
         <div className="sa-sub">{tr("autoRuns")}</div>
         <div className="dim" style={{ marginBottom: 8, fontSize: 12.5 }}>
-          Each run is a live conversation — open one to see what the agent did and ask a follow-up.
+          {t("svRunIsConversation")}
         </div>
         {runs.length === 0 && <div className="dim">{tr("autoNoRuns")}</div>}
         {runs.map((r) => (
@@ -496,7 +498,7 @@ function TaskDetail({
                 {r.artifacts.length > 0 && <span className="dim"> · {r.artifacts.length} file(s)</span>}
               </span>
               <span className="sched-run-go" aria-hidden>
-                Open ›
+                {t("svOpenRun")}
               </span>
             </div>
             {r.result_text && <div className="sched-run-peek">{r.result_text}</div>}

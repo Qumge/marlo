@@ -622,7 +622,7 @@ function ModeMenu({
                   <span className="flex-1 min-w-0">
                     <span className="block text-[13px] text-ink">{t("sendApprovalsToInbox")}</span>
                     <span className="block text-[11px] text-faint leading-snug">
-                      Approvals &amp; questions go to the Inbox; the agent keeps working.
+                      {t("cmpApprovalsToInbox")}
                     </span>
                   </span>
                   <Toggle

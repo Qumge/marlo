@@ -58,7 +58,7 @@ export function FolderGate({ onChoose, onCancel, create }: Props) {
             autoFocus
           />
           <button className="btn" onClick={browse} title={t("uiPickFolder")}>
-            Browse…
+            {t("uiBrowseEllipsis")}
           </button>
           <button className="btn primary" onClick={() => open(path, create)} disabled={!path.trim()}>
             {create ? "Create" : "Open"}
@@ -83,7 +83,7 @@ export function FolderGate({ onChoose, onCancel, create }: Props) {
         {onCancel && (
           <div className="gate-foot">
             <button className="btn gate-cancel" onClick={onCancel}>
-              Cancel
+              {t("uiCancel")}
             </button>
           </div>
         )}

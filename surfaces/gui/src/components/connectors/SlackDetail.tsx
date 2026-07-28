@@ -167,7 +167,7 @@ export function SlackDetail({ c, cloud, slack, onChanged }: DetailProps) {
         <AddConnectionModal
           c={c}
           cloud={cloud}
-          title="Add a workspace"
+          title={t("cxAddWorkspace")}
           onClose={() => setAdding(false)}
           onChanged={changed}
         />
@@ -479,7 +479,7 @@ function PersonPicker({
             )}
           </div>
           <div className="px-2 pb-1 text-[10.5px] text-faint">
-            From your workspace directory — stays on this computer.
+            {t("cxFromDirectory")}
           </div>
         </div>
       )}
@@ -517,11 +517,11 @@ function ApprovalOwnersRow({
   };
   return (
     <div className={ROW} data-testid="slack-approval-owners">
-      <span className={LABEL}>Approvals</span>
+      <span className={LABEL}>{t("cxApprovals")}</span>
       <span className="min-w-0 flex-1 flex flex-wrap items-center gap-1.5">
         {owners.length === 0 && (
           <span className="text-[12px] text-warnInk">
-            Choose at least one owner before routing Inbox approvals to Slack.
+            {t("cxPickOwnerFirst")}
           </span>
         )}
         {owners.map((u) => (
@@ -579,18 +579,18 @@ function WaitingRow({ m, onChanged }: { m: ParkedMessage; onChanged: () => void 
       <button
         className={PILL_ACCENT + " !py-1"}
         data-testid={`parked-allow-deliver-${m.id}`}
-        title="Allow the sender and deliver this message now"
+        title={t("cxAllowDeliverMsg")}
         onClick={() => act("allow_deliver")}
       >
-        Allow & deliver
+        {t("mtAllowDeliver")}
       </button>
       <button
         className={PILL_LINE + " !py-1"}
         data-testid={`parked-allow-${m.id}`}
-        title="Allow the sender; this message is discarded"
+        title={t("cxAllowDropMsg")}
         onClick={() => act("allow")}
       >
-        Allow
+        {t("uiAllow")}
       </button>
       <button className={XBTN + " px-1"} data-testid={`parked-dismiss-${m.id}`} title={t("connDismiss")} onClick={() => act("dismiss")}>
         ×

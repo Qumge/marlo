@@ -155,7 +155,7 @@ export function UpdateBanner() {
           disabled={phase === "installing"}
           data-testid="update-later"
         >
-          Later
+          {t("uiLater")}
         </button>
       </div>
     </div>

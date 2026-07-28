@@ -20,6 +20,7 @@ import { HubSpotDetail } from "./HubSpotDetail";
 import { SlackDetail } from "./SlackDetail";
 import { GRP } from "./ui";
 
+import { useT } from "../../i18n";
 // Connectors surface = LIST ⇄ per-connector DETAIL SUBPAGE (UX-DECISIONS §21). The
 // Integrations sub-nav never grows per-connector items; detail pages live behind a
 // `‹ Connectors` breadcrumb. Connectors without a bespoke page get GenericDetail so
@@ -122,6 +123,7 @@ function GenericDetail({
   onChanged,
   onGone,
 }: DetailProps & { onGone: () => void }) {
+  const t = useT();
   return (
     <div>
       <div className="flex items-center gap-3.5 mb-5">
@@ -142,7 +144,7 @@ function GenericDetail({
               onGone();
             }}
           >
-            Disconnect
+            {t("cxDisconnect")}
           </button>
         )}
       </div>

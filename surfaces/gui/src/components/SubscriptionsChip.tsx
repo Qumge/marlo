@@ -39,6 +39,7 @@ export function ChannelPicker({
   // human name (+ workspace) wherever they show the target (§25 consent line, summaries).
   onPickName?: (address: string, name: string, workspace?: string) => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -144,7 +145,7 @@ export function ChannelPicker({
       <input
         ref={inputRef}
         className="chan-input w-full"
-        placeholder="slack:C0123 or channel link"
+        placeholder={t("scChannelPlaceholder")}
         value={display}
         title={value || undefined}
         onChange={(e) => {
@@ -316,7 +317,7 @@ export function SubscriptionsChip({
           <div className="sub-pop-add">
             <ChannelPicker value={draft} onChange={setDraft} recent={recent} onSubmit={add} />
             <button className="btn-primary sm" disabled={!draft.trim()} onClick={add}>
-              Add
+              {t("uiAdd")}
             </button>
           </div>
         </div>

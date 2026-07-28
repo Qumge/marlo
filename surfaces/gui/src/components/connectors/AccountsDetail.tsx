@@ -139,7 +139,7 @@ function Row({
             onChanged();
           }}
         >
-          Make default
+          {t("mtMakeDefault")}
         </button>
       )}
       <button

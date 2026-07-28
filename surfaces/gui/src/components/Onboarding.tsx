@@ -284,7 +284,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
                           className="shrink-0 rounded-full border border-line px-4 py-1.5 text-[12.5px] font-medium hover:border-lineStrong"
                           onClick={() => startTool(name)}
                         >
-                          Connect
+                          {t("uiConnect")}
                         </button>
                       ))}
                   </div>
@@ -334,7 +334,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
                           onClick={() => setSigninPhase(null)}
                           data-testid="ob-signin-cancel"
                         >
-                          Cancel
+                          {t("uiCancel")}
                         </button>
                       </>
                     )}

@@ -356,6 +356,7 @@ function VoiceInputSection() {
 // entry point to the Persona Gallery (a screen-sized modal — installs finish back
 // here, disabled pending consent; a gallery install re-mounts the list in place).
 function PersonasSection({ onOpenPersona }: { onOpenPersona?: (id: string) => void }) {
+  const t = useT();
   const tr = useT();
   const [galleryBump, setGalleryBump] = useState(0);
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -376,7 +377,7 @@ function PersonasSection({ onOpenPersona }: { onOpenPersona?: (id: string) => vo
         <span className="min-w-0 flex-1">
           <span className="block text-[13.5px] font-medium">{tr("setBrowseGallery")}</span>
           <span className="block text-[12px] text-muted">
-            Curated coworkers from the OpenWorker team — see what each can do before installing.
+            {t("setGalleryLede")}
           </span>
         </span>
         <span className="text-[12.5px] text-accent shrink-0">Open →</span>
@@ -393,6 +394,7 @@ function PersonasSection({ onOpenPersona }: { onOpenPersona?: (id: string) => vo
 
 // -- Appearance + app behaviour ------------------------------------------------
 function AppearanceSection() {
+  const t = useT();
   const tr = useT();
   const [theme, setTheme] = useThemePref();
   const [autostart, setAuto] = useState(false);
@@ -469,7 +471,7 @@ function AppearanceSection() {
         <div className={FIELD_LABEL + " mb-2"}>Setup &amp; updates</div>
         <div className="flex items-center gap-2">
           <button className={BTN_BORDERED} onClick={runSetupAgain}>
-            Run setup again
+            {t("setRunSetupAgain")}
           </button>
           {desktop && <UpdateInline />}
         </div>
@@ -480,6 +482,7 @@ function AppearanceSection() {
 }
 
 function TrustedWorkspacesCard() {
+  const t = useT();
   const tr = useT();
   const [workspaces, setWorkspaces] = useState<WorkspaceCommandTrust[] | null>(null);
 
@@ -502,7 +505,7 @@ function TrustedWorkspacesCard() {
     <div className={CARD + " p-4 mb-4"} data-testid="trusted-workspaces-card">
       <div className={FIELD_LABEL}>{tr("setTrustedWorkspaces")}</div>
       <div className={FIELD_HELP}>
-        Trusted projects may manage their command allowances in .coworker/config.toml.
+        {t("setTrustedProjectsNote")}
       </div>
       {workspaces === null ? (
         <div className="text-[12px] text-muted mt-3">Loading…</div>
@@ -525,7 +528,7 @@ function TrustedWorkspacesCard() {
                 className="text-[12px] text-red-600 px-2 py-1"
                 onClick={() => void revoke(workspace.workspace)}
               >
-                Revoke
+                {t("uiRevoke")}
               </button>
             </div>
           ))}
@@ -608,6 +611,7 @@ function UpdateInline() {
 // then this card is the user's dial: attach thresholds + the fallback for models
 // without native PDF support.
 function TokenSavingsCard() {
+  const t = useT();
   const tr = useT();
   const [pdf, setPdf] = useState<PdfSettings | null>(null);
 
@@ -643,13 +647,13 @@ function TokenSavingsCard() {
           className={pdf.pdf_fallback === "text" ? "active" : ""}
           onClick={() => save({ pdf_fallback: "text" })}
         >
-          Extract text
+          {t("setExtractText")}
         </button>
         <button
           className={pdf.pdf_fallback === "images" ? "active" : ""}
           onClick={() => save({ pdf_fallback: "images" })}
         >
-          Send page images
+          {t("setSendPageImages")}
         </button>
       </div>
       <div className={FIELD_HELP}>
@@ -694,6 +698,7 @@ function TokenSavingsCard() {
 }
 
 function SidebarCard() {
+  const t = useT();
   const tr = useT();
   const [peek, setPeek] = useState<number | null>(null);
 
@@ -725,7 +730,7 @@ function SidebarCard() {
         />
       </label>
       <div className={FIELD_HELP}>
-        Longer lists collapse behind &ldquo;Show more&rdquo;. Applies per coworker and per project.
+        {t("setShowMoreNote")}
       </div>
     </div>
   );
@@ -734,6 +739,7 @@ function SidebarCard() {
 // -- Files (scratch location) — one card inside General (UX-021: a single option
 // doesn't earn its own tab) -----------------------------------------------------
 function FilesCard() {
+  const t = useT();
   const tr = useT();
   const [settings, setSettings] = useState<ModelSettings | null>(null);
   const [scratchDraft, setScratchDraft] = useState("");
@@ -784,11 +790,11 @@ function FilesCard() {
           />
           {desktop && (
             <button className={BTN_BORDERED} onClick={browseScratch} title={tr("setPickFolder")}>
-              Browse
+              {t("uiBrowse")}
             </button>
           )}
           <button className={BTN_ACCENT} onClick={saveScratch} disabled={!scratchDraft.trim()}>
-            Save
+            {t("uiSave")}
           </button>
         </div>
       <div className={FIELD_HELP}>

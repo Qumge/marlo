@@ -81,7 +81,7 @@ export function HubSpotDetail({ c, cloud, slack: _slack, onChanged }: DetailProp
         <AddConnectionModal
           c={c}
           cloud={cloud}
-          title="Add a portal"
+          title={t("cxAddPortal")}
           onClose={() => setAdding(false)}
           onChanged={onChanged}
         />
@@ -117,7 +117,7 @@ function PortalRow({ p, onChanged }: { p: HubSpotPortal; onChanged: () => void }
             onChanged();
           }}
         >
-          Make default
+          {t("mtMakeDefault")}
         </button>
       )}
       <button

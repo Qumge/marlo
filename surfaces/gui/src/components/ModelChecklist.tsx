@@ -104,7 +104,7 @@ export function ModelChecklist({
               <span className="mlist-default">default</span>
             ) : (
               <button className="mlist-make" onClick={() => makeDefault(id)}>
-                Make default
+                {t("mtMakeDefault")}
               </button>
             )}
           </div>
@@ -170,7 +170,7 @@ export function ModelChecklist({
           onKeyDown={(e) => e.key === "Enter" && add()}
         />
         <button className="btn-primary sm" onClick={add} disabled={!draft.trim()}>
-          Add
+          {t("uiAdd")}
         </button>
       </div>
     </div>

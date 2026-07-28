@@ -161,6 +161,7 @@ export function AutomationQuickstart({
     permissions?: { tool: string; target: string; access: "read" | "write" }[];
   }) => void;
 }) {
+  const t = useT();
   const tr = useT();
   const [pickedKey, setPickedKey] = useState<string | null>(null);
   const picked = TEMPLATES.find((t) => t.key === pickedKey) || null;
@@ -309,7 +310,7 @@ export function AutomationQuickstart({
   return (
     <div className="mb-4">
       <div className="text-[11px] uppercase tracking-[0.05em] text-faint mb-2.5">
-        Start from a template
+        {t("aqFromTemplate")}
       </div>
       {/* Equal-height cards (owner ask 2026-07-12): 1fr rows + h-full — <button> grid items
           don't stretch like divs. */}
@@ -363,7 +364,7 @@ export function AutomationQuickstart({
           {/* §30: the card names its template — without this it starts abruptly after the grid. */}
           <div className="flex items-baseline gap-2 pb-2.5 mb-1 border-b border-line">
             <span className="text-[11px] uppercase tracking-[0.05em] text-accent font-semibold">
-              Set up
+              {t("aqSetUp")}
             </span>
             <span className="text-[14px] font-semibold">{tr(picked.title as any)}</span>
             <span className="ml-auto text-[12px] text-faint max-sm:hidden">
@@ -397,7 +398,7 @@ export function AutomationQuickstart({
                       onClick={() => startConnect(name)}
                       data-testid={`ob-connect-${name}`}
                     >
-                      Connect
+                      {t("uiConnect")}
                     </button>
                   )}
                 </div>
@@ -420,7 +421,7 @@ export function AutomationQuickstart({
                       onClick={() => setConnFlow(null)}
                       data-testid="ob-connect-cancel"
                     >
-                      Cancel
+                      {t("uiCancel")}
                     </button>
                   </div>
                 )}
@@ -434,7 +435,7 @@ export function AutomationQuickstart({
               data-testid="ob-cloudpane"
             >
               <span className="block text-[13px] text-ink font-medium">
-                One sign-in unlocks every one-click connection
+                {t("aqOneSignIn")}
               </span>
               Connections are brokered by OpenWorker Cloud — your tokens stay on this Mac.
               <div className="flex items-center gap-3 mt-2">
@@ -452,7 +453,7 @@ export function AutomationQuickstart({
                           onClick={cancelSignin}
                           data-testid="ob-signin-cancel"
                         >
-                          Cancel
+                          {t("uiCancel")}
                         </button>
                       </span>
                     )}
@@ -463,7 +464,7 @@ export function AutomationQuickstart({
                     onClick={signInThenConnect}
                     data-testid="ob-cloud-signin"
                   >
-                    Sign in to OpenWorker Cloud
+                    {t("aqSignInCloud")}
                   </button>
                 )}
               </div>
@@ -498,7 +499,7 @@ export function AutomationQuickstart({
                     />
                   </div>
                   <p className="text-[11px] text-warnInk mt-1">
-                    The bot must be a member of the channel — invite @OpenWorker in Slack if it isn't.
+                    {t("aqBotMustJoin")}
                   </p>
                 </>
               )}
@@ -566,7 +567,7 @@ export function AutomationQuickstart({
               className="text-[12.5px] text-faint hover:text-muted"
               onClick={() => setPickedKey(null)}
             >
-              Cancel
+              {t("uiCancel")}
             </button>
             {/* A silently-disabled primary reads as a bug — always name the missing piece. */}
             {gateHint && (

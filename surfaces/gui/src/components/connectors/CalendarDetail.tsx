@@ -112,7 +112,7 @@ function AccountRow({ a, onChanged }: { a: GmailAccount; onChanged: () => void }
             onChanged();
           }}
         >
-          Make default
+          {t("mtMakeDefault")}
         </button>
       )}
       <button

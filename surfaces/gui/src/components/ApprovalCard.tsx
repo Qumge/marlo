@@ -3,6 +3,7 @@ import type { ApprovalDecision, Item } from "../types";
 import { humanizeApprovalTitle, type HumanLine } from "../humanize";
 import { Icon } from "./Icon";
 
+import { useT } from "../i18n";
 export function shortArgs(args: any): string {
   if (!args || typeof args !== "object") return "";
   return Object.entries(args)
@@ -131,6 +132,7 @@ function Buttons({
   runTask?: { id: string; title: string } | null;
   primaryLabel: string;
 }) {
+  const t = useT();
   const connector = item.category === "connector";
   const offerStanding = !!(runTask && item.standingTarget);
   return (
@@ -144,7 +146,7 @@ function Buttons({
           title={`Always allow ${item.name} → ${item.standingTarget} for “${runTask?.title || "this automation"}” — revoke any time on its Automations page`}
           onClick={() => onApprove("always_task")}
         >
-          Allow every time
+          {t("apAllowEveryTime")}
         </button>
       )}
       {/* In a run context the task-persistent grant replaces the session-scoped one —
@@ -158,17 +160,17 @@ function Buttons({
           title={`Always allow ${TOOL_VERBS[item.name]?.toLowerCase() || item.name} for this session`}
           onClick={() => onApprove("always_tool")}
         >
-          Always allow
+          {t("apAlwaysAllow")}
         </button>
       )}
       {item.name === "run_shell" && (
         <button className="btn" onClick={() => onApprove("always_command")}>
-          Always allow this command
+          {t("apAlwaysAllowCmd")}
         </button>
       )}
       <span className="spacer" />
       <button className="btn quiet-deny" onClick={() => onApprove("deny")}>
-        Deny
+        {t("apDeny")}
       </button>
     </div>
   );

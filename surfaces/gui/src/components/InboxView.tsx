@@ -211,7 +211,7 @@ export function InboxView({
                   data-testid="inbox-route-configure"
                   onClick={() => setTab("configure")}
                 >
-                  Configure ›
+                  {t("ibConfigure")}
                 </button>
               </div>
 
@@ -228,7 +228,7 @@ export function InboxView({
                       className={CHIP(personaFilter === "all")}
                       onClick={() => setPersonaFilter("all")}
                     >
-                      All coworkers
+                      {t("ibAllCoworkers")}
                     </button>
                     {personasWithItems.map((p) => (
                       <button

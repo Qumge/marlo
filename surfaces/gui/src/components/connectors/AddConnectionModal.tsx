@@ -285,6 +285,7 @@ function GithubOneClick({ c, cloud }: { c: Connector; cloud: CloudStatus | null 
 }
 
 function HubSpotOneClick({ c, cloud }: { c: Connector; cloud: CloudStatus | null }) {
+  const t = useT();
   const [access, setAccess] = useState<"read" | "write">("read");
   const [waiting, setWaiting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -334,7 +335,7 @@ function HubSpotOneClick({ c, cloud }: { c: Connector; cloud: CloudStatus | null
       )}
       {error && <div className="text-[12.5px] text-danger">{error}</div>}
       <p className="text-[12px] text-faint text-center">
-        Works for any number of portals · tokens stay on this computer
+        {t("cxAnyPortals")}
       </p>
     </div>
   );
@@ -361,14 +362,14 @@ function SlackManual({ onConnected }: { onConnected: () => void }) {
         <li>{t("connSocketModeSteps")}</li>
         <li>{t("connPasteBothTokens")}</li>
       </ol>
-      <input className={INPUT} type="password" placeholder="Bot token · xoxb-…" value={bot} spellCheck={false} onChange={(e) => setBot(e.target.value)} />
-      <input className={INPUT} type="password" placeholder="App token · xapp-…" value={app} spellCheck={false} onChange={(e) => setApp(e.target.value)} />
+      <input className={INPUT} type="password" placeholder={t("connBotToken")} value={bot} spellCheck={false} onChange={(e) => setBot(e.target.value)} />
+      <input className={INPUT} type="password" placeholder={t("connAppToken")} value={app} spellCheck={false} onChange={(e) => setApp(e.target.value)} />
       <button className={PILL_LINE + " w-full !py-2"} onClick={submit} disabled={busy || !bot.trim() || !app.trim()}>
         {busy ? t("validating") : t("connect")}
       </button>
       {error && <div className="text-[12.5px] text-danger">{error}</div>}
       <p className="text-[12px] text-warnInk text-center">
-        One mode at a time — this pauses any relay workspaces.
+        {t("cxOneModeAtATime")}
       </p>
     </div>
   );

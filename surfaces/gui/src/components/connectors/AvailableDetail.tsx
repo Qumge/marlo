@@ -38,7 +38,7 @@ export function AvailableDetail({
           data-testid="available-connect"
           onClick={() => setConnecting(true)}
         >
-          Connect
+          {t("uiConnect")}
         </button>
       </div>
 
@@ -46,7 +46,7 @@ export function AvailableDetail({
 
       {(c.access?.length ?? 0) > 0 && (
         <>
-          <div className={GRP_H}>Access</div>
+          <div className={GRP_H}>{t("cxAccess")}</div>
           <div className={GRP} data-testid="available-access">
             {c.access!.map((line) => (
               <div key={line} className={ROW + " !min-h-[36px] !py-2 text-[13px]"}>
@@ -55,7 +55,7 @@ export function AvailableDetail({
             ))}
           </div>
           <div className={FOOT}>
-            Keys and tokens are stored only on this computer. Disconnect anytime.
+            {t("cxKeysLocal")}
           </div>
         </>
       )}

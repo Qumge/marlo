@@ -116,7 +116,7 @@ function AccountRow({ a, onChanged }: { a: GmailAccount; onChanged: () => void }
             onChanged();
           }}
         >
-          Make default
+          {t("mtMakeDefault")}
         </button>
       )}
       <button
@@ -166,7 +166,7 @@ function FiltersGroup({ c, onChanged }: Pick<DetailProps, "c" | "onChanged">) {
         />
       </div>
       <div className={FOOT}>
-        Matching email is silently left out of what agents read — no trace they could probe.
+        {t("cxFilteredSilently")}
       </div>
     </>
   );

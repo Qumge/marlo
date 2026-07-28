@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { setWorkspaceTrusted, type WorkspaceCommandTrust } from "../api";
 
+import { useT } from "../i18n";
 export function WorkspaceTrustPrompt({
   request,
   onClose,
@@ -8,6 +9,7 @@ export function WorkspaceTrustPrompt({
   request: WorkspaceCommandTrust;
   onClose: () => void;
 }) {
+  const t = useT();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -44,7 +46,7 @@ export function WorkspaceTrustPrompt({
         {error && <div className="gate-error">{error}</div>}
         <div className="gate-foot justify-end gap-2">
           <button className="btn" onClick={onClose} disabled={saving}>
-            Keep asking
+            {t("wtKeepAsking")}
           </button>
           <button className="btn primary" onClick={() => void trust()} disabled={saving}>
             {saving ? "Saving…" : "Trust workspace"}

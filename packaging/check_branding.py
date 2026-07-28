@@ -130,6 +130,16 @@ ALLOWED = [
     re.compile(r"OpenWorker sidecar token"),  # the server's own error string
     # The connector sign-in card: OpenWorker Cloud brokers this OAuth, not us.
     re.compile(r"OpenWorker handles the OAuth"),
+    # 【搬进 i18n 会丢掉 EXEMPT_DIRS 的豁免】—— 这是好事：目录豁免是按位置给的，
+    # 而字符串一旦集中到 i18n/，就得逐条说明理由。下面三条都是这么冒出来的。
+    #
+    # 用户在 Slack 里装的那个 app 就叫 OpenWorker，@ 它的时候打的也是这个名字。
+    # 这一屏正是在教他怎么装、怎么 @。
+    re.compile(r"Getting started with Slack & OpenWorker"),
+    re.compile(r"Slack 与 OpenWorker 上手"),
+    # "Curated coworkers from the OpenWorker team" 的中文。这个角色库【确实】是
+    # 上游策展的，说成 Marlo 团队精选是把别人的工作算到自己头上。
+    re.compile(r"OpenWorker 团队精选"),
     # 同一句话的中文。2026-07-28 把这句从 Onboarding.tsx 里搬进 i18n 时，守卫立刻
     # 报了出来 —— 它只认英文那条原文。留 OpenWorker 的理由和英文侧【一模一样】：
     # client secret 真在 OpenWorker Cloud 手上，下一步就把用户送到

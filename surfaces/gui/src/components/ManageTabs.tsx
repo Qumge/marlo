@@ -114,7 +114,7 @@ export function ModelsTab() {
                 if (window.confirm(`Remove the ${info?.title} key from this computer?`)) ps.removeKey();
               }}
             >
-              Remove key…
+              {t("mtRemoveKey")}
             </button>
           ) : null
         }
@@ -151,7 +151,7 @@ export function ModelsTab() {
           <div className="mt-6" data-testid="model-preview">
             <div className={SEC_H + " mb-1.5"}>{t("uiIncludedModels")}</div>
             <p className="text-[12px] text-muted mb-2.5 leading-relaxed">
-              Curated, agent-capable models this provider serves — add your key above to enable them.
+              {t("mtCuratedModels")}
             </p>
             <div className="space-y-1">
               {(info?.suggested_models || []).map((m) => {
@@ -225,7 +225,7 @@ function ComposerPickerCard({
                 <span className="mlist-default">default</span>
               ) : (
                 <button className="mlist-make" onClick={() => setDefaultModel(id).then(() => onChanged())}>
-                  Make default
+                  {t("mtMakeDefault")}
                 </button>
               )}
             </div>
@@ -297,7 +297,7 @@ export function McpTab() {
         <div className={CARD + " p-4 text-[13px] text-muted"}>
           No MCP servers configured.{" "}
           <button className="text-accent font-medium" onClick={() => setAdding(true)}>
-            Add a server
+            {t("mtAddServer")}
           </button>
         </div>
       ) : (
@@ -329,7 +329,7 @@ export function McpTab() {
               refresh();
             }}
           >
-            Connect
+            {t("uiConnect")}
           </button>
         </div>
       ))}
@@ -413,7 +413,7 @@ function McpRow({
         {isOauth &&
           (server.status === "needs_auth" ? (
             <button className={BTN_ACCENT} onClick={signIn} data-testid={`mcp-signin-${server.name}`}>
-              Sign in
+              {t("signIn")}
             </button>
           ) : authorizing ? (
             <span className="text-[12px] text-muted shrink-0">waiting for browser…</span>
@@ -468,6 +468,7 @@ function AddForm({
   onAdded: () => void;
   onError: (e: string | null) => void;
 }) {
+  const t = useT();
   const [text, setText] = useState(EXAMPLE);
 
   const save = async () => {
@@ -507,7 +508,7 @@ function AddForm({
       />
       <div className="flex items-center gap-3">
         <button className={BTN_ACCENT} onClick={save}>
-          Add
+          {t("uiAdd")}
         </button>
         <button className="text-[12.5px] text-muted hover:text-ink" onClick={onCancel}>
           cancel
@@ -570,7 +571,7 @@ export function UnauthorizedBlock({
                 title={t("uiAllowAndDeliver")}
                 onClick={() => act(m.id, "allow_deliver")}
               >
-                Allow & deliver
+                {t("mtAllowDeliver")}
               </button>
               <button
                 className={BTN_BORDERED}
@@ -578,7 +579,7 @@ export function UnauthorizedBlock({
                 title={t("uiAllowDiscard")}
                 onClick={() => act(m.id, "allow")}
               >
-                Allow only
+                {t("mtAllowOnly")}
               </button>
               <button
                 className="text-[11.5px] px-2 py-1 rounded-md text-faint hover:text-danger"
@@ -600,6 +601,7 @@ export function UnauthorizedBlock({
 // Channel-subscriptions table (Integrations ▸ Messaging routing). Subscribing happens from a
 // session's Sources ▸ Channels panel; here the owner can see and revoke.
 export function ListeningSessionsBlock({ c }: { c: Connector }) {
+  const t = useT();
   const [subs, setSubs] = useState<Subscription[] | null>(null);
   const load = () => getSubscriptions().then(setSubs).catch(() => setSubs([]));
   useEffect(() => {
@@ -613,7 +615,7 @@ export function ListeningSessionsBlock({ c }: { c: Connector }) {
       <div className={SEC_H + " mb-2"}>Sessions listening to {c.title} channels · {mine.length}</div>
       {mine.length === 0 ? (
         <div className="text-[12px] text-faint">
-          None yet — open a session's Sources ▸ Channels to subscribe it to a channel.
+          {t("mtNoSubs")}
         </div>
       ) : (
         <div className="space-y-1.5">
@@ -628,7 +630,7 @@ export function ListeningSessionsBlock({ c }: { c: Connector }) {
               </span>
               <button
                 className="ml-auto text-faint hover:text-danger shrink-0"
-                title="Unsubscribe this session"
+                title={t("mtUnsubscribe")}
                 onClick={async () => {
                   await unsubscribeChannel(s.session_id, s.channel);
                   load();
@@ -722,7 +724,7 @@ export function AllowlistBlock({
                     onChanged();
                   }}
                 >
-                  Allow
+                  {t("uiAllow")}
                 </button>
               </div>
             ))}
@@ -742,7 +744,7 @@ export function ConnectorTools({ c, onChanged }: { c: Connector; onChanged: () =
   if (!c.tools?.length)
     return (
       <div className="border-t border-line px-3.5 py-3 text-[12.5px] text-muted">
-        No tools for this connector yet.
+        {t("mtNoTools")}
       </div>
     );
   return (
@@ -911,7 +913,7 @@ export function ConnectSetup({
                 </span>
               </button>
               <div className="text-[11.5px] text-faint">
-                One-click sign-in is coming soon — connect manually below for now:
+                {t("mtManualForNow")}
               </div>
             </>
           ) : cloud?.signed_in ? (
