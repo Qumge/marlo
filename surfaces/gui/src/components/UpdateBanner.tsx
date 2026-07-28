@@ -43,6 +43,7 @@ type Phase = "downloading" | "ready" | "fallback" | "installing" | "error";
 export function UpdateBanner() {
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
   const [phase, setPhase] = useState<Phase>("downloading");
+  const [err, setErr] = useState("");
   // Per-run, per-version dismissal — no localStorage, so a restart re-offers, and a
   // NEWER release found by a later check overrides an earlier "Later".
   const dismissed = useRef<string | null>(null);
@@ -92,9 +93,17 @@ export function UpdateBanner() {
 
   const install = async () => {
     setPhase("installing");
+    setErr("");
     try {
       await installUpdate(); // success restarts the app — nothing to do after
-    } catch {
+    } catch (e: any) {
+      // 【不要再吞掉】。0.3.2 装 0.3.6 失败过一次，而横幅只说"装不上"——
+      // 排查时字节、包结构、公钥、权限、content-type 一个个排除，最后卡在
+      // "rename 到底报了什么"上，而那个字符串一直就在，只是这里扔了。
+      // Rust 侧把 install 的失败原因原样返回（lib.rs 的 install_update）。
+      const msg = String(e?.message || e);
+      console.error("[updater] 安装失败：", msg);
+      setErr(msg);
       setPhase("error");
     }
   };
@@ -119,6 +128,7 @@ export function UpdateBanner() {
       {phase === "error" && (
         <div className="text-[11.5px] text-warnInk mt-1.5">
           The update couldn't be installed — it will be offered again next launch.
+          {err && <div className="mt-1 text-faint break-words">{err}</div>}
         </div>
       )}
       <div className="flex items-center gap-2 mt-2.5">

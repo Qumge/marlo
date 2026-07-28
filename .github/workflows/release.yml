@@ -229,6 +229,17 @@ jobs:
           # 按 tag 归档一份（清单指向这里，版本永远对得上）……
           aws s3 cp dist/ "s3://$R2_BUCKET/marlo/$TAG/" \
             --endpoint-url "$R2_ENDPOINT" --recursive --no-progress
+          # R2 按扩展名猜 content-type，.tar.gz 被猜成 application/x-tar ——
+          # 一个 gzip 压缩包被标成未压缩的 tar。GitHub 给的是
+          # application/octet-stream。字节本身是对的（魔数 1f8b），但一个按
+          # content-type 决定怎么解包的客户端会在这里翻车。改成 application/gzip
+          # 而不是照抄 octet-stream：它是这个文件真实的类型。
+          for t in dist/*.app.tar.gz; do
+            [ -f "$t" ] || continue
+            aws s3 cp "$t" "s3://$R2_BUCKET/marlo/$TAG/$(basename "$t")" \
+              --endpoint-url "$R2_ENDPOINT" --content-type application/gzip \
+              --metadata-directive REPLACE --no-progress
+          done
           # ……另一份放在稳定路径下，给网站的下载按钮和 updater 的入口用。
           for f in dist/Marlo-macos-arm64.dmg dist/Marlo-windows-setup.exe \
                    dist/Marlo-windows.msi dist/latest.json; do
