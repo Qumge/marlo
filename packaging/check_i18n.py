@@ -46,6 +46,33 @@ _TEXT = re.compile(
 # 面向用户的属性
 _ATTR = re.compile(r'\b(?:placeholder|title|aria-label)="([^"{}]{2,80})"')
 
+# 【守卫的第三个盲区】：JSX 文本节点的 `>` 和文字【不在同一行】——
+#
+#   <button
+#     className="..."
+#     onClick={...}
+#   >
+#     Use your own API key instead
+#   </button>
+#
+# 上面两条正则都是【逐行】跑的（scan 里 for line in splitlines），所以只要元素带
+# 属性、Prettier 一换行，它的文字就彻底看不见了。而带属性的多行元素是这个代码库
+# 里最常见的形状。
+#
+# 后果实测：0.4.1 发出去之后，上手引导第一屏（新用户看到的第一个界面）整段是
+# 英文——"Connect to Qumge to get started…"、"Use your own API key instead"、
+# "Skip setup"——而守卫报的是"基线 29 条，无新增"。同一个文件里 welcomeTo 和
+# beta 是走 t() 的，所以连"这个文件没做 i18n"都不成立。
+#
+# 这是守卫第二次给出虚假的安心（第一次是下面的数据数组）。一个有盲区的守卫比没有
+# 守卫更糟：它让人以为已经做完了。
+#
+# 修法：整份文件按 > … < 匹配一次，允许中间跨行。不能直接放宽上面的 _TEXT ——
+# 那条逐行跑还有行号可报。
+_TEXT_ML = re.compile(
+    r"(?<![=!<>-])>\s*\n\s*([A-Z\u2018\u2019\u201c\u201d][^<>{}\n]{2,120}?)\s*\n\s*<(?![A-Za-z])"
+)
+
 # 【守卫的盲区】：写死的界面文字不只在 JSX 里，也在【数据数组】里 ——
 #
 #   const SET_TABS = [{ key: "models", label: "Models", ... }]
@@ -98,6 +125,11 @@ def scan() -> list[str]:
         # as_posix()：Windows 上分隔符是反斜杠，而基线里存的是正斜杠 —— 不统一
         # 的话整份基线在那个平台上全被当成新增（CI 实测 184 条全报，构建挂掉）。
         rel = path.relative_to(SRC).as_posix()
+        # 跨行的文本节点：整份文件扫一次（逐行永远看不到它们）。
+        for m in _TEXT_ML.finditer(text):
+            sm = " ".join(m.group(1).split())
+            if len(sm) >= 3 and not any(a.match(sm) for a in ALLOWED):
+                found.append(f"{rel}: {sm}")
         for lineno, line in enumerate(text.splitlines(), 1):
             stripped = line.strip()
             if stripped.startswith(("//", "*", "/*")):

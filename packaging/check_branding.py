@@ -130,6 +130,11 @@ ALLOWED = [
     re.compile(r"OpenWorker sidecar token"),  # the server's own error string
     # The connector sign-in card: OpenWorker Cloud brokers this OAuth, not us.
     re.compile(r"OpenWorker handles the OAuth"),
+    # 同一句话的中文。2026-07-28 把这句从 Onboarding.tsx 里搬进 i18n 时，守卫立刻
+    # 报了出来 —— 它只认英文那条原文。留 OpenWorker 的理由和英文侧【一模一样】：
+    # client secret 真在 OpenWorker Cloud 手上，下一步就把用户送到
+    # opencoworker.us.auth0.com。翻成 Marlo 是在告诉用户一件假事。
+    re.compile(r"OAuth 由 OpenWorker 代办"),
     # The coworker gallery is curated upstream — publisher === "OpenWorker".
     re.compile(r"from the OpenWorker team"),
     # What opencoworker.us.auth0.com actually calls the app it signs you into.

@@ -76,6 +76,56 @@ def test_the_baseline_matches_what_the_scan_finds_today():
     assert not (found - base), f"有 {len(found - base)} 条没进基线也没翻译"
 
 
+def test_it_sees_text_whose_bracket_is_on_another_line():
+    """`>` 和文字不在同一行时也要能看见。
+
+    这是 0.4.1 漏掉整个上手引导的原因：两条正则都逐行跑，而带属性的元素被 Prettier
+    一换行，文字就到了下一行 ——
+
+        <button
+          className="..."
+        >
+          Use your own API key instead
+        </button>
+
+    带属性的多行元素是这个代码库里最常见的形状，不是边角情况。守卫当时报的是
+    「基线 29 条，无新增」，而新用户看到的第一屏整段是英文。
+
+    【为什么单独测这一条】：现成的 test_the_baseline_matches_what_the_scan_finds_today
+    只断言"没有基线之外的新东西"。把这个分支拆掉，scan() 结果变成基线的子集，那条
+    测试照样通过 —— 它拦不住守卫【变弱】，而变弱正是这里出过的事。
+    """
+    sample = (
+        '<button\n'
+        '  className="x"\n'
+        '  onClick={f}\n'
+        '>\n'
+        '  Use your own API key instead\n'
+        '</button>\n'
+    )
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as d:
+        src = Path(d)
+        (src / "Fixture.tsx").write_text(sample, encoding="utf-8")
+        original = mod.SRC
+        try:
+            mod.SRC = src
+            found = [f.split(": ", 1)[1] for f in mod.scan()]
+        finally:
+            mod.SRC = original
+    assert "Use your own API key instead" in found, found
+
+    # 逐行那条【看不见】它 —— 这才说明上面那条不是多余的。
+    assert not any(mod._TEXT.search(line) for line in sample.splitlines())
+
+
+def test_it_still_ignores_type_signatures_across_lines():
+    # 跨行匹配放宽了边界，别把 `=> Promise<void>` 这类又收回来（基线里躺过 5 条）。
+    for src in ("const f = () =>\n  doThing<void>\n", "type A = Map<\n  string\n>\n"):
+        assert not list(mod._TEXT_ML.finditer(src)), src
+
+
 def test_brand_names_are_not_flagged():
     # 把 Gmail、Slack 这些当成"没翻译"会让守卫吵到没人看。
     found = mod.scan()

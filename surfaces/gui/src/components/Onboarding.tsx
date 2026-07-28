@@ -169,8 +169,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
             {/* Persistent header — stays put while the region below swaps (§39). */}
             <h1 className="text-[19px] font-semibold">{t("welcomeTo")}<span className="beta-tag">{t("beta")}</span></h1>
             <p className="text-[13px] text-muted mt-0.5 mb-4">
-              Connect to Qumge to get started — one sign-in, every model, and your key stays
-              on this Mac.
+              {t("onboardLede")}
             </p>
 
             {!useOwnKey ? (
@@ -180,7 +179,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
                 <div className="flex-1 min-h-0 flex flex-col items-start justify-center gap-4">
                   {qumgeConnected ? (
                     <span className="text-[13px] text-ok font-medium" data-testid="ob-qumge-connected">
-                      ✓ Connected to Qumge
+                      ✓ {t("connectedToQumge")}
                     </span>
                   ) : (
                     <QumgeConnect onConnected={handleQumgeConnected} />
@@ -191,7 +190,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
                   onClick={() => setUseOwnKey(true)}
                   data-testid="ob-use-own-key"
                 >
-                  Use your own API key instead
+                  {t("useOwnKey")}
                 </button>
               </div>
             ) : !ps.sel ? (
@@ -206,7 +205,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
                   onClick={() => setUseOwnKey(false)}
                   data-testid="ob-back-to-qumge"
                 >
-                  ‹ Back to Qumge sign-in
+                  ‹ {t("connectToQumge")}
                 </button>
                 <div className="flex-1 min-h-0 overflow-y-auto pr-1" data-testid="ob-provider-gallery">
                   <ProviderCards ps={ps} tp="ob" exclude={["qumge"]} />
@@ -223,7 +222,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
             <div className="flex items-center gap-3 pt-5">
               {!skipConfirm ? (
                 <button className="text-[12.5px] text-faint hover:text-muted" onClick={() => setSkipConfirm(true)}>
-                  Skip setup
+                  {t("skipSetup")}
                 </button>
               ) : (
                 <span className="text-[12.5px] text-muted">
@@ -239,11 +238,11 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
                 onClick={advance}
                 data-testid="ob-continue"
               >
-                {ps.verify.state === "testing" ? "Checking…" : "Next"}
+                {ps.verify.state === "testing" ? t("checking") : t("next")}
               </button>
             </div>
             <p className="text-[11px] text-faint mt-3">
-              Models can be enabled or hidden anytime in Settings ▸ Models.
+              {t("onboardModelsNote")}
             </p>
           </section>
         )}
@@ -257,7 +256,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
           <section data-testid="ob-step-tools" className="flex-1 min-h-0 flex flex-col">
             <h1 className="text-[19px] font-semibold">{t("uiConnectTools")}</h1>
             <p className="text-[13px] text-muted mt-0.5 mb-3">
-              Chat can only advise. Connected, your coworker does the actual work:
+              {t("obToolsLede")}
             </p>
 
             <div className="flex-1 min-h-0 overflow-y-auto pr-1" data-testid="ob-tool-gallery">
@@ -304,7 +303,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
                     Gmail &amp; Google Calendar
                   </span>
                   <span className="block text-[12px] text-faint truncate">
-                    Coming soon — pending Google&rsquo;s app verification.
+                    {t("obGoogleGated")}
                   </span>
                 </span>
                 {cloud?.signed_in && <span className="text-[11.5px] text-faint shrink-0">{t("uiComingSoon")}</span>}
@@ -318,16 +317,15 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
               <div className="mt-3.5 rounded-xl border border-line bg-paper px-4 py-3 flex items-center gap-3.5 shrink-0">
                 <span className="flex-1 text-[12.5px] text-muted leading-snug">
                   <span className="block text-[13px] font-semibold text-ink mb-0.5">
-                    Sign in for one-click connections
+                    {t("obSignInTitle")}
                   </span>
-                  OpenWorker handles the OAuth for 20+ tools — no dev consoles, no pasted keys.
-                  Tokens stay on this Mac.
+                  {t("obSignInBody")}
                 </span>
                 {signinPhase ? (
                   <span className="inline-flex items-center gap-2 text-[12.5px] text-muted shrink-0">
                     <Spinner />
                     {signinPhase === "opening" ? (
-                      "Opening browser…"
+                      t("obOpeningBrowser")
                     ) : (
                       <>
                         Waiting…{" "}
@@ -351,7 +349,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
                     }}
                     data-testid="ob-cloud-signin"
                   >
-                    Sign in
+                    {t("signIn")}
                   </button>
                 )}
               </div>
@@ -361,11 +359,10 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
                 data-testid="ob-tools-signedin"
               >
                 <span className="block text-[13px] font-semibold text-ok mb-0.5">
-                  🎉 You&rsquo;re signed in{cloud.account ? ` as ${cloud.account}` : ""}
+                  🎉 {t("obSignedIn")}{cloud.account ? ` · ${cloud.account}` : ""}
                 </span>
                 <span className="block text-[12.5px] text-muted">
-                  Connect a tool above with one click — or add them anytime later from the
-                  Connectors page.
+                  {t("obSignedInBody")}
                 </span>
               </div>
             )}
@@ -378,7 +375,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
                   onClick={() => setStep(2)}
                   data-testid="ob-continue-tools"
                 >
-                  Next
+                  {t("next")}
                 </button>
               ) : (
                 <button
@@ -386,13 +383,12 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
                   onClick={() => setStep(2)}
                   data-testid="ob-tools-skip"
                 >
-                  Continue without sign-in
+                  {t("obContinueNoSignIn")}
                 </button>
               )}
             </div>
             <p className="text-[11px] text-faint mt-3">
-              30+ more tools on the Connectors page — add or remove anytime. Tokens stay on
-              this Mac.
+              {t("obMoreTools")}
             </p>
           </section>
         )}
@@ -403,8 +399,8 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
               <div className="w-12 h-12 rounded-full bg-okSoft text-ok grid place-items-center mx-auto mb-3 text-[22px]">
                 ✓
               </div>
-              <h1 className="text-[19px] font-semibold mb-1">You're set up</h1>
-              <p className="text-[13px] text-muted mb-5">Two good ways to start:</p>
+              <h1 className="text-[19px] font-semibold mb-1">{t("obDone")}</h1>
+              <p className="text-[13px] text-muted mb-5">{t("obDoneLede")}</p>
             </div>
 
             <button
@@ -418,7 +414,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
               <span className="flex-1 min-w-0 text-left">
                 <b className="block text-[13.5px]">{t("uiFirstAutomation")}</b>
                 <span className="text-[12px] text-muted">
-                  A weekly digest, a morning brief — pick a template, running in two minutes.
+                  {t("obCtaAutomation")}
                 </span>
               </span>
               <span className="text-faint self-center">›</span>
@@ -434,7 +430,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
               <span className="flex-1 min-w-0 text-left">
                 <b className="block text-[13.5px]">{t("uiStartWorking")}</b>
                 <span className="text-[12px] text-muted">
-                  Open a session and just ask — analyze files, draft, research, build.
+                  {t("obCtaWork")}
                 </span>
               </span>
               <span className="text-faint self-center">›</span>
@@ -444,7 +440,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
                 (owner call 2026-07-12); the finish("gallery") plumbing remains for their return. */}
 
             <p className="text-[11px] text-faint text-center mt-auto pt-5">
-              Replay this setup anytime: Settings ▸ Appearance ▸ Run setup again.
+              {t("obReplay")}
             </p>
           </section>
         )}

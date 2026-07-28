@@ -14,6 +14,7 @@ import {
   type ProviderInfo,
 } from "../api";
 import { startQumgeDevice, pollQumgeDevice, type QumgeDeviceStart } from "../api.qumge";
+import { setLocale } from "../i18n";
 
 vi.mock("../api", () => ({
   getProviders: vi.fn(),
@@ -238,5 +239,31 @@ describe("Onboarding — step 0 (Task 4: connect to Qumge, not the gallery)", ()
 
     expect(screen.queryByTestId("ob-step-tools")).toBeNull();
     expect(screen.getByTestId("ob-step-done")).toBeTruthy();
+  });
+
+  // 这一屏是新用户看到的【第一个界面】。0.4.1 发出去时它整段是英文 —— 键和中文都
+  // 早就写好了（onboardLede / useOwnKey / skipSetup…），组件从来没调用过，而 i18n
+  // 守卫看不见跨行的 JSX 文本节点，报的是"无新增"。
+  //
+  // 断言中文【出现】还不够：漏掉一个键时，界面显示的是键名，中文那句照样在。所以
+  // 同时断言英文原文【不出现】。
+  it("中文界面下第一屏没有英文残留", async () => {
+    setLocale("zh");   // 其余 mock 走全局 beforeEach
+    render(<Onboarding onDone={() => {}} />);
+    await act(async () => {});
+
+    const box = screen.getByTestId("onboarding").textContent || "";
+    expect(box).toContain("连上 Qumge 就能开始");
+    expect(box).toContain("改用我自己的 API key");
+    expect(box).toContain("先跳过");
+    for (const en of [
+      "Connect to Qumge to get started",
+      "Use your own API key instead",
+      "Skip setup",
+      "Models can be enabled or hidden",
+    ]) {
+      expect(box).not.toContain(en);
+    }
+    setLocale("en");
   });
 });
