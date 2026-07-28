@@ -1,1 +1,219 @@
-components/connectors/CalendarDetail.tsx: Google Calendar
+App.tsx: , path: d.path ||
+App.tsx: Hide side panel
+App.tsx: How can I help?
+App.tsx: Let's build something.
+App.tsx: Model switched
+App.tsx: Restoring your session…
+App.tsx: Show side panel
+App.tsx: Stopped: max iterations reached.
+App.tsx: That message was rejected.
+App.tsx: What can this touch
+components/AccessSection.tsx: >Subscribed channels · {channels.length}<
+components/AccessSection.tsx: Couldn't add that channel.
+components/AccessSection.tsx: This channel is also this session's Inbox-routing target — inbound and outbound collide.
+components/AccountRow.tsx: bg-accentSoft text-accent
+components/AccountRow.tsx: bg-accentSoft text-accent font-semibold
+components/ApprovalCard.tsx: , runTask?.title ||
+components/ApprovalCard.tsx: Allow once
+components/ApprovalCard.tsx: Apply a patch
+components/ApprovalCard.tsx: Edit a file
+components/ApprovalCard.tsx: Run a command
+components/ApprovalCard.tsx: Send a file
+components/ApprovalCard.tsx: Send a message
+components/ApprovalCard.tsx: With the message
+components/ApprovalCard.tsx: Write a file
+components/ApprovalCard.tsx: · as a PNG screenshot
+components/ApprovalCard.tsx: — always allowed once you approve
+components/ApprovalCard.tsx: — read-only
+components/AuditView.tsx: Recent connector and browser tool activity. Arguments are sanitized before storage.
+components/AutomationQuickstart.tsx: Connections, delivery & schedule
+components/AutomationQuickstart.tsx: Create automation
+components/AutomationQuickstart.tsx: Deliver to
+components/AutomationQuickstart.tsx: Delivery & schedule
+components/AutomationQuickstart.tsx: Opening browser…
+components/AutomationQuickstart.tsx: Pick a channel to post to first
+components/AutomationQuickstart.tsx: Pipeline and deal activity
+components/AutomationQuickstart.tsx: Save it as the session deliverable.
+components/AutomationQuickstart.tsx: Search the web for the most important technology and world news from the last 24 hours
+components/AutomationQuickstart.tsx: Send it to me as a Slack DM.
+components/AutomationQuickstart.tsx: Slack DM (connect Slack later)
+components/AutomationQuickstart.tsx: Sort my recent Downloads into tidy folders by file type.
+components/AutomationQuickstart.tsx: Summarize my unread email into one short digest note.
+components/AutomationQuickstart.tsx: Today's meetings and gaps
+components/AutomationQuickstart.tsx: Waiting for sign-in…
+components/AutomationQuickstart.tsx: What arrived overnight
+components/AutomationQuickstart.tsx: What the digest summarizes
+components/AutomationQuickstart.tsx: Where the digest posts
+components/AutomationQuickstart.tsx: Your unread email
+components/AutomationQuickstart.tsx: and write a concise 5-bullet briefing, saved as a markdown file.
+components/Composer.tsx: Ask for approval ⌄
+components/Composer.tsx: Configure Voice Input in Settings
+components/Composer.tsx: Connect a model to send
+components/Composer.tsx: Could not start the microphone.
+components/Composer.tsx: Could not transcribe your recording.
+components/Composer.tsx: Other files
+components/Composer.tsx: Photo or image
+components/Composer.tsx: Start dictation
+components/Composer.tsx: Start local voice dictation
+components/Composer.tsx: Starting microphone…
+components/Composer.tsx: Stop dictation
+components/Composer.tsx: Stop recording and transcribe
+components/Composer.tsx: Voice dictation is unavailable.
+components/Composer.tsx: text/*,.md,.csv,.json,.yaml,.yml,.log,.py,.ts,.tsx,.js,.rs,.go,.toml
+components/Composer.tsx: · approvals go to the Inbox
+components/FolderGate.tsx: Choose a project folder
+components/FolderGate.tsx: New project
+components/FolderGate.tsx: Pick a folder or enter a path. If the path doesn't exist, it will be created.
+components/FolderGate.tsx: This coworker needs a workspace to read, edit, and run in.
+components/GalleryModal.tsx: Check your browser…
+components/GalleryModal.tsx: From your team
+components/GalleryModal.tsx: No personas match your search.
+components/GalleryModal.tsx: No personas published yet.
+components/GalleryModal.tsx: Nothing shared with your team yet.
+components/GalleryModal.tsx: Sign in
+components/GalleryModal.tsx: · can use messaging
+components/InboxConfigure.tsx: Could not clear Inbox routing.
+components/InboxConfigure.tsx: Could not update Inbox routing.
+components/InboxConfigure.tsx: in-app Inbox only
+components/InboxItemCard.tsx: Allow once
+components/InboxItemCard.tsx: No folder was suggested
+components/InboxItemCard.tsx: Or type your own answer…
+components/InboxItemCard.tsx: Your answer…
+components/InboxItemCard.tsx: text-warnInk
+components/InboxView.tsx: Approvals, questions, and notifications from your coworkers — including sessions running unattended.
+components/InboxView.tsx: Nothing pending for this filter.
+components/InboxView.tsx: Nothing pending.
+components/InboxView.tsx: Session unavailable
+components/ManageTabs.tsx: >Sessions listening to {c.title} channels · {mine.length}<
+components/ManageTabs.tsx: @modelcontextprotocol/server-filesystem
+components/ManageTabs.tsx: Remove from the picker
+components/ManageTabs.tsx: The default model is always shown — make another model default first
+components/ManageTabs.tsx: signing in…
+components/ModelChecklist.tsx: The default model is always shown — make another model default first
+components/Onboarding.tsx: Attio — search records, read timelines, log notes.
+components/Onboarding.tsx: GitHub — review PRs, watch issues, reply to @mentions.
+components/Onboarding.tsx: HubSpot — update deals, log notes, prep calls.
+components/Onboarding.tsx: Keep the CRM current
+components/Onboarding.tsx: Keep up with Slack
+components/Onboarding.tsx: Keep your notes in reach
+components/Onboarding.tsx: Notion — search pages, query databases, draft docs.
+components/Onboarding.tsx: Outlook — triage mail, draft replies, run your calendar.
+components/Onboarding.tsx: Ship code
+components/Onboarding.tsx: Slack — catch up, answer mentions, post updates.
+components/Onboarding.tsx: Stay on top of email
+components/Onboarding.tsx: Track every relationship
+components/PersonaHero.tsx: xMidYMid slice
+components/PersonaView.tsx: Connect this first
+components/PersonaView.tsx: Could not load this persona.
+components/PersonaView.tsx: On by default for new sessions
+components/RightRail.tsx: >Could not parse spreadsheet: {error}<
+components/RightRail.tsx: >Could not render PDF: {error}<
+components/RightRail.tsx: >This {/\.pptx?$/i.test(artifact.name) ? "PowerPoint" : "Word"} file can’t be previewed here.<
+components/RightRail.tsx: pdfjs-dist/build/pdf.worker.min.mjs?url
+components/RootRow.tsx: Read-only
+components/RootRow.tsx: Read-write
+components/RootRow.tsx: Temporary space
+components/RootRow.tsx: The main workspace is always read-write
+components/RootRow.tsx: Toggle read-only / read-write
+components/ScheduledView.tsx: Create automation
+components/ScheduledView.tsx: Recurring tasks Marlo runs on a schedule.
+components/SearchModal.tsx: bg-accentSoft
+components/SelectMenu.tsx: Key set
+components/SettingsView.tsx: Check for updates
+components/SettingsView.tsx: Checking compatibility…
+components/SettingsView.tsx: Could not use that location.
+components/SettingsView.tsx: Delete the local Whisper model and disable Voice Input?
+components/SettingsView.tsx: Downloading — Marlo restarts by itself when it's ready.
+components/SettingsView.tsx: How Marlo looks and behaves on this machine.
+components/SettingsView.tsx: No project command allowances currently declared
+components/SettingsView.tsx: No speech was detected. Try again and speak for a little longer.
+components/SettingsView.tsx: Providers and the models offered in the composer's picker. Keys are stored only on this computer.
+components/SettingsView.tsx: Record a short phrase to enable the composer microphone.
+components/SettingsView.tsx: Saved. New conversations will use this location.
+components/SettingsView.tsx: Speak naturally in the composer. Recordings and transcripts stay on this device.
+components/SettingsView.tsx: Stop and check
+components/SettingsView.tsx: Test again
+components/SettingsView.tsx: Test microphone
+components/SettingsView.tsx: Voice Input could not complete that action.
+components/SettingsView.tsx: Which coworkers are enabled and shown in the picker, plus installing new persona bundles.
+components/SettingsView.tsx: You're on the latest version.
+components/SettingsView.tsx: Your microphone and local transcription engine are working.
+components/SettingsView.tsx: · Folder unavailable
+components/Sidebar.tsx: Collapse sidebar
+components/Sidebar.tsx: Dock sidebar
+components/Sidebar.tsx: New session
+components/Sidebar.tsx: Show more
+components/Sidebar.tsx: bg-ink/[0.055]
+components/Transcript.tsx: Declined folder access
+components/Transcript.tsx: Granted folder access
+components/Transcript.tsx: Plan approved
+components/Transcript.tsx: Removed by your privacy filters before the agent saw the results — agents get no trace of these.
+components/Transcript.tsx: Sent back with feedback
+components/Transcript.tsx: Thought process
+components/UpdateBanner.tsx: Restart to update
+components/WorkspaceTrustPrompt.tsx: Could not save workspace trust.
+components/WorkspaceTrustPrompt.tsx: Trust workspace
+components/connectors/AccountsDetail.tsx: Add an account
+components/connectors/AccountsDetail.tsx: Add manually
+components/connectors/AccountsDetail.tsx: Check your browser…
+components/connectors/AccountsDetail.tsx: Sign in to OpenWorker Cloud for one-click — or add a token below
+components/connectors/AccountsDetail.tsx: ＋ Add account
+components/connectors/AddConnectionModal.tsx: Add a workspace
+components/connectors/AddConnectionModal.tsx: Add to Slack
+components/connectors/AddConnectionModal.tsx: Read & write
+components/connectors/AddConnectionModal.tsx: Read-only
+components/connectors/AddConnectionModal.tsx: adds: log notes and tasks, update records, create contacts — never delete
+components/connectors/AddConnectionModal.tsx: search and read contacts, companies, deals, tickets
+components/connectors/AddConnectionModal.tsx: w-full !py-2
+components/connectors/CalendarDetail.tsx: Check your browser…
+components/connectors/CalendarDetail.tsx: One-click Google sign-in is coming soon
+components/connectors/CalendarDetail.tsx: Requires cloud sign-in.
+components/connectors/CalendarDetail.tsx: Sign in to OpenWorker Cloud first
+components/connectors/CalendarDetail.tsx: ＋ Add account
+components/connectors/CalendarDetail.tsx: ＋ Add account · Coming soon
+components/connectors/CloudSignIn.tsx: Check your browser…
+components/connectors/CloudSignIn.tsx: Sign-in unlocks one-click connects — or switch to Manual, which works without it.
+components/connectors/ConnectorsList.tsx: Built in
+components/connectors/ConnectorsSection.tsx: Built in
+components/connectors/GithubDetail.tsx: Connected · personal access token
+components/connectors/GithubDetail.tsx: Disconnect installation
+components/connectors/GithubDetail.tsx: Live · managed relay
+components/connectors/GithubDetail.tsx: Offline — can't reach the relay
+components/connectors/GithubDetail.tsx: Reconnecting to the relay…
+components/connectors/GithubDetail.tsx: Sign-in needed — relaying is paused
+components/connectors/GithubDetail.tsx: Stops relaying this installation to this computer. The App stays installed on GitHub.
+components/connectors/GithubDetail.tsx: bg-warnInk
+components/connectors/GithubDetail.tsx: bg-warnSoft/25
+components/connectors/GmailDetail.tsx: Check your browser…
+components/connectors/GmailDetail.tsx: One-click Google sign-in is coming soon
+components/connectors/GmailDetail.tsx: Requires cloud sign-in.
+components/connectors/GmailDetail.tsx: Sign in to OpenWorker Cloud first
+components/connectors/GmailDetail.tsx: ＋ Add account
+components/connectors/GmailDetail.tsx: ＋ Add account · Coming soon
+components/connectors/HubSpotDetail.tsx: read & write
+components/connectors/SlackDetail.tsx: Disconnect workspace
+components/connectors/SlackDetail.tsx: Live · managed relay
+components/connectors/SlackDetail.tsx: Offline — can't reach the relay
+components/connectors/SlackDetail.tsx: Reconnecting to the relay…
+components/connectors/SlackDetail.tsx: Sign-in needed — relaying is paused
+components/connectors/SlackDetail.tsx: Stops relaying this workspace to this computer. The app stays installed in Slack.
+components/connectors/SlackDetail.tsx: bg-warnInk
+components/connectors/SlackDetail.tsx: bg-warnSoft/25
+components/connectors/SlackDetail.tsx: ＋ Add owner
+components/connectors/SlackDetail.tsx: ＋ Add person
+components/connectors/SlackHowItWorks.tsx: Allow teammates
+components/connectors/SlackHowItWorks.tsx: Collapse — reopen anytime
+components/connectors/SlackHowItWorks.tsx: How it works
+components/connectors/SlackHowItWorks.tsx: Lumina Labs
+components/connectors/SlackHowItWorks.tsx: Mention → session
+components/connectors/SlackHowItWorks.tsx: Show how mentions work
+components/connectors/SlackHowItWorks.tsx: Summarize #launch-room
+components/connectors/SlackHowItWorks.tsx: Teammates aren't auto-trusted: their first mention waits for your OK, then they're on the People list.
+components/connectors/SlackHowItWorks.tsx: Threads stay connected
+components/connectors/SlackHowItWorks.tsx: via Slack · now
+components/connectors/SlackHowItWorks.tsx: — here's how mentions reach you.
+components/connectors/SlackHowItWorks.tsx: — you're on the People list, so your mentions get through.
+providers/ProviderSetup.tsx: No key needed
+providers/ProviderSetup.tsx: couldn't verify
+providers/QumgeConnect.tsx: Open browser
+providers/QumgeConnect.tsx: couldn't reach the sign-in server

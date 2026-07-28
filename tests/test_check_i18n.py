@@ -151,6 +151,40 @@ def test_it_sees_english_inside_template_literals():
     assert not any("host" in f or "artifacts" in f or "w-" in f for f in found), found
 
 
+def test_it_sees_bare_literals_and_text_split_by_expressions():
+    """最后两种形状：三元/函数参数里的字符串，和被 {expr} 截断的文本。
+
+    前四条规则都是在给"英文出现的形状"列清单，而 JSX 的形状列不完 —— 每补一条
+    又冒出一种。UpdateBanner 一个文件里就有三种：`Marlo v{update.version} is
+    ready to install.`（被表达式截断）、`{busy ? "Downloading…" : "Restart to
+    update"}`（三元里的字面量）、以及后面跟着条件块的多行文本。
+
+    所以这两条反过来做：默认全抓，靠 _looks_like_prose 和 ALLOWED 收敛。
+    """
+    import tempfile
+
+    sample = (
+        'const a = <div>Marlo v{u.version} is ready to install.</div>;\n'
+        'const b = <span>{busy ? "Downloading now…" : "Restart to update"}</span>;\n'
+        'const c2 = <div className="flex items-center gap-2 rounded-full" />;\n'   # css，不算
+        'const d = <a href="https://example.com/some/path" />;\n'                  # url，不算
+        'const e = el.setAttribute("data-role", "menu-item");\n'                   # 全小写 id，不算
+    )
+    with tempfile.TemporaryDirectory() as d:
+        src = Path(d)
+        (src / "Fixture.tsx").write_text(sample, encoding="utf-8")
+        original = mod.SRC
+        try:
+            mod.SRC = src
+            found = [f.split(": ", 1)[1] for f in mod.scan()]
+        finally:
+            mod.SRC = original
+    assert any("ready to install" in f for f in found), found
+    assert any("Restart to update" in f for f in found), found
+    # 噪声：css / url / 小写 id 一条都不该进来
+    assert not any("rounded-full" in f or "example.com" in f or "menu-item" in f for f in found), found
+
+
 def test_it_still_ignores_type_signatures_across_lines():
     # 跨行匹配放宽了边界，别把 `=> Promise<void>` 这类又收回来（基线里躺过 5 条）。
     for src in ("const f = () =>\n  doThing<void>\n", "type A = Map<\n  string\n>\n"):

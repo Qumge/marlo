@@ -73,6 +73,42 @@ _TEXT_ML = re.compile(
     r"(?<![=!<>-])>\s*\n\s*([A-Z\u2018\u2019\u201c\u201d][^<>{}\n]{2,120}?)\s*\n\s*<(?![A-Za-z])"
 )
 
+# 【第五、第六个盲区】：JSX 文本被 {expr} 截断，以及裸字符串字面量。
+#
+#   <div>Marlo v{update.version} is ready to install.</div>     ← 被表达式截断
+#   {busy ? "Downloading…" : "Restart to update"}               ← 三元里的字面量
+#   setToast("Stopped: max iterations reached.")                ← 传给函数的字面量
+#
+# 前四条规则都是在给"英文出现的形状"列清单，而 JSX 的形状列不完 —— 每补一条就
+# 又冒出一种。这两条改成【反过来】：默认全抓，靠 ALLOWED 和下面的排除规则收敛。
+#
+# ATTR_KILL 把代码属性的【整个值】挖掉（className / data-testid / d / viewBox…）。
+# 只挖属性名是不够的：值还留在行里，会被当成文案（第一版就是这样，1129 条噪声）。
+_ATTR_KILL = re.compile(
+    r'\b(?:className|data-testid|key|id|href|src|role|type|xmlns|d|viewBox|fill|stroke|style)'
+    r'\s*=\s*"[^"]*"'
+)
+_BARE = re.compile(r'"([^"\n]{4,120})"')
+_INTERP = re.compile(r"(?<![=!<>-])>([^<>\n]*\{[^{}\n]*\}[^<>\n]*)<(?![A-Za-z])")
+_ENG = re.compile(r"\b[A-Za-z]{2,}\b")
+
+
+def _looks_like_prose(s: str) -> bool:
+    """是给人读的句子，还是代码？"""
+    s = s.strip()
+    if len(_ENG.findall(s)) < 2:
+        return False
+    if re.fullmatch(r"[a-z0-9_\-./:\s]+", s):          # id / 路径 / 事件名
+        return False
+    if s.startswith(("http", "/", "./", "../", "#")):
+        return False
+    if re.search(r"[{}<>=;]|\bpx-|\btext-\[|\bflex\b|rounded|border-", s):  # 残留的 css
+        return False
+    if re.search(r"[()\[\]]\s*[?&|.]|[?&|]\s*[\w.]+\(|\)\s*$|^\s*\)", s):  # 跨过代码匹配出来的
+        return False
+    return True
+
+
 # 【守卫的第四个盲区】：模板字符串。
 #
 #   {`Connect ${c.title} with one click`}
@@ -99,6 +135,28 @@ _TPL_WORD = re.compile(r"[A-Za-z]{3,}\s")
 _DATA = re.compile(r'\b(?:label|title|blurb|name|description|summary|hint)\s*:\s*"([^"]{3,90})"')
 
 # 这些不是界面文案：专名、协议词、单位、以及只由符号/数字组成的。
+# 【第七个盲区，在判据本身】：下面第一条原来写的是 `^(Marlo|Qumge|…)\b` ——
+# 【任何以品牌名开头的句子都被豁免】。于是 "Marlo v{update.version} is ready to
+# install." 这种整句英文，只因为第一个词是 Marlo 就彻底隐形。
+#
+# 白名单要豁免的是"这个字符串【就是】一个专名"，不是"它以专名开头"。改成：把所有
+# 专名抠掉之后，剩下的英文单词少于两个才豁免。
+_BRANDS = re.compile(
+    r"\b(Marlo|Qumge|OpenWorker|Gmail|Slack|Notion|GitHub|GitLab|Jira|Outlook|"
+    r"Telegram|Discord|WhatsApp|Dropbox|Box|Stripe|Asana|HubSpot|Linear|Figma|"
+    r"Canva|Zendesk|Confluence|QuickBooks|DocuSign|ClickUp|Attio|PostHog|Mixpanel|"
+    r"Amplitude|Apollo|Hunter|AutoWhisper|MCP|IMAP|SMTP|OAuth|API|URL|JSON|PDF|"
+    r"Ollama|Claude|OpenAI|Anthropic|Gemini|DeepSeek|Windows|macOS|Word|Excel|"
+    r"Google|Calendar|Bedrock|Vertex|OpenRouter)\b"
+)
+
+
+def _brands_only(s: str) -> bool:
+    """抠掉所有专名之后，还剩下句子吗？"""
+    rest = _BRANDS.sub(" ", s)
+    return len(re.findall(r"\b[A-Za-z]{2,}\b", rest)) < 2
+
+
 ALLOWED = [
     re.compile(r"^(Marlo|Qumge|OpenWorker|Gmail|Slack|Notion|GitHub|GitLab|Jira|Outlook|"
                r"Telegram|Discord|WhatsApp|Dropbox|Box|Stripe|Asana|HubSpot|Linear|Figma|"
@@ -134,6 +192,13 @@ ALLOWED = [
 ]
 
 
+def _allowed(s: str) -> bool:
+    """豁免吗？专名【组成的】字符串豁免；以专名【开头的句子】不豁免。"""
+    if _brands_only(s):
+        return True
+    return any(a.match(s) for a in ALLOWED[1:])
+
+
 def _is_test(p: Path) -> bool:
     return ".test." in p.name
 
@@ -150,23 +215,35 @@ def scan() -> list[str]:
         # 跨行的文本节点：整份文件扫一次（逐行永远看不到它们）。
         for m in _TEXT_ML.finditer(text):
             sm = " ".join(m.group(1).split())
-            if len(sm) >= 3 and not any(a.match(sm) for a in ALLOWED):
+            if len(sm) >= 3 and not _allowed(sm):
                 found.append(f"{rel}: {sm}")
         for lineno, line in enumerate(text.splitlines(), 1):
             stripped = line.strip()
             if stripped.startswith(("//", "*", "/*")):
                 continue
+            clean = _ATTR_KILL.sub("", line)
+            for m in _BARE.finditer(clean):
+                sm = m.group(1).strip()
+                if _looks_like_prose(sm) and not _allowed(sm):
+                    found.append(f"{rel}: {sm}")
+            for m in _INTERP.finditer(clean):
+                body = m.group(1)
+                plain = re.sub(r"\{[^{}]*\}", " ", body).strip()
+                if _looks_like_prose(plain) and 't("' not in body:
+                    sm = " ".join(body.split())
+                    if not _allowed(sm):
+                        found.append(f"{rel}: >{sm}<")
             if not _TPL_BAD.search(line):
                 for m in _TPL.finditer(line):
                     body = m.group(1)
                     plain = re.sub(r"\$\{[^}]*\}", " ", body)
                     if _TPL_WORD.search(plain) and 't("' not in body:
                         sm = " ".join(body.split())
-                        if not any(a.match(sm) for a in ALLOWED):
+                        if not _allowed(sm):
                             found.append(f"{rel}: `{sm}`")
             for m in (*_TEXT.finditer(line), *_ATTR.finditer(line), *_DATA.finditer(line)):
                 s = m.group(1).strip()
-                if len(s) < 3 or any(a.match(s) for a in ALLOWED):
+                if len(s) < 3 or _allowed(s):
                     continue
                 found.append(f"{rel}: {s}")
     return sorted(set(found))
