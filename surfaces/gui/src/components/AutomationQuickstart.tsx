@@ -24,15 +24,15 @@ import { SelectMenu } from "./SelectMenu";
 
 // "When" = day choice × free time (owner call 2026-07-11); the cron assembles from the two.
 const DAYS: Record<string, { label: string; dow: string }> = {
-  mon: { label: "Mondays", dow: "1" },
-  tue: { label: "Tuesdays", dow: "2" },
-  wed: { label: "Wednesdays", dow: "3" },
-  thu: { label: "Thursdays", dow: "4" },
-  fri: { label: "Fridays", dow: "5" },
-  sat: { label: "Saturdays", dow: "6" },
-  sun: { label: "Sundays", dow: "0" },
-  weekdays: { label: "Weekdays", dow: "1-5" },
-  daily: { label: "Every day", dow: "*" },
+  mon: { label: "freqMon", dow: "1" },
+  tue: { label: "freqTue", dow: "2" },
+  wed: { label: "freqWed", dow: "3" },
+  thu: { label: "freqThu", dow: "4" },
+  fri: { label: "freqFri", dow: "5" },
+  sat: { label: "freqSat", dow: "6" },
+  sun: { label: "freqSun", dow: "0" },
+  weekdays: { label: "freqWeekdays", dow: "1-5" },
+  daily: { label: "freqDaily", dow: "*" },
 };
 // §30 connect-state spinner (the app has no other spinner — waits elsewhere are label swaps).
 // Exported for Onboarding page 2's sign-in button (same states, same look).
@@ -63,8 +63,8 @@ interface QuickTemplate {
 const TEMPLATES: QuickTemplate[] = [
   {
     key: "github",
-    title: "GitHub digest",
-    blurb: "Merged PRs and commits, posted to your team's Slack.",
+    title: "tplGithubDigest",
+    blurb: "tplGithubBlurb",
     cadence: "Weekly",
     conns: [
       { name: "slack", why: "Where the digest posts" },
@@ -82,8 +82,8 @@ const TEMPLATES: QuickTemplate[] = [
   },
   {
     key: "pipeline",
-    title: "Pipeline digest",
-    blurb: "Deals that moved — and deals going quiet — posted to Slack.",
+    title: "tplPipelineDigest",
+    blurb: "tplPipelineBlurb",
     cadence: "Weekly",
     conns: [
       { name: "slack", why: "Where the digest posts" },
@@ -100,8 +100,8 @@ const TEMPLATES: QuickTemplate[] = [
   },
   {
     key: "brief",
-    title: "Morning brief",
-    blurb: "Calendar and unread email, summarized before your day starts.",
+    title: "tplMorningBrief",
+    blurb: "tplMorningBlurb",
     cadence: "Daily",
     conns: [
       { name: "google_calendar", why: "Today's meetings and gaps" },
@@ -117,8 +117,8 @@ const TEMPLATES: QuickTemplate[] = [
   },
   {
     key: "news",
-    title: "Morning news briefing",
-    blurb: "A 5-bullet tech & world news digest, saved as markdown.",
+    title: "tplNewsBriefing",
+    blurb: "tplNewsBlurb",
     cadence: "Daily",
     conns: [],
     day: "daily",
@@ -129,9 +129,9 @@ const TEMPLATES: QuickTemplate[] = [
   },
   {
     key: "inboxdigest",
-    title: "Inbox digest",
-    blurb: "One short digest of your unread email.",
-    cadence: "Weekdays",
+    title: "tplInboxDigest",
+    blurb: "tplInboxBlurb",
+    cadence: "freqWeekdays",
     conns: [{ name: "gmail", why: "Your unread email" }],
     day: "weekdays",
     time: "09:00",
@@ -139,8 +139,8 @@ const TEMPLATES: QuickTemplate[] = [
   },
   {
     key: "cleanup",
-    title: "Folder cleanup",
-    blurb: "Sort recent Downloads into tidy folders by type.",
+    title: "tplFolderCleanup",
+    blurb: "tplFolderBlurb",
     cadence: "Weekly",
     conns: [],
     day: "fri",
@@ -161,7 +161,7 @@ export function AutomationQuickstart({
     permissions?: { tool: string; target: string; access: "read" | "write" }[];
   }) => void;
 }) {
-  const t = useT();
+  const tr = useT();
   const [pickedKey, setPickedKey] = useState<string | null>(null);
   const picked = TEMPLATES.find((t) => t.key === pickedKey) || null;
 
@@ -282,7 +282,8 @@ export function AutomationQuickstart({
   const create = () => {
     if (!picked) return;
     onCreate({
-      title: picked.title,
+      // 存翻译后的文字，不是键 —— 键会原样显示在任务列表里。
+      title: tr(picked.title as any),
       instructions: picked.instructions({ repo, channel, deliver }),
       cron: cronFor(day, time),
       permissions:
@@ -325,8 +326,8 @@ export function AutomationQuickstart({
             }
             onClick={() => pick(t)}
           >
-            <span className="text-[13.5px] font-semibold">{t.title}</span>
-            <span className="text-[12px] text-muted leading-relaxed flex-1">{t.blurb}</span>
+            <span className="text-[13.5px] font-semibold">{tr(t.title as any)}</span>
+            <span className="text-[12px] text-muted leading-relaxed flex-1">{tr(t.blurb as any)}</span>
             <span className="flex items-center gap-1.5 mt-1">
               {t.conns.map((c) => {
                 const cs = connState(c.name);
@@ -346,7 +347,7 @@ export function AutomationQuickstart({
                 );
               })}
               <span className="text-[11px] text-faint ml-0.5">
-                {t.conns.length === 0 ? `No connections needed · ${t.cadence}` : t.cadence}
+                {t.conns.length === 0 ? `${tr("tplNoConnections")} · ${tr(t.cadence as any)}` : tr(t.cadence as any)}
               </span>
             </span>
           </button>
@@ -364,10 +365,10 @@ export function AutomationQuickstart({
             <span className="text-[11px] uppercase tracking-[0.05em] text-accent font-semibold">
               Set up
             </span>
-            <span className="text-[14px] font-semibold">{picked.title}</span>
+            <span className="text-[14px] font-semibold">{tr(picked.title as any)}</span>
             <span className="ml-auto text-[12px] text-faint max-sm:hidden">
               {picked.conns.length ? "Connections, delivery & schedule" : "Delivery & schedule"} ·{" "}
-              {picked.cadence}
+              {tr(picked.cadence as any)}
             </span>
           </div>
           {picked.conns.map(({ name, why }) => {
@@ -473,10 +474,10 @@ export function AutomationQuickstart({
             <div className={picked.conns.length ? "bg-paper rounded-xl px-4 py-3.5 mt-3" : ""} data-testid="ob-recipe">
               {picked.needsRepo && (
                 <>
-                  <label className={label}>{t("autoRepository")}</label>
+                  <label className={label}>{tr("autoRepository")}</label>
                   <input
                     className={input}
-                    placeholder={t("autoOwnerRepo")}
+                    placeholder={tr("autoOwnerRepo")}
                     value={repo}
                     onChange={(e) => setRepo(e.target.value)}
                     data-testid="ob-repo"
@@ -485,7 +486,7 @@ export function AutomationQuickstart({
               )}
               {picked.needsChannel && (
                 <>
-                  <label className={label}>{t("autoPostToChannel")}</label>
+                  <label className={label}>{tr("autoPostToChannel")}</label>
                   <div data-testid="ob-channel">
                     <ChannelPicker
                       value={channel}
@@ -501,32 +502,32 @@ export function AutomationQuickstart({
                   </p>
                 </>
               )}
-              <label className={label}>{t("autoWhen")}</label>
+              <label className={label}>{tr("autoWhen")}</label>
               <div className="flex gap-2">
                 <div className="flex-1 min-w-0">
                   <SelectMenu
                     ariaLabel="Day"
                     value={day}
-                    options={Object.entries(DAYS).map(([k, v]) => ({ value: k, label: v.label }))}
+                    options={Object.entries(DAYS).map(([k, v]) => ({ value: k, label: tr(v.label as any) }))}
                     onChange={setDay}
                   />
                 </div>
                 <input
                   className="w-28 px-3 py-2 rounded-lg border border-line bg-panel text-[13.5px] outline-none focus:border-accent"
                   type="time"
-                  aria-label={t("autoTime")}
+                  aria-label={tr("autoTime")}
                   value={time}
                   onChange={(e) => setTime(e.target.value)}
                 />
               </div>
               {picked.deliver && (
                 <>
-                  <label className={label}>{t("autoDeliverTo")}</label>
+                  <label className={label}>{tr("autoDeliverTo")}</label>
                   <SelectMenu
                     ariaLabel="Deliver to"
                     value={deliver}
                     options={[
-                      { value: "app", label: "In the app" },
+                      { value: "app", label: "deliverInApp" },
                       { value: "slack", label: "Slack DM (connect Slack later)" },
                     ]}
                     onChange={(v) => setDeliver(v as "app" | "slack")}

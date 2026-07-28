@@ -233,8 +233,8 @@ export const CONNECTORS: Record<string, ConnectorRegistryEntry> = {
   apollo: { label: "Apollo.io", logo: ApolloLogo },
   hunter: { label: "Hunter", logo: HunterLogo },
   // Non-brand utilities.
-  email: { label: "Email", logo: EmailLogo },
-  browser: { label: "Browser", logo: BrowserLogo },
+  email: { label: "connEmailLabel", logo: EmailLogo },
+  browser: { label: "connBrowserLabel", logo: BrowserLogo },
   mcp: { label: "MCP", logo: McpLogo },
 };
 

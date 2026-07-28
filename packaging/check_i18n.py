@@ -46,6 +46,16 @@ _TEXT = re.compile(
 # 面向用户的属性
 _ATTR = re.compile(r'\b(?:placeholder|title|aria-label)="([^"{}]{2,80})"')
 
+# 【守卫的盲区】：写死的界面文字不只在 JSX 里，也在【数据数组】里 ——
+#
+#   const SET_TABS = [{ key: "models", label: "Models", ... }]
+#   const TEMPLATES = [{ title: "GitHub digest", blurb: "Merged PRs and ..." }]
+#
+# 它们照样渲染给用户看，但既不是 JSX 文本也不是属性，上面两条正则都扫不到。
+# 0.4.0 发出去之后 owner 一眼看到设置页左栏和自动化模板还是英文 —— 而守卫报的是
+# "无新增"。一个有盲区的守卫会让人以为已经做完了。
+_DATA = re.compile(r'\b(?:label|title|blurb|name|description|summary|hint)\s*:\s*"([^"]{3,90})"')
+
 # 这些不是界面文案：专名、协议词、单位、以及只由符号/数字组成的。
 ALLOWED = [
     re.compile(r"^(Marlo|Qumge|OpenWorker|Gmail|Slack|Notion|GitHub|GitLab|Jira|Outlook|"
@@ -54,6 +64,24 @@ ALLOWED = [
                r"Amplitude|Apollo|Hunter|AutoWhisper|MCP|IMAP|SMTP|OAuth|API|URL|JSON|PDF|"
                r"Ollama|Claude|OpenAI|Anthropic|Gemini|DeepSeek|Windows|macOS|Word|Excel)\b"),
     re.compile(r"^[\W\d]+$"),
+    # 域名（provider 的控制台地址）：console.anthropic.com、platform.openai.com…
+    # 翻译它们等于给用户一个打不开的地址。
+    re.compile(r"^[a-z0-9-]+(\.[a-z0-9-]+)+$"),
+    # 连接器/厂商的品牌名。翻了会让人对不上自己在别处见到的那个东西。
+    # 内置角色名（Coworker / Chat / Code）。它们和【用户自定义的 persona 名】走同一
+    # 条渲染路径 —— 那一处套 t() 的话，找不到键的自定义名字（Ops、我的助理…）会
+    # 直接消失。测试抓到过一次：Ops 不见了。要翻它们得先把两条路径分开。
+    re.compile(r"^(Coworker|Chat|Code)$"),
+    # 已经是 i18n 键了：camelCase、无空格（tplGithubDigest、navModels）。
+    # 数据数组里存【键】而不是英文，渲染时才 t(key) —— 常量因此保持纯数据，
+    # 不需要 hook。守卫认不出这一点的话，会把已经做完的事再报一遍。
+    re.compile(r"^[a-z][a-zA-Z0-9]*$"),
+    # 全小写、无空格的：连接器 id / provider key（gmail、google_calendar、slack）。
+    # 它们出现在 name: "gmail" 这种字段里 —— 是 key 不是文案，翻了会让查找失败。
+    re.compile(r"^[a-z][a-z0-9_-]*$"),
+    re.compile(r"^(Clay|Close|Descript|Docusign|Salesforce|Together AI|Fireworks AI|"
+               r"Z AI \(GLM\)|Kimi \(Moonshot AI\)|Qwen \(Alibaba\)|xAI \(Grok\)|"
+               r"MiniMax|Meta \(Muse Spark\)|Connector)$"),
 ]
 
 
@@ -74,7 +102,7 @@ def scan() -> list[str]:
             stripped = line.strip()
             if stripped.startswith(("//", "*", "/*")):
                 continue
-            for m in (*_TEXT.finditer(line), *_ATTR.finditer(line)):
+            for m in (*_TEXT.finditer(line), *_ATTR.finditer(line), *_DATA.finditer(line)):
                 s = m.group(1).strip()
                 if len(s) < 3 or any(a.match(s) for a in ALLOWED):
                     continue

@@ -241,13 +241,14 @@ function ComposerPickerCard({
 const MCP_PRESETS: { name: string; label: string; blurb: string; config: Record<string, any> }[] = [
   {
     name: "granola",
-    label: "Granola",
-    blurb: "Meeting notes & transcripts — sign in with your Granola account.",
+    label: "connGranola",
+    blurb: "connGranolaBlurb",
     config: { type: "http", url: "https://mcp.granola.ai/mcp", auth: "oauth" },
   },
 ];
 
 export function McpTab() {
+  const t = useT();
   const [servers, setServers] = useState<McpServer[]>([]);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -317,8 +318,8 @@ export function McpTab() {
       {MCP_PRESETS.filter((p) => !servers.some((s) => s.name === p.name)).map((p) => (
         <div key={p.name} className={CARD + " p-3.5 flex items-center gap-3"} data-testid={`mcp-preset-${p.name}`}>
           <div className="flex-1 min-w-0">
-            <div className="text-[14px] font-medium">{p.label}</div>
-            <div className="text-[11.5px] text-faint">{p.blurb}</div>
+            <div className="text-[14px] font-medium">{t(p.label as any)}</div>
+            <div className="text-[11.5px] text-faint">{t(p.blurb as any)}</div>
           </div>
           <button
             className={BTN_ACCENT}

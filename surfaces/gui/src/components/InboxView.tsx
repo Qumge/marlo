@@ -25,9 +25,9 @@ const ICON_FOR: Record<string, "diamond" | "chat" | "code"> = {
 };
 
 const KIND_TABS: { key: string; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "approval", label: "Approvals" },
-  { key: "question", label: "Questions" },
+  { key: "all", label: "filterAll" },
+  { key: "approval", label: "filterApprovals" },
+  { key: "question", label: "filterQuestions" },
 ];
 
 const CHIP = (active: boolean) =>
@@ -57,6 +57,7 @@ export function InboxView({
 }: {
   onOpenSession: (sessionId: string, workspace: string, agent: string) => void;
 }) {
+  const tr = useT();
   const t = useT();
   const [tab, setTab] = useState<"pending" | "configure">("pending");
   const [items, setItems] = useState<InboxItem[]>([]);
@@ -217,7 +218,7 @@ export function InboxView({
               <div className="flex items-center gap-2 flex-wrap mb-4" data-testid="inbox-filters">
                 {KIND_TABS.map((t) => (
                   <button key={t.key} className={CHIP(kind === t.key)} onClick={() => setKind(t.key)}>
-                    {t.label}
+                    {tr(t.label as any)}
                   </button>
                 ))}
                 {personasWithItems.length > 1 && (

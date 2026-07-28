@@ -3,9 +3,7 @@ App.tsx: Show sidebar
 App.tsx: Show sidebar (⌘B)
 App.tsx: Try a task
 App.tsx: Waiting for agent...
-components/AuditView.tsx: connector
 components/AuditView.tsx: session id
-components/AuditView.tsx: tool
 components/FolderGate.tsx: /path/to/your/project
 components/InboxConfigure.tsx: Direct messages
 components/ManageTabs.tsx: Unsubscribe this session
@@ -13,7 +11,6 @@ components/SettingsView.tsx: ~/Marlo
 components/SubscriptionsChip.tsx: slack:C0123 or channel link
 components/connectors/AddConnectionModal.tsx: App token · xapp-…
 components/connectors/AddConnectionModal.tsx: Bot token · xoxb-…
-components/connectors/AddConnectionModal.tsx: Close
 components/connectors/AvailableDetail.tsx: Access
 components/connectors/CalendarDetail.tsx: Google Calendar
 components/connectors/GithubDetail.tsx: Add an installation

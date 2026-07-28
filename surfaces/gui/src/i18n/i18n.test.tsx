@@ -20,7 +20,7 @@ describe("i18n", () => {
   it("every Chinese value differs from the English one, except where it should not", () => {
     // Product and language names are the same string in both catalogs on purpose.
     // autoOwnerRepo 是 GitHub 的字面格式（owner/repo），翻译它会让人照着填错。
-    const SAME_BY_DESIGN = new Set(["appName", "langEnglish", "langChinese", "autoOwnerRepo", "uiMac"]);
+    const SAME_BY_DESIGN = new Set(["appName", "langEnglish", "langChinese", "autoOwnerRepo", "uiMac", "connGranola"]);
     const untranslated = (Object.keys(en) as (keyof typeof en)[]).filter(
       (k) => !SAME_BY_DESIGN.has(k as string) && zh[k] === en[k],
     );
