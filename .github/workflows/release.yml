@@ -241,11 +241,25 @@ jobs:
               --metadata-directive REPLACE --no-progress
           done
           # ……另一份放在稳定路径下，给网站的下载按钮和 updater 的入口用。
+          #
+          # 【必须显式给短缓存】。marlo/latest/ 下的文件名【永远不变】而内容每次
+          # 发版都变 —— 它是一个可变指针，不是内容。Cloudflare 默认给 dmg/exe
+          # 这类扩展名 4 小时的边缘缓存，于是发版之后官网的下载按钮会继续发【上
+          # 一个版本】最长 4 小时。
+          #
+          # 2026-07-28 发 0.4.3 时实测：latest/latest.json 是 DYNAMIC（不缓存，
+          # 所以更新器一切正常），而 latest/Marlo-macos-arm64.dmg 是 HIT、age
+          # 4701、last-modified 停在 0.4.1 的上传时间。源站是对的，边缘是旧的。
+          # 更新器不受影响（它读清单，清单指向 v<tag>/），受影响的是【新用户从
+          # 官网下载】这条路 —— 也就是获客那条。
+          #
+          # marlo/$TAG/ 那份【不动】：那个前缀里的内容永远不变，长缓存是对的。
           for f in dist/Marlo-macos-arm64.dmg dist/Marlo-windows-setup.exe \
                    dist/Marlo-windows.msi dist/latest.json; do
             [ -f "$f" ] || continue
             aws s3 cp "$f" "s3://$R2_BUCKET/marlo/latest/$(basename "$f")" \
-              --endpoint-url "$R2_ENDPOINT" --no-progress
+              --endpoint-url "$R2_ENDPOINT" --no-progress \
+              --cache-control "public, max-age=60, must-revalidate"
           done
           echo "镜像完成：$TAG"
 
