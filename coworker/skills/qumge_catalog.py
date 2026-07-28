@@ -85,12 +85,16 @@ def _between_markers(text: str) -> str:
     return text[j + 1 : k].strip() if j != -1 and k != -1 else text
 
 
-def search(query: str, *, limit: int = 8, client: Optional[httpx.Client] = None) -> list[dict[str, Any]]:
-    """按用户自己的话搜目录。返回 [{name, summary, slug, meta, needs}]。"""
+def search(query: str = "", *, limit: int = 0, client: Optional[httpx.Client] = None) -> list[dict[str, Any]]:
+    """搜目录；不给 query 就是【浏览】（按排名的前 N 条，界面用来铺默认列表）。
+
+    返回 [{name, summary, slug, meta, needs, group}]。
+    """
     query = (query or "").strip()
-    if not query:
-        return []
-    text = _call("search_skills", {"query": query, "limit": limit}, client=client)
+    args: dict[str, Any] = {"limit": limit or (8 if query else 30)}
+    if query:
+        args["query"] = query
+    text = _call("search_skills", args, client=client)
     out: list[dict[str, Any]] = []
     # 末尾补一个换行：_between_markers 的 strip() 去掉了它，而 rest 那一组
     # 要求每行以换行结尾 —— 不补的话【最后一条】的 meta 和 needs 会静悄悄丢掉。
@@ -104,12 +108,24 @@ def search(query: str, *, limit: int = 8, client: Optional[httpx.Client] = None)
                 needs = line[len("needs:"):].strip()
             elif line:
                 meta = line
+        # 分组用的分类。meta 有两种形状：
+        #   "category: content-writing · 299 stars on owner/repo"   第三方
+        #   "vetted by qumge · first-party · owner/repo"            我们审过的
+        # 后者没有分类 —— 它们单独成组（"Qumge 精选"），这既是事实也是它们
+        # 相对于四千条第三方技能的唯一区别。
+        if meta.startswith("category:"):
+            group = meta[len("category:"):].split("·", 1)[0].strip()
+        elif "vetted by qumge" in meta:
+            group = "__vetted__"
+        else:
+            group = "other"
         out.append({
             "name": m.group("name").strip(),
             "summary": " ".join(m.group("summary").split()),
             "slug": m.group("slug").strip(),
             "meta": meta,
             "needs": needs,
+            "group": group,
         })
     return out
 

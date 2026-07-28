@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useT } from "../i18n";
 import {
   addMcpServer,
   allowUser,
@@ -843,6 +844,7 @@ export function ConnectSetup({
   // pill, so don't render the managed block again here.
   manualOnly?: boolean;
 }) {
+  const t = useT();
   const [values, setValues] = useState<Record<string, string>>({});
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -963,7 +965,7 @@ export function ConnectSetup({
       )}
       <div>
         <button className={BTN_ACCENT} onClick={submit} disabled={busy}>
-          {busy ? "Validating…" : "Connect"}
+          {busy ? t("validating") : t("connect")}
         </button>
       </div>
       {error && <div className="text-[12.5px] text-danger">{error}</div>}

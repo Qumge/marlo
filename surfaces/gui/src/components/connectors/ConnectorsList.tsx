@@ -55,7 +55,7 @@ export function ConnectorsList({
     <div>
       <div className="flex items-center justify-end mb-4">
         <input
-          placeholder="Search"
+          placeholder={t("searchPlaceholder")}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           className="w-44 px-3.5 py-1.5 rounded-full border border-line bg-panel text-[13px] outline-none focus:border-accent"
@@ -145,7 +145,7 @@ export function ConnectorsList({
                         setConnecting(c.name);
                       }}
                     >
-                      Connect
+                      {t("connect")}
                     </span>
                   )}
                 </button>

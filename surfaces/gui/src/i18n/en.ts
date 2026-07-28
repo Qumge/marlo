@@ -188,6 +188,9 @@ export const en = {
   connectorWaitingUpstream: "Waiting on the provider",
   // 邮件类的死胡同有出路：同一个邮箱用 IMAP 连得上。别让人以为是坏了。
   connectorUseImapInstead: "Use Email (IMAP) →",
+  connect: "Connect",
+  validating: "Validating…",
+  searchPlaceholder: "Search",
 
   // 「能力」页。分类是【能力 / 连接】两类，而能力之前一个界面都没有。
   // 它是【管理台】不是发现入口：发现发生在对话里（规格 D'）。
@@ -204,6 +207,7 @@ export const en = {
   abilitiesRemove: "Remove",
   abilitiesNeeds: "needs a connection:",
   abilitiesNoResults: "Nothing found. Try describing the job instead of naming a tool.",
+  abilitiesVetted: "Vetted by Qumge",
   abilitiesSearchFailed: "Couldn't reach the catalog:",
 
   // -- account (sidebar footer) ---------------------------------------------

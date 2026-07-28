@@ -619,9 +619,11 @@ export interface CatalogSkill {
   slug: string;
   meta: string;   // "vetted by qumge · first-party · …" 或 "category: … · N stars on …"
   needs: string;  // 需要先连的账号，逗号分隔；没有就是空串
+  group: string;  // 分组用：分类名，或 "__vetted__"（我们审过的，单独一组）
 }
 
 export async function searchSkills(q: string): Promise<{ results: CatalogSkill[]; error?: string }> {
+  // 空 q 不是"不搜"，是【浏览】：返回排名靠前的一批，用来铺默认列表。
   const res = await fetch(`${httpBase()}/v1/skills/search?q=${encodeURIComponent(q)}`);
   return res.json();
 }

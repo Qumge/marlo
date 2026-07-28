@@ -147,6 +147,9 @@ export const zh: Strings = {
   connectorWaitingUpstream: "等服务商审核",
   // 邮件类的死胡同有出路：同一个邮箱用 IMAP 连得上。别让人以为是坏了。
   connectorUseImapInstead: "改用邮箱（IMAP）→",
+  connect: "连接",
+  validating: "验证中…",
+  searchPlaceholder: "搜索",
 
   // 「能力」页。分类是【能力 / 连接】两类，而能力之前一个界面都没有。
   // 它是【管理台】不是发现入口：发现发生在对话里（规格 D'）。
@@ -163,6 +166,7 @@ export const zh: Strings = {
   abilitiesRemove: "移除",
   abilitiesNeeds: "需要先连：",
   abilitiesNoResults: "没搜到。试试直接说你要做的事，而不是工具的名字。",
+  abilitiesVetted: "Qumge 精选",
   abilitiesSearchFailed: "连不上目录：",
 
   accountOf: (email) => `${email} · Qumge`,

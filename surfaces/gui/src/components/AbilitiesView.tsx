@@ -9,6 +9,21 @@ import {
 } from "../api";
 import { PanelHead } from "./IntegrationsView";
 import { useT } from "../i18n";
+import { GRP, GRP_H, PILL_QUIET, ROW } from "./connectors/ui";
+
+// 按分类分组，我们审过的排最前。分类名直接用目录给的（marketing-growth 这种）
+// —— 翻译它们意味着维护一张 20+ 项、还会随目录增长的表，而用户在网站上看到的
+// 也是这些名字。
+function groupsOf(rows: CatalogSkill[]): [string, CatalogSkill[]][] {
+  const by = new Map<string, CatalogSkill[]>();
+  for (const r of rows) {
+    const g = r.group || "other";
+    (by.get(g) ?? by.set(g, []).get(g)!).push(r);
+  }
+  return [...by.entries()].sort((a, b) =>
+    a[0] === "__vetted__" ? -1 : b[0] === "__vetted__" ? 1 : b[1].length - a[1].length,
+  );
+}
 
 // 「能力」——分类里的另一半（另一半是「连接」）。
 //
@@ -49,11 +64,8 @@ export function AbilitiesView() {
   // 输入停下来再搜。每敲一个字就打一次目录，既慢又白费 —— 而这条路要出网。
   useEffect(() => {
     const term = q.trim();
-    if (!term) {
-      setResults(null);
-      setSearchErr("");
-      return;
-    }
+    // 没输入【不是】不搜 —— 那是浏览：铺一份排名靠前的默认列表。空白会让人
+    // 以为目录里没东西。
     const h = setTimeout(() => {
       searchSkills(term)
         .then((r) => {
@@ -61,7 +73,7 @@ export function AbilitiesView() {
           setSearchErr(r.error || "");
         })
         .catch((e) => setSearchErr(String(e?.message || e)));
-    }, 400);
+    }, q.trim() ? 400 : 0);   // 浏览是首屏，不用等防抖
     return () => clearTimeout(h);
   }, [q]);
 
@@ -88,13 +100,17 @@ export function AbilitiesView() {
         <div className="max-w-4xl mx-auto px-7 py-6">
           <PanelHead title={t("abilities")} sub={t("abilitiesSub")} />
 
-          <input
-            className="w-full px-3.5 py-2 mb-5 rounded-full border border-line bg-panel text-[13px] outline-none focus:border-accent"
-            placeholder={t("abilitiesSearch")}
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            data-testid="abilities-search"
-          />
+          {/* 和「连接」页一模一样的搜索框：右对齐的短框。两页并列在同一个菜单
+              里，长得不一样会让人以为是两种东西。 */}
+          <div className="flex items-center justify-end mb-4">
+            <input
+              className="w-44 px-3.5 py-1.5 rounded-full border border-line bg-panel text-[13px] outline-none focus:border-accent"
+              placeholder={t("abilitiesSearch")}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              data-testid="abilities-search"
+            />
+          </div>
 
           {searchErr && (
             <div className="text-[12px] text-warnInk mb-4" data-testid="abilities-error">
@@ -102,84 +118,90 @@ export function AbilitiesView() {
             </div>
           )}
 
-          {results !== null && (
-            <section className="mb-6" data-testid="abilities-results">
-              <div className="text-[12px] text-muted mb-2">{t("abilitiesFound")}</div>
-              {results.length === 0 && !searchErr ? (
-                <div className="text-[12.5px] text-muted">{t("abilitiesNoResults")}</div>
-              ) : (
-                <div className="rounded-xl border border-line overflow-hidden">
-                  {results.map((s) => (
-                    <div
-                      key={s.slug}
-                      className="flex items-start gap-3 px-4 py-3 border-b border-line last:border-b-0"
-                      data-testid={`catalog-${s.name}`}
+          {/* 已装的在最上面 —— 和「连接」页的 Connected 一样。用户先关心
+              "我现在有什么"，再看"还能有什么"。 */}
+          {installed !== null && installed.length > 0 && (
+            <>
+              <div className={GRP_H + " !mt-0"}>
+                {t("abilitiesInstalled")} · {installed.length}
+              </div>
+              <div className={GRP} data-testid="abilities-list">
+                {installed.map((s) => (
+                  <div key={s.name} className={ROW} data-testid={`ability-${s.name}`}>
+                    <span className="min-w-0 flex-1">
+                      <span className="font-medium text-[13.5px]">{s.name}</span>
+                      <span className="block text-[12px] text-muted">{s.description}</span>
+                    </span>
+                    <button
+                      className="shrink-0 px-3 py-1 rounded-full text-[12.5px] text-faint hover:text-ink disabled:opacity-50"
+                      disabled={busy === s.name}
+                      onClick={() => remove(s.name)}
+                      data-testid={`remove-${s.name}`}
                     >
-                      <span className="min-w-0 flex-1">
-                        <span className="font-medium text-[13.5px]">{s.name}</span>
-                        <span className="block text-[12px] text-muted mt-0.5">{s.summary}</span>
-                        <span className="block text-[11.5px] text-faint mt-0.5">{s.meta}</span>
-                        {s.needs && (
-                          // 装之前就说清楚它要账号 —— 装完才发现连不上是最差的顺序。
-                          <span className="block text-[11.5px] text-warnInk mt-0.5">
-                            {t("abilitiesNeeds")} {s.needs}
-                          </span>
-                        )}
-                      </span>
-                      {installedNames.has(s.name) ? (
-                        <span className="text-[11.5px] text-faint shrink-0 mt-0.5">
-                          {t("abilitiesInstalled")}
-                        </span>
-                      ) : (
-                        <button
-                          className="shrink-0 px-3 py-1 rounded-full border border-line text-[12.5px] hover:bg-paper disabled:opacity-50"
-                          disabled={busy === s.slug}
-                          onClick={() => add(s)}
-                          data-testid={`install-${s.name}`}
-                        >
-                          {busy === s.slug ? t("abilitiesInstalling") : t("abilitiesInstall")}
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
+                      {t("abilitiesRemove")}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
 
-          <div className="text-[12px] text-muted mb-2">{t("abilitiesInstalled")}</div>
-          {installed === null ? null : installed.length === 0 ? (
+          {installed !== null && installed.length === 0 && (
             <div
-              className="rounded-xl border border-line bg-panel/50 p-5 text-[13px]"
+              className="rounded-xl border border-line bg-panel/50 p-5 text-[13px] mb-2"
               data-testid="abilities-empty"
             >
               <div className="font-medium">{t("abilitiesEmpty")}</div>
               <div className="text-muted mt-1.5 leading-relaxed">{t("abilitiesEmptyHow")}</div>
             </div>
-          ) : (
-            <div className="rounded-xl border border-line overflow-hidden" data-testid="abilities-list">
-              {installed.map((s) => (
-                <div
-                  key={s.name}
-                  className="flex items-start gap-3 px-4 py-3 border-b border-line last:border-b-0"
-                  data-testid={`ability-${s.name}`}
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="font-medium text-[13.5px]">{s.name}</span>
-                    <span className="block text-[12px] text-muted mt-0.5">{s.description}</span>
-                  </span>
-                  <button
-                    className="shrink-0 px-3 py-1 rounded-full text-[12.5px] text-faint hover:text-ink disabled:opacity-50"
-                    disabled={busy === s.name}
-                    onClick={() => remove(s.name)}
-                    data-testid={`remove-${s.name}`}
-                  >
-                    {t("abilitiesRemove")}
-                  </button>
-                </div>
-              ))}
-            </div>
           )}
+
+          {/* 目录：按分类分组，和「连接」页的 邮件/日历/聊天 一个形状。
+              我们审过的单独一组排最前 —— 那是它们相对于四千条第三方技能的
+              唯一区别，也是用户最该先看到的。 */}
+          {results !== null &&
+            (results.length === 0 && !searchErr ? (
+              <div className="text-[12.5px] text-muted">{t("abilitiesNoResults")}</div>
+            ) : (
+              <div data-testid="abilities-results">
+                {groupsOf(results).map(([g, rows]) => (
+                  <div key={g}>
+                    <div className={GRP_H}>{g === "__vetted__" ? t("abilitiesVetted") : g}</div>
+                    <div className={GRP}>
+                      {rows.map((s) => (
+                        <div key={s.slug} className={ROW} data-testid={`catalog-${s.name}`}>
+                          <span className="min-w-0 flex-1">
+                            <span className="font-medium text-[13.5px]">{s.name}</span>
+                            <span className="block text-[12px] text-muted">{s.summary}</span>
+                            <span className="block text-[11.5px] text-faint mt-0.5">{s.meta}</span>
+                            {s.needs && (
+                              // 装之前就说清楚它要账号 —— 装完才发现连不上是最差的顺序。
+                              <span className="block text-[11.5px] text-warnInk mt-0.5">
+                                {t("abilitiesNeeds")} {s.needs}
+                              </span>
+                            )}
+                          </span>
+                          {installedNames.has(s.name) ? (
+                            <span className="text-[11.5px] text-faint shrink-0">
+                              {t("abilitiesInstalled")}
+                            </span>
+                          ) : (
+                            <button
+                              className={PILL_QUIET + " shrink-0 disabled:opacity-50"}
+                              disabled={busy === s.slug}
+                              onClick={() => add(s)}
+                              data-testid={`install-${s.name}`}
+                            >
+                              {busy === s.slug ? t("abilitiesInstalling") : t("abilitiesInstall")}
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
 
           {skillsDir && <div className="text-[11.5px] text-faint mt-3">{t("abilitiesWhere")(skillsDir)}</div>}
         </div>

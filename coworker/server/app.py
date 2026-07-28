@@ -564,6 +564,8 @@ def create_app(manager: SessionManager) -> FastAPI:
     # 这是同一个目录的另一个入口，给想自己看看的用户。
     @app.get("/v1/skills/search")
     def search_skills(q: str = "") -> dict[str, Any]:
+        # q 为空 = 浏览（目录排名靠前的一批），不是"不搜"。「能力」页在用户还没
+        # 输入时要有列表，空白会让人以为目录里没东西。
         from ..skills import qumge_catalog
 
         try:
