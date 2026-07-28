@@ -2,7 +2,7 @@
 
 Design (from OpenClaw): secrets **never enter the model's context, prompts, or traces**.
 The store holds profiles keyed by `connector[:account]`; values may be literals OR
-`${ENV_VAR}` references resolved at read time from the process env / `~/.config/coworker/.env`.
+`${ENV_VAR}` references resolved at read time from the process env / `~/.config/marlo/.env`.
 
 v1 is a `0600` JSON file behind this interface; the interface is what callers depend on, so
 a Keychain / age-encrypted backend can swap in later without touching them.
@@ -24,23 +24,46 @@ _REF = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
 _IS_WINDOWS = sys.platform == "win32"
 
 
-def state_dir() -> Path:
-    """Where coworker keeps its state — the one cross-platform source of truth.
-
-    Resolution order:
-    1. `$COWORKER_STATE_DIR` — explicit override on any OS (used by tests/sidecars).
-    2. Windows: `%APPDATA%\\coworker` (e.g. `C:\\Users\\You\\AppData\\Roaming\\coworker`),
-       the native per-user app-data location.
-    3. macOS / Linux: `~/.config/coworker` (XDG-style, unchanged from prior behavior).
-    """
-    base = os.environ.get("COWORKER_STATE_DIR")
-    if base:
-        return Path(base).expanduser()
+def _default_dir(name: str) -> Path:
     if sys.platform == "win32":
         appdata = os.environ.get("APPDATA")
         if appdata:
-            return Path(appdata) / "coworker"
-    return Path.home() / ".config" / "coworker"
+            return Path(appdata) / name
+    return Path.home() / ".config" / name
+
+
+def state_dir() -> Path:
+    """Marlo 的状态目录 —— 跨平台的唯一出处。
+
+    解析顺序：
+    1. `$MARLO_STATE_DIR`，其次 `$COWORKER_STATE_DIR`（老名字仍然认，测试和
+       sidecar 里到处在用，改掉等于毫无收益地弄坏一堆东西）。
+    2. Windows: `%APPDATA%\\marlo`；macOS / Linux: `~/.config/marlo`。
+    3. 老目录（coworker）存在而新的不存在 -> 【搬过去】。
+
+    为什么要搬而不是两边都读：两边都读意味着往后每加一个状态文件都要想一次
+    "它该落在哪"，而那种分叉不会有人记得维护。搬一次，之后只有一个位置。
+
+    用 os.rename：同一个文件系统上它是原子的，中途断电不会留下半个目录。
+    失败就【继续用老目录】—— 一个迁移失败还坚持返回新路径的程序，会让用户
+    打开来看到空空如也，以为东西全没了。
+    """
+    base = os.environ.get("MARLO_STATE_DIR") or os.environ.get("COWORKER_STATE_DIR")
+    if base:
+        return Path(base).expanduser()
+
+    new, old = _default_dir("marlo"), _default_dir("coworker")
+    if new.exists() or not old.is_dir():
+        return new
+    try:
+        new.parent.mkdir(parents=True, exist_ok=True)
+        os.rename(old, new)
+    except FileNotFoundError:
+        # 另一个进程（shell 和 sidecar 会同时起）刚好搬完了。
+        return new if new.exists() else old
+    except OSError:
+        return old
+    return new
 
 
 def _load_dotenv(path: Path) -> dict[str, str]:

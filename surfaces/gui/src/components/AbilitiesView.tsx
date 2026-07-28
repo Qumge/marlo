@@ -29,8 +29,15 @@ export function AbilitiesView() {
   const [results, setResults] = useState<CatalogSkill[] | null>(null);
   const [searchErr, setSearchErr] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [skillsDir, setSkillsDir] = useState("");
 
-  const reload = () => getSkills().then(setInstalled).catch(() => setInstalled([]));
+  const reload = () =>
+    getSkills()
+      .then((r) => {
+        setInstalled(r.skills);
+        setSkillsDir(r.dir || "");
+      })
+      .catch(() => setInstalled([]));
 
   useEffect(() => {
     reload();
@@ -174,7 +181,7 @@ export function AbilitiesView() {
             </div>
           )}
 
-          <div className="text-[11.5px] text-faint mt-3">{t("abilitiesWhere")}</div>
+          {skillsDir && <div className="text-[11.5px] text-faint mt-3">{t("abilitiesWhere")(skillsDir)}</div>}
         </div>
       </div>
     </main>

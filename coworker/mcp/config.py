@@ -1,6 +1,6 @@
 """MCP server config — the standard `mcpServers` JSON, layered global + workspace.
 
-Global:    ~/.config/coworker/mcp.json
+Global:    ~/.config/marlo/mcp.json
 Workspace: <workspace>/.coworker/mcp.json   (overrides global on name clash)
 
 Paste-compatible with Claude Desktop / Cursor / Codex. `${VAR}` refs in command/args/env/

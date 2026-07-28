@@ -556,7 +556,9 @@ def create_app(manager: SessionManager) -> FastAPI:
 
     @app.get("/v1/skills")
     def skills() -> dict[str, Any]:
-        return {"skills": manager.list_skills()}
+        from ..secrets import state_dir
+
+        return {"skills": manager.list_skills(), "dir": str(state_dir() / "skills")}
 
     # 「能力」页里的搜索 / 安装 / 卸载。对话里 Marlo 自己找技能走的是 MCP；
     # 这是同一个目录的另一个入口，给想自己看看的用户。

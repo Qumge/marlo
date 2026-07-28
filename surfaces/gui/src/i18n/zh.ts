@@ -154,7 +154,7 @@ export const zh: Strings = {
   abilitiesSub: "Marlo 会做的事。干活过程中它自己会去找新的。",
   abilitiesEmpty: "还没装任何能力。",
   abilitiesEmptyHow: "这些不用你从列表里挑 —— 跟 Marlo 说你要做什么，它自己会去找。",
-  abilitiesWhere: "装在 ~/.config/coworker/skills",
+  abilitiesWhere: (dir: string) => `装在 ${dir}`,
   abilitiesSearch: "搜 Qumge 的技能目录…",
   abilitiesInstalled: "已装",
   abilitiesFound: "目录里的",

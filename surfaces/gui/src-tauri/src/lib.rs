@@ -90,20 +90,50 @@ fn server_bin() -> PathBuf {
     p
 }
 
-/// Mirror of `coworker.secrets.state_dir()` so the shell and server agree on `desktop.json`.
-/// Windows: `%APPDATA%\coworker`; POSIX: `~/.config/coworker`. `COWORKER_STATE_DIR` overrides.
-fn state_dir() -> PathBuf {
-    if let Ok(d) = std::env::var("COWORKER_STATE_DIR") {
-        return PathBuf::from(d);
-    }
+fn default_state_dir(name: &str) -> PathBuf {
     #[cfg(windows)]
     {
         if let Ok(appdata) = std::env::var("APPDATA") {
-            return PathBuf::from(appdata).join("coworker");
+            return PathBuf::from(appdata).join(name);
         }
     }
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
-    PathBuf::from(home).join(".config").join("coworker")
+    PathBuf::from(home).join(".config").join(name)
+}
+
+/// Mirror of `coworker.secrets.state_dir()` so the shell and server agree on `desktop.json`.
+/// Windows: `%APPDATA%\marlo`; POSIX: `~/.config/marlo`.
+/// `MARLO_STATE_DIR`（其次 `COWORKER_STATE_DIR`）覆盖。
+///
+/// 老目录（coworker，fork 自 OpenWorker 时留下的）存在而新的不存在 -> 搬过去。
+/// 【两侧必须一致】：shell 和 sidecar 各有一份实现，只改一边等于把状态搬走一半。
+/// 谁先起来谁搬，rename 在同一个文件系统上是原子的；失败就继续用老目录 ——
+/// 一个迁移失败还坚持返回新路径的程序，会让用户打开来看到空的，以为东西没了。
+fn state_dir() -> PathBuf {
+    for key in ["MARLO_STATE_DIR", "COWORKER_STATE_DIR"] {
+        if let Ok(d) = std::env::var(key) {
+            if !d.is_empty() {
+                return PathBuf::from(d);
+            }
+        }
+    }
+    let new = default_state_dir("marlo");
+    let old = default_state_dir("coworker");
+    if new.exists() || !old.is_dir() {
+        return new;
+    }
+    if let Some(parent) = new.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    match std::fs::rename(&old, &new) {
+        Ok(()) => new,
+        // 另一个进程刚好搬完了 —— shell 和 sidecar 会同时起。
+        Err(_) if new.exists() => new,
+        Err(e) => {
+            eprintln!("[state] 迁移 {old:?} -> {new:?} 失败，继续用老目录：{e}");
+            old
+        }
+    }
 }
 
 fn desktop_prefs_path() -> PathBuf {

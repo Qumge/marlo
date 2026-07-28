@@ -4,7 +4,7 @@ The product is an agent, our models, and our skills. The models arrived with the
 device flow; the skills did not. SkillLoader reads two local directories and
 nothing else, so the 4,500-odd curated SKILL.md files on qumge.com were reachable
 only by a person downloading one and dropping it into
-~/.config/coworker/skills by hand — which no one Marlo is built for will do.
+~/.config/marlo/skills by hand — which no one Marlo is built for will do.
 
 Both halves of the bridge already existed and were never joined. qumge.com serves
 `search_skills` / `get_skill` / `list_categories` over MCP at POST /mcp, and this

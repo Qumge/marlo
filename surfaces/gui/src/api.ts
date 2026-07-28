@@ -605,9 +605,11 @@ export interface InstalledSkill {
   description: string;
 }
 
-export async function getSkills(): Promise<InstalledSkill[]> {
+export async function getSkills(): Promise<{ skills: InstalledSkill[]; dir: string }> {
   const res = await fetch(`${httpBase()}/v1/skills`);
-  return (await res.json()).skills ?? [];
+  const b = await res.json();
+  // 目录由后端给【真实解析到的那个】。前端写死路径的话，迁移失败时会撒谎。
+  return { skills: b.skills ?? [], dir: b.dir ?? "" };
 }
 
 /** Qumge 目录里的一条技能（搜索结果）。 */
