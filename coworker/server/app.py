@@ -563,17 +563,28 @@ def create_app(manager: SessionManager) -> FastAPI:
     # 「能力」页里的搜索 / 安装 / 卸载。对话里 Marlo 自己找技能走的是 MCP；
     # 这是同一个目录的另一个入口，给想自己看看的用户。
     @app.get("/v1/skills/search")
-    def search_skills(q: str = "") -> dict[str, Any]:
+    def search_skills(q: str = "", offset: int = 0) -> dict[str, Any]:
         # q 为空 = 浏览（目录排名靠前的一批），不是"不搜"。「能力」页在用户还没
         # 输入时要有列表，空白会让人以为目录里没东西。
         from ..skills import qumge_catalog
 
         try:
-            return {"results": qumge_catalog.search(q)}
+            return qumge_catalog.search(q, offset=offset)
         except Exception as exc:  # noqa: BLE001
             # 目录不可达是常事（没网、被墙、qumge 在部署）。把原因带回界面 ——
             # 一个空列表会被读成"什么都没搜到"，那是另一回事。
             return {"results": [], "error": str(exc)}
+
+    @app.get("/v1/skills/detail")
+    def skill_detail(slug: str = "") -> dict[str, Any]:
+        # 装之前先看看它到底会做什么 —— 一条技能就是一段【会被当成指令读】的
+        # 文字，用户有权先读一遍。
+        from ..skills import qumge_catalog
+
+        try:
+            return {"body": qumge_catalog.detail(slug)}
+        except Exception as exc:  # noqa: BLE001
+            return {"body": "", "error": str(exc)}
 
     @app.post("/v1/skills/install")
     def install_skill(body: dict) -> dict[str, Any]:

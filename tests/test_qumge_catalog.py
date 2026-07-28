@@ -83,7 +83,9 @@ def state(monkeypatch, tmp_path):
 
 
 def test_search_parses_the_text_the_model_reads():
-    r = q.search("video", client=_Fake(FENCED_SEARCH))
+    # search 返回 {"results": [...], "has_more": bool} —— has_more 是分页要用的，
+    # 界面据它决定显不显示"加载更多"。
+    r = q.search("video", client=_Fake(FENCED_SEARCH))["results"]
     assert [x["name"] for x in r] == ["autowhisper", "video-recap"]
     assert r[0]["slug"] == "xnjiang/autowhisper-skill/autowhisper"
     assert r[0]["needs"] == "autowhisper"
@@ -95,7 +97,32 @@ def test_search_parses_the_text_the_model_reads():
 
 def test_search_of_nothing_is_not_a_network_call():
     r = q.search("   ", client=_Fake("should not be used"))
-    assert r == []
+    assert r["results"] == [] and r["has_more"] is False
+
+
+def test_detail_shows_exactly_what_install_would_write(state):
+    """「看看它做什么」读到的，必须【就是】将来落到磁盘上的那段文字。
+
+    两处分开实现的话，迟早出现"看的是一份、装的是另一份"——而这一屏存在的全部
+    意义就是让用户在装之前读到真东西。
+    """
+    shown = q.detail("xnjiang/autowhisper-skill/autowhisper", client=_Fake(FENCED_SKILL))
+    r = q.install("xnjiang/autowhisper-skill/autowhisper", client=_Fake(FENCED_SKILL))
+    written = Path(r["path"]).read_text(encoding="utf-8")
+    assert written.strip() == shown.strip()
+
+
+def test_detail_refuses_a_malformed_slug():
+    for bad in ["", "autowhisper", "a/b/c/d"]:
+        with pytest.raises(ValueError):
+            q.detail(bad, client=_Fake(FENCED_SKILL))
+
+
+def test_search_reports_whether_more_pages_exist():
+    # 界面据此决定显不显示"加载更多"。自己猜的结果是一个可能点空的按钮。
+    with_more = FENCED_SEARCH + "\n(more available — pass offset=30)"
+    assert q.search("video", client=_Fake(with_more))["has_more"] is True
+    assert q.search("video", client=_Fake(FENCED_SEARCH))["has_more"] is False
 
 
 def test_install_writes_only_what_is_inside_the_fence(state):

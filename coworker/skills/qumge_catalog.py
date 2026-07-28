@@ -85,15 +85,24 @@ def _between_markers(text: str) -> str:
     return text[j + 1 : k].strip() if j != -1 and k != -1 else text
 
 
-def search(query: str = "", *, limit: int = 0, client: Optional[httpx.Client] = None) -> list[dict[str, Any]]:
+def search(
+    query: str = "",
+    *,
+    limit: int = 0,
+    offset: int = 0,
+    client: Optional[httpx.Client] = None,
+) -> dict[str, Any]:
     """搜目录；不给 query 就是【浏览】（按排名的前 N 条，界面用来铺默认列表）。
 
-    返回 [{name, summary, slug, meta, needs, group}]。
+    返回 {"results": [...], "has_more": bool}。has_more 由目录给——界面据此决定
+    显不显示"加载更多"，而不是自己猜。
     """
     query = (query or "").strip()
     args: dict[str, Any] = {"limit": limit or (8 if query else 30)}
     if query:
         args["query"] = query
+    if offset:
+        args["offset"] = offset
     text = _call("search_skills", args, client=client)
     out: list[dict[str, Any]] = []
     # 末尾补一个换行：_between_markers 的 strip() 去掉了它，而 rest 那一组
@@ -127,7 +136,22 @@ def search(query: str = "", *, limit: int = 0, client: Optional[httpx.Client] = 
             "needs": needs,
             "group": group,
         })
-    return out
+    return {"results": out, "has_more": "more available" in text}
+
+
+def detail(slug: str, *, client: Optional[httpx.Client] = None) -> str:
+    """一条技能的完整正文（框内那部分），给「装之前先看看」用。
+
+    和 install 走同一个 get_skill、同一套剥框逻辑 —— 用户读到的必须【就是】将来
+    落到磁盘上、被当成指令读的那段文字。两处分开实现的话，迟早会出现"看的是一
+    份、装的是另一份"。
+    """
+    if not slug or slug.count("/") != 2:
+        raise ValueError("slug 必须是 owner/repo/name 三段式")
+    body = _between_markers(_call("get_skill", {"slug": slug}, client=client))
+    if not body.strip():
+        raise RuntimeError("目录返回的正文是空的")
+    return body
 
 
 def install(slug: str, *, client: Optional[httpx.Client] = None) -> dict[str, Any]:

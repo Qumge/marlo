@@ -3,6 +3,7 @@ import {
   getSkills,
   installSkill,
   searchSkills,
+  skillDetail,
   uninstallSkill,
   type CatalogSkill,
   type InstalledSkill,
@@ -45,6 +46,10 @@ export function AbilitiesView() {
   const [searchErr, setSearchErr] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [skillsDir, setSkillsDir] = useState("");
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  // 装之前先看看它到底会做什么 —— 一条技能就是一段【会被当成指令读】的文字。
+  const [detail, setDetail] = useState<{ name: string; body: string } | null>(null);
 
   const reload = () =>
     getSkills()
@@ -70,6 +75,7 @@ export function AbilitiesView() {
       searchSkills(term)
         .then((r) => {
           setResults(r.results || []);
+          setHasMore(!!r.has_more);
           setSearchErr(r.error || "");
         })
         .catch((e) => setSearchErr(String(e?.message || e)));
@@ -78,6 +84,23 @@ export function AbilitiesView() {
   }, [q]);
 
   const installedNames = new Set((installed || []).map((s) => s.name));
+
+  const loadMore = async () => {
+    setLoadingMore(true);
+    // 用【当前已加载的条数】当 offset，而不是页码：分组是客户端做的，页码和
+    // 服务端的偏移量对不上。
+    const r = await searchSkills(q.trim(), (results || []).length).catch(() => null);
+    setLoadingMore(false);
+    if (!r) return;
+    setResults([...(results || []), ...(r.results || [])]);
+    setHasMore(!!r.has_more);
+  };
+
+  const openDetail = async (c: CatalogSkill) => {
+    setDetail({ name: c.name, body: "" });
+    const r = await skillDetail(c.slug).catch((e: any) => ({ body: "", error: String(e) }));
+    setDetail({ name: c.name, body: r.body || r.error || "" });
+  };
 
   const add = async (s: CatalogSkill) => {
     setBusy(s.slug);
@@ -181,6 +204,13 @@ export function AbilitiesView() {
                               </span>
                             )}
                           </span>
+                          <button
+                            className="shrink-0 text-[11.5px] text-faint hover:text-ink mr-2"
+                            onClick={() => openDetail(s)}
+                            data-testid={`view-${s.name}`}
+                          >
+                            {t("abilitiesView")}
+                          </button>
                           {installedNames.has(s.name) ? (
                             <span className="text-[11.5px] text-faint shrink-0">
                               {t("abilitiesInstalled")}
@@ -200,8 +230,49 @@ export function AbilitiesView() {
                     </div>
                   </div>
                 ))}
+                {hasMore && (
+                  <button
+                    className="mt-3 w-full py-2 rounded-xl border border-line text-[12.5px] text-muted hover:text-ink disabled:opacity-50"
+                    disabled={loadingMore}
+                    onClick={loadMore}
+                    data-testid="abilities-more"
+                  >
+                    {loadingMore ? t("abilitiesLoading") : t("abilitiesMore")}
+                  </button>
+                )}
               </div>
             ))}
+
+          {/* 装之前先看看它到底会做什么。
+              一条技能就是一段【会被当成指令读】的文字，来自公开的 GitHub 仓库
+              ——用户有权先读一遍。面板顶部那句话不是免责声明，是在说明我们怎么
+              对待它：当参考读，不当命令执行（隔离框做的就是这件事）。 */}
+          {detail && (
+            <div
+              className="fixed inset-0 z-40 grid place-items-center bg-black/30 p-8"
+              onClick={() => setDetail(null)}
+              data-testid="ability-detail"
+            >
+              <div
+                className="max-w-3xl w-full max-h-[80vh] overflow-y-auto rounded-2xl bg-panel border border-line p-6"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="font-semibold text-[15px] flex-1">{detail.name}</div>
+                  <button
+                    className="text-[12.5px] text-faint hover:text-ink"
+                    onClick={() => setDetail(null)}
+                  >
+                    {t("abilitiesClose")}
+                  </button>
+                </div>
+                <div className="text-[11.5px] text-faint mb-3">{t("abilitiesUntrusted")}</div>
+                <pre className="text-[12px] leading-relaxed whitespace-pre-wrap break-words">
+                  {detail.body || t("abilitiesLoading")}
+                </pre>
+              </div>
+            </div>
+          )}
 
           {skillsDir && <div className="text-[11.5px] text-faint mt-3">{t("abilitiesWhere")(skillsDir)}</div>}
         </div>

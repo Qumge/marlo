@@ -208,6 +208,11 @@ export const en = {
   abilitiesNeeds: "needs a connection:",
   abilitiesNoResults: "Nothing found. Try describing the job instead of naming a tool.",
   abilitiesVetted: "Vetted by Qumge",
+  abilitiesMore: "Load more",
+  abilitiesLoading: "Loading…",
+  abilitiesView: "What it does",
+  abilitiesClose: "Close",
+  abilitiesUntrusted: "This text comes from a public catalog. Marlo reads it as guidance, never as orders.",
   scheduledOnlyWhileOpen: "Runs only while Marlo is open — a missed schedule catches up once when you next open it.",
 
   // -- 设置页 ---------------------------------------------------------------

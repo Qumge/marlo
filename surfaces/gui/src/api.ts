@@ -622,9 +622,21 @@ export interface CatalogSkill {
   group: string;  // 分组用：分类名，或 "__vetted__"（我们审过的，单独一组）
 }
 
-export async function searchSkills(q: string): Promise<{ results: CatalogSkill[]; error?: string }> {
+export async function searchSkills(
+  q: string,
+  offset = 0,
+): Promise<{ results: CatalogSkill[]; has_more?: boolean; error?: string }> {
   // 空 q 不是"不搜"，是【浏览】：返回排名靠前的一批，用来铺默认列表。
-  const res = await fetch(`${httpBase()}/v1/skills/search?q=${encodeURIComponent(q)}`);
+  // has_more 由目录给，界面不自己猜——猜的结果是一个可能点空的"加载更多"。
+  const res = await fetch(
+    `${httpBase()}/v1/skills/search?q=${encodeURIComponent(q)}&offset=${offset}`,
+  );
+  return res.json();
+}
+
+/** 一条技能的完整正文 —— 装之前先看看它到底会做什么。 */
+export async function skillDetail(slug: string): Promise<{ body: string; error?: string }> {
+  const res = await fetch(`${httpBase()}/v1/skills/detail?slug=${encodeURIComponent(slug)}`);
   return res.json();
 }
 

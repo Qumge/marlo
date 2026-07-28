@@ -15,8 +15,19 @@ const serve = (skills: any[], results: any[] = [], opts: any = {}) =>
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init?: any) => {
-      if (String(url).includes("/v1/skills/search"))
-        return { json: async () => ({ results, error: opts.searchError }) };
+      if (String(url).includes("/v1/skills/detail"))
+        return { json: async () => ({ body: opts.detailBody ?? "# 技能正文" }) };
+      if (String(url).includes("/v1/skills/search")) {
+        const off = Number(new URL(String(url), "http://x").searchParams.get("offset") || 0);
+        opts.offsets?.push(off);
+        return {
+          json: async () => ({
+            results: off ? opts.page2 || [] : results,
+            has_more: off ? false : !!opts.hasMore,
+            error: opts.searchError,
+          }),
+        };
+      }
       if (String(url).includes("/v1/skills/install")) {
         opts.installed?.push(JSON.parse(init.body).slug);
         return { json: async () => ({ ok: !opts.installFails, error: opts.installError }) };
@@ -104,6 +115,41 @@ describe("能力页", () => {
     fireEvent.change(screen.getByTestId("abilities-search"), { target: { value: "视频" } });
     await waitFor(() => expect(screen.getByTestId("abilities-error")).toBeTruthy(), { timeout: 2000 });
     expect(screen.getByText(/connection refused/)).toBeTruthy();
+  });
+
+  it("还有下一页时才显示「加载更多」", async () => {
+    // has_more 由目录给，界面不自己猜 —— 猜的结果是一个可能点空的按钮。
+    serve([], [{ name: "a", summary: "s", slug: "o/r/a", meta: "m", needs: "", group: "g" }]);
+    render(<AbilitiesView />);
+    await waitFor(() => expect(screen.getByTestId("catalog-a")).toBeTruthy(), { timeout: 2000 });
+    expect(screen.queryByTestId("abilities-more")).toBeNull();
+  });
+
+  it("点「加载更多」用【已加载条数】当 offset，不是页码", async () => {
+    // 分组是客户端做的，页码和服务端的偏移量对不上。
+    const offsets: number[] = [];
+    serve([], [
+      { name: "a", summary: "s", slug: "o/r/a", meta: "m", needs: "", group: "g" },
+      { name: "b", summary: "s", slug: "o/r/b", meta: "m", needs: "", group: "g" },
+    ], { hasMore: true, offsets, page2: [{ name: "c", summary: "s", slug: "o/r/c", meta: "m", needs: "", group: "g" }] });
+    render(<AbilitiesView />);
+    await waitFor(() => expect(screen.getByTestId("abilities-more")).toBeTruthy(), { timeout: 2000 });
+    fireEvent.click(screen.getByTestId("abilities-more"));
+    await waitFor(() => expect(screen.getByTestId("catalog-c")).toBeTruthy());
+    expect(offsets).toContain(2);
+    // 已加载的不能被替换掉 —— 那是"翻页"不是"加载更多"。
+    expect(screen.getByTestId("catalog-a")).toBeTruthy();
+  });
+
+  it("能在装之前看正文，并说明我们怎么对待它", async () => {
+    serve([], [{ name: "a", summary: "s", slug: "o/r/a", meta: "m", needs: "", group: "g" }],
+          { detailBody: "# 它会做什么" });
+    render(<AbilitiesView />);
+    await waitFor(() => expect(screen.getByTestId("view-a")).toBeTruthy(), { timeout: 2000 });
+    fireEvent.click(screen.getByTestId("view-a"));
+    await waitFor(() => expect(screen.getByText("# 它会做什么")).toBeTruthy());
+    // 这句不是免责声明，是在说明我们怎么读它。
+    expect(screen.getByText(/当参考读，不当命令执行/)).toBeTruthy();
   });
 
   it("英文界面用英文文案", async () => {
