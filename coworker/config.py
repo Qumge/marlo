@@ -28,7 +28,7 @@ DEFAULT_ALLOWED_COMMANDS: list[str] = []
 # the same class of duplication) server/manager.py and tui/app.py — bumping the recommended
 # model meant five one-line edits kept in lockstep by hand, and a missed one doesn't fail,
 # it just silently diverges. tests/test_config.py pins all five back to this constant.
-DEFAULT_MODEL = "qumge:anthropic/claude-sonnet-4.6"
+DEFAULT_MODEL = "qumge:deepseek/deepseek-v4-flash"
 
 
 @dataclass

@@ -342,7 +342,7 @@ DESCRIPTORS: list[ProviderDescriptor] = [
         "qumge",
         "Qumge",
         base_url="https://qumge.com/v1",
-        recommended_model="anthropic/claude-sonnet-4.6",
+        recommended_model="deepseek/deepseek-v4-flash",
         env_key="QUMGE_API_KEY",
     ),
     ProviderDescriptor(

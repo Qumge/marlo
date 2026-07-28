@@ -57,3 +57,40 @@ def test_qumge_claude_and_gpt_models_get_vision_and_pdf():
     assert capabilities_for("qumge:anthropic/claude-sonnet-4.6").pdf is True
     assert capabilities_for("qumge:openai/gpt-5.6-sol").vision is True
     assert capabilities_for("qumge:openai/gpt-5.6-sol").pdf is True
+
+
+def test_qumge_default_model_is_actually_offered():
+    """新用户连上 qumge 之后拿到的默认模型，必须在 COMPAT_MODELS 里。
+
+    连接流程是：configure_provider 读 recommended_model -> 如果它在
+    _suggested_models 里就 add_model 并设为默认。recommended_model 写了一个
+    清单外的值，新用户连上之后【默认模型不会被设置】，composer 里空着 ——
+    而这个失败是静默的：provider 配好了、界面没报错、就是发不出消息。
+
+    2026-07-28 还有一个同形状的 bug 刚修：list_models 给出的 id 少了厂商段，
+    网关直接 400。id 的形状只有真正要吃它的那端说了算。
+    """
+    from coworker.providers.registry import get_descriptor
+    from coworker.server.manager import SessionManager
+
+    rec = get_descriptor("qumge").recommended_model
+    assert rec, "qumge 没有推荐模型 —— 新用户连上之后没有默认模型可用"
+    assert rec in SessionManager.COMPAT_MODELS["qumge"], (
+        f"推荐模型 {rec!r} 不在 COMPAT_MODELS['qumge'] 里，"
+        f"新用户连上之后默认模型不会被设置"
+    )
+
+
+def test_qumge_default_is_the_cheap_tier():
+    """默认档必须是便宜的那一档 —— 这是产品决定，不是随手挑的。
+
+    Marlo 的用户是中小商家的白领，不会为了跑几件杂活选每 Mtok 五美元的模型。
+    默认值就是绝大多数人实际用的那个。
+
+    2026-07-28 实测（三件白领活各三轮）：deepseek-v4-flash 9/9、28 秒；
+    claude-sonnet-5 7/9、62 秒（两轮把中文专名写成形近字）。便宜 21 倍而且更准。
+    把默认改回贵档之前，先把那九轮重跑一遍。
+    """
+    from coworker.providers.registry import get_descriptor
+
+    assert get_descriptor("qumge").recommended_model == "deepseek/deepseek-v4-flash"
