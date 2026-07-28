@@ -3,182 +3,30 @@ App.tsx: Show sidebar
 App.tsx: Show sidebar (⌘B)
 App.tsx: Try a task
 App.tsx: Waiting for agent...
-components/AccessSection.tsx: Add a channel
-components/AccessSection.tsx: Back to sources
-components/AccessSection.tsx: Enabled for this session — tap to mute here
-components/AccessSection.tsx: Folders
-components/AccessSection.tsx: Recommended
-components/AccessSection.tsx: Search connectors…
-components/AccessSection.tsx: Session access
-components/AccessSection.tsx: Sources
-components/AccessSection.tsx: Stop listening
-components/AddFolderForm.tsx: Choose location
-components/AddFolderForm.tsx: Choose or paste a folder path…
-components/AddFolderForm.tsx: Off = read-only. Tick to let the agent write here.
-components/AddFolderForm.tsx: Promise
-components/AuditView.tsx: Activity
-components/AuditView.tsx: No audit events yet.
 components/AuditView.tsx: connector
 components/AuditView.tsx: session id
 components/AuditView.tsx: tool
-components/Composer.tsx: Attach
-components/Composer.tsx: Mode
-components/Composer.tsx: No model connected — connect a model
-components/Composer.tsx: Send
-components/DirectoryRequestCard.tsx: Choose location
-components/DirectoryRequestCard.tsx: Choose or paste a folder path…
-components/DirectoryRequestCard.tsx: The agent is requesting access to a folder
 components/FolderGate.tsx: /path/to/your/project
-components/FolderGate.tsx: Pick a folder
-components/FolderGate.tsx: Recent
-components/GalleryModal.tsx: Close gallery
-components/GalleryModal.tsx: Installed
-components/GalleryModal.tsx: Persona Gallery
-components/GalleryModal.tsx: Search personas
-components/GalleryModal.tsx: Sign in to browse the Gallery
-components/InboxConfigure.tsx: Channel subscriptions
 components/InboxConfigure.tsx: Direct messages
-components/InboxConfigure.tsx: Inbox routes to
-components/InboxConfigure.tsx: Listens to
-components/InboxConfigure.tsx: Message
-components/InboxConfigure.tsx: Reason
-components/InboxConfigure.tsx: Session
-components/InboxConfigure.tsx: Source
-components/InboxConfigure.tsx: Unattended approvals
-components/InboxConfigure.tsx: Unrouted
-components/InboxConfigure.tsx: Unsubscribe
-components/InboxConfigure.tsx: When
-components/InboxView.tsx: Delivered here only.
-components/InboxView.tsx: Inbox
-components/ManageTabs.tsx: Add the sender to the allow-list and deliver this message now
-components/ManageTabs.tsx: Add the sender to the allow-list; this message is discarded
-components/ManageTabs.tsx: Allowed to message
-components/ManageTabs.tsx: Enable this server
-components/ManageTabs.tsx: In the composer's picker
-components/ManageTabs.tsx: Included models
-components/ManageTabs.tsx: Models
-components/ManageTabs.tsx: No tools.
-components/ManageTabs.tsx: None yet. Message the bot once and it'll show here.
-components/ManageTabs.tsx: Recent senders
-components/ManageTabs.tsx: Throw this message away
-components/ManageTabs.tsx: Tools exposed to Marlo
 components/ManageTabs.tsx: Unsubscribe this session
-components/ManageTabs.tsx: remove
-components/ModelChecklist.tsx: Add another model…
-components/Onboarding.tsx: Coming soon
-components/Onboarding.tsx: Connect your everyday tools
-components/Onboarding.tsx: Create your first automation
-components/Onboarding.tsx: Start working with Coworker
-components/PersonaView.tsx: About
-components/PersonaView.tsx: Connections for full benefit
-components/PersonaView.tsx: Default mode
-components/PersonaView.tsx: Enable this persona
-components/PersonaView.tsx: Models
-components/PersonaView.tsx: New sessions get by default
-components/PersonaView.tsx: Persona
-components/PersonaView.tsx: Workspace
-components/PersonasTab.tsx: Add personas
-components/PersonasTab.tsx: Default for new sessions
-components/PersonasTab.tsx: Delete this persona
-components/PersonasTab.tsx: Local directory
-components/PlanCard.tsx: The agent proposed a plan
-components/PlanCard.tsx: What should change about the plan?
-components/RightRail.tsx: Copy path
-components/RightRail.tsx: Empty sheet.
-components/RightRail.tsx: Open
-components/RightRail.tsx: Open in default app
-components/RightRail.tsx: Promise
-components/RightRail.tsx: Reload preview
-components/RightRail.tsx: Show in folder
-components/RootRow.tsx: Remove
-components/SearchModal.tsx: No chats found.
-components/SearchModal.tsx: Search chats
-components/SettingsView.tsx: Mac
 components/SettingsView.tsx: ~/Marlo
-components/Sidebar.tsx: Choose a persona
-components/Sidebar.tsx: New project
-components/Sidebar.tsx: Session actions
-components/SubscriptionsChip.tsx: Channels this session listens to
-components/SubscriptionsChip.tsx: Not subscribed to any channel.
-components/SubscriptionsChip.tsx: Unsubscribe
 components/SubscriptionsChip.tsx: slack:C0123 or channel link
-components/TodoPanel.tsx: Tasks
-components/Transcript.tsx: Copy message
-components/UpdateBanner.tsx: Update available
-components/connectors/AccountsDetail.tsx: Accounts
-components/connectors/AccountsDetail.tsx: Default
-components/connectors/AccountsDetail.tsx: Disconnect this account
-components/connectors/AccountsDetail.tsx: Not connected
 components/connectors/AddConnectionModal.tsx: App token · xapp-…
 components/connectors/AddConnectionModal.tsx: Bot token · xoxb-…
 components/connectors/AddConnectionModal.tsx: Close
-components/connectors/AddConnectionModal.tsx: Enable Socket Mode, add bot scopes, install it to your workspace
-components/connectors/AddConnectionModal.tsx: Paste both tokens
-components/connectors/AddConnectionModal.tsx: Recommended
 components/connectors/AvailableDetail.tsx: Access
-components/connectors/AvailableDetail.tsx: Tools
-components/connectors/CalendarDetail.tsx: Accounts
-components/connectors/CalendarDetail.tsx: Default
-components/connectors/CalendarDetail.tsx: Disconnect this account
 components/connectors/CalendarDetail.tsx: Google Calendar
-components/connectors/CalendarDetail.tsx: Not connected
-components/connectors/ConnectorsList.tsx: Nothing matches.
 components/connectors/GithubDetail.tsx: Add an installation
 components/connectors/GithubDetail.tsx: Allow the sender and deliver this mention now
 components/connectors/GithubDetail.tsx: Allow the sender; this mention is discarded
-components/connectors/GithubDetail.tsx: Dismiss
-components/connectors/GithubDetail.tsx: Listening
-components/connectors/GithubDetail.tsx: Not connected
-components/connectors/GithubDetail.tsx: People
-components/connectors/GithubDetail.tsx: Unsubscribe this session
-components/connectors/GithubDetail.tsx: Waiting
-components/connectors/GithubDetail.tsx: remove
-components/connectors/GmailDetail.tsx: Accounts
-components/connectors/GmailDetail.tsx: Default
-components/connectors/GmailDetail.tsx: Disconnect this mailbox
-components/connectors/GmailDetail.tsx: Label name, e.g. Personal
-components/connectors/GmailDetail.tsx: Never show agents
-components/connectors/GmailDetail.tsx: Not connected
-components/connectors/GmailDetail.tsx: Promise
-components/connectors/GmailDetail.tsx: name@example.com or @domain.com
-components/connectors/GmailDetail.tsx: remove
 components/connectors/HubSpotDetail.tsx: Add a portal
-components/connectors/HubSpotDetail.tsx: Default
-components/connectors/HubSpotDetail.tsx: Disconnect this portal
-components/connectors/HubSpotDetail.tsx: Hidden fields
-components/connectors/HubSpotDetail.tsx: Not connected
-components/connectors/HubSpotDetail.tsx: Portals
-components/connectors/HubSpotDetail.tsx: Property name, e.g. salary
-components/connectors/HubSpotDetail.tsx: Sandbox
-components/connectors/HubSpotDetail.tsx: Stripped from every record agents read, across all portals.
-components/connectors/HubSpotDetail.tsx: remove
 components/connectors/SlackDetail.tsx: Add a workspace
 components/connectors/SlackDetail.tsx: Allow the sender and deliver this message now
 components/connectors/SlackDetail.tsx: Allow the sender; this message is discarded
 components/connectors/SlackDetail.tsx: Approvals
-components/connectors/SlackDetail.tsx: Dismiss
-components/connectors/SlackDetail.tsx: Listening
-components/connectors/SlackDetail.tsx: Names come from Slack automatically. IDs show on hover.
-components/connectors/SlackDetail.tsx: Not connected
-components/connectors/SlackDetail.tsx: People
-components/connectors/SlackDetail.tsx: Pick from the workspace directory
-components/connectors/SlackDetail.tsx: Promise
-components/connectors/SlackDetail.tsx: Remove approval-owner access before removing this person.
-components/connectors/SlackDetail.tsx: Set by the workspace installer.
-components/connectors/SlackDetail.tsx: Type a name…
-components/connectors/SlackDetail.tsx: Unsubscribe this session
-components/connectors/SlackDetail.tsx: Waiting
-components/connectors/SlackDetail.tsx: remove
-components/connectors/SlackDetail.tsx: remove approval owner
 components/connectors/SlackHowItWorks.tsx: APP
 components/connectors/SlackHowItWorks.tsx: Channels
-components/connectors/SlackHowItWorks.tsx: Coworker
-components/connectors/SlackHowItWorks.tsx: Direct messages
 components/connectors/SlackHowItWorks.tsx: Emma W
 components/connectors/SlackHowItWorks.tsx: Message #launch-room
 components/connectors/SlackHowItWorks.tsx: Priya N
-components/connectors/SlackHowItWorks.tsx: RECENT
-components/connectors/SlackHowItWorks.tsx: Thread
-components/connectors/SlackHowItWorks.tsx: Threads
 providers/ProviderSetup.tsx: Not set up
-providers/ProviderSetup.tsx: Promise

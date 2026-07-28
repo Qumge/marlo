@@ -401,7 +401,7 @@ export function Sidebar(props: Props) {
       >
         <button
           title={t("sessionActions")}
-          aria-label="Session actions"
+          aria-label={t("uiSessionActions")}
           aria-haspopup="menu"
           aria-expanded={menuOpen}
           data-testid="row-menu"
@@ -812,7 +812,7 @@ export function Sidebar(props: Props) {
               <button
                 className="w-5 h-5 grid place-items-center rounded text-faint hover:text-ink hover:bg-panel"
                 title={t("newProject")}
-                aria-label="New project"
+                aria-label={t("uiNewProject")}
                 onClick={() => props.onNewProject(browseKey)}
               >
                 <Icon name="folderPlus" size={14} />
@@ -1139,7 +1139,7 @@ function NewSessionSplit({
           <button
             className="px-2.5 rounded-r-lg bg-accent text-white border-l border-white/25 hover:opacity-95 flex items-center"
             title={t("startWithPersona")}
-            aria-label="Choose a persona"
+            aria-label={t("uiChoosePersona")}
             onClick={() => setOpen((v) => !v)}
           >
             <Icon name="chevronDown" size={13} />

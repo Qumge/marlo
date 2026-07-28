@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useT } from "../i18n";
 import {
   cloudLogin,
   getCloudGallery,
@@ -52,6 +53,7 @@ export function GalleryModal({
   onClose: () => void;
   onInstalled?: () => void;
 }) {
+  const t = useT();
   const [cloud, setCloud] = useState<CloudStatus | null>(null);
   const [cards, setCards] = useState<GalleryPersona[]>([]);
   const [installed, setInstalled] = useState<Set<string>>(new Set());
@@ -229,7 +231,7 @@ export function GalleryModal({
               </div>
               <div className="shrink-0 flex items-center">
                 {isInstalled ? (
-                  <span className="text-[12px] text-muted">Installed</span>
+                  <span className="text-[12px] text-muted">{t("uiInstalled")}</span>
                 ) : (
                   <span className="text-[12.5px] text-accent">View & install →</span>
                 )}
@@ -285,7 +287,7 @@ export function GalleryModal({
             </div>
             <div className="shrink-0">
               {installed.has(detailSlug) ? (
-                <span className="text-[12.5px] text-muted">Installed</span>
+                <span className="text-[12.5px] text-muted">{t("uiInstalled")}</span>
               ) : (
                 <button className={BTN_ACCENT} onClick={() => install(detailSlug)} disabled={busy}>
                   {busy ? "Installing…" : "Install"}
@@ -372,7 +374,7 @@ export function GalleryModal({
       <div className="absolute left-1/2 top-[6vh] -translate-x-1/2 w-[720px] max-w-[94vw] max-h-[88vh] rounded-xl2 border border-line bg-panel shadow-2xl overflow-hidden flex flex-col">
         <div className="px-5 pt-4 pb-3 border-b border-line flex items-center gap-3 shrink-0">
           <div className="min-w-0 flex-1">
-            <div className="text-[15px] font-semibold">Persona Gallery</div>
+            <div className="text-[15px] font-semibold">{t("uiPersonaGallery")}</div>
             <div className="text-[12px] text-muted">
               Curated coworkers · installs stay disabled until you approve them
             </div>
@@ -381,14 +383,14 @@ export function GalleryModal({
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search personas"
+              placeholder={t("uiSearchPersonas")}
               className="w-[180px] px-3 py-1.5 rounded-lg border border-line bg-paper text-[12.5px] text-ink outline-none focus:border-accent"
             />
           )}
           <button
             className="text-faint hover:text-ink shrink-0"
             onClick={onClose}
-            aria-label="Close gallery"
+            aria-label={t("uiCloseGallery")}
             data-testid="gallery-close"
           >
             <Icon name="x" size={16} />
@@ -409,7 +411,7 @@ export function GalleryModal({
           ) : cloud && !cloud.signed_in ? (
             <div className={CARD + " p-5 flex items-center gap-4"} data-testid="gallery-signin">
               <div className="min-w-0 flex-1">
-                <div className="font-semibold text-[14px] mb-1">Sign in to browse the Gallery</div>
+                <div className="font-semibold text-[14px] mb-1">{t("uiSignInGallery")}</div>
                 <div className="text-[12.5px] text-muted leading-relaxed">
                   The Gallery is a curated set of coworkers from OpenWorker Cloud and needs a
                   (free) cloud sign-in. Installing personas from a folder or Git URL — on the

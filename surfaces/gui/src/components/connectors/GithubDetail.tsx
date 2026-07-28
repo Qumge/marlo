@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useT } from "../../i18n";
 import {
   disallowUser,
   disconnectGithubInstallation,
@@ -40,6 +41,7 @@ function relayHealth(gh: GithubStatus | null): { dot: string; text: string } {
 }
 
 export function GithubDetail({ c, cloud, onChanged }: DetailProps) {
+  const t = useT();
   const [adding, setAdding] = useState(false);
   const [subs, setSubs] = useState<Subscription[]>([]);
   const [status, setStatus] = useState<GithubStatus | null>(null);
@@ -80,7 +82,7 @@ export function GithubDetail({ c, cloud, onChanged }: DetailProps) {
                 </span>
               </>
             ) : (
-              <span>Not connected</span>
+              <span>{t("connNotConnected")}</span>
             )}
           </div>
         </div>
@@ -128,7 +130,7 @@ export function GithubDetail({ c, cloud, onChanged }: DetailProps) {
 
       {relay && listening.length > 0 && (
         <>
-          <div className={GRP_H}>Listening</div>
+          <div className={GRP_H}>{t("connListening")}</div>
           <div className={GRP}>
             <ListeningRows subs={listening} onChanged={changed} />
           </div>
@@ -245,9 +247,10 @@ function PeopleRow({
   installationId: string;
   onChanged: () => void;
 }) {
+  const t = useT();
   return (
     <div className={ROW}>
-      <span className={LABEL}>People</span>
+      <span className={LABEL}>{t("connPeople")}</span>
       <span className="min-w-0 flex-1 flex flex-wrap items-center gap-1.5">
         {allowed.length === 0 && (
           <span className="text-[12px] text-faint">nobody yet — approve a waiting sender below</span>
@@ -261,7 +264,7 @@ function PeopleRow({
             @{login}
             <button
               className={XBTN}
-              title="remove"
+              title={t("connRemove")}
               onClick={() => disallowUser("github", login, installationId).then(onChanged)}
             >
               ×
@@ -274,13 +277,14 @@ function PeopleRow({
 }
 
 function WaitingRow({ m, onChanged }: { m: ParkedMessage; onChanged: () => void }) {
+  const t = useT();
   const act = async (action: "dismiss" | "allow" | "allow_deliver") => {
     await resolveUnauthorized("github", m.id, action);
     onChanged();
   };
   return (
     <div className={ROW + " bg-warnSoft/25"} data-testid={`waiting-${m.id}`}>
-      <span className={LABEL}>Waiting</span>
+      <span className={LABEL}>{t("connWaiting")}</span>
       <span className="min-w-0 flex-1">
         <span className="font-medium text-[13px]">@{m.user_name || m.user_id}</span>{" "}
         <span className="text-[12.5px] text-muted">in {m.chat_name || m.chat_id}</span>
@@ -302,7 +306,7 @@ function WaitingRow({ m, onChanged }: { m: ParkedMessage; onChanged: () => void 
       >
         Allow
       </button>
-      <button className={XBTN + " px-1"} data-testid={`parked-dismiss-${m.id}`} title="Dismiss" onClick={() => act("dismiss")}>
+      <button className={XBTN + " px-1"} data-testid={`parked-dismiss-${m.id}`} title={t("connDismiss")} onClick={() => act("dismiss")}>
         ×
       </button>
     </div>
@@ -310,9 +314,10 @@ function WaitingRow({ m, onChanged }: { m: ParkedMessage; onChanged: () => void 
 }
 
 function ListeningRows({ subs, onChanged }: { subs: Subscription[]; onChanged: () => void }) {
+  const t = useT();
   return (
     <div className={ROW} data-testid="listening-github">
-      <span className={LABEL}>Listening</span>
+      <span className={LABEL}>{t("connListening")}</span>
       <span className="min-w-0 flex-1 space-y-1">
         {subs.map((s) => (
           <span key={s.session_id + s.channel} className="flex items-center gap-2 text-[12.5px]">
@@ -325,7 +330,7 @@ function ListeningRows({ subs, onChanged }: { subs: Subscription[]; onChanged: (
             </span>
             <button
               className={XBTN + " ml-auto"}
-              title="Unsubscribe this session"
+              title={t("connUnsubscribe")}
               onClick={async () => {
                 await unsubscribeChannel(s.session_id, s.channel);
                 onChanged();

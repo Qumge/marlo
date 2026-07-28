@@ -162,7 +162,7 @@ export function ModelChecklist({
 
       <div className="mlist-add">
         <input
-          placeholder="Add another model…"
+          placeholder={t("uiAddAnotherModel")}
           value={draft}
           spellCheck={false}
           autoComplete="off"

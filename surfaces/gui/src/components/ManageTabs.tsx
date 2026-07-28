@@ -78,6 +78,7 @@ const EXAMPLE = `{
 // key…" affordance, the global composer-picker card (gallery view), and the
 // per-provider ModelChecklist / read-only model preview (form view).
 export function ModelsTab() {
+  const t = useT();
   const [settings, setSettings] = useState<ModelSettings | null>(null);
   const refreshSettings = () => getSettings().then(setSettings).catch(() => setSettings(null));
   const ps = useProviderSetup({ onSaved: refreshSettings });
@@ -128,7 +129,7 @@ export function ModelsTab() {
 
       {info?.configured ? (
         <div className="mt-6">
-          <div className={SEC_H + " mb-1.5"}>Models</div>
+          <div className={SEC_H + " mb-1.5"}>{t("uiModels")}</div>
           <p className="text-[12px] text-muted mb-2.5 leading-relaxed">
             Ticked models show in the composer's picker; the black badge marks the default for new
             sessions.
@@ -148,7 +149,7 @@ export function ModelsTab() {
         // key unlocks is part of deciding to get one at all (owner ask, 2026-07-04).
         (info?.suggested_models?.length || 0) > 0 && (
           <div className="mt-6" data-testid="model-preview">
-            <div className={SEC_H + " mb-1.5"}>Included models</div>
+            <div className={SEC_H + " mb-1.5"}>{t("uiIncludedModels")}</div>
             <p className="text-[12px] text-muted mb-2.5 leading-relaxed">
               Curated, agent-capable models this provider serves — add your key above to enable them.
             </p>
@@ -185,6 +186,7 @@ function ComposerPickerCard({
   providers: ProviderInfo[];
   onChanged: () => void;
 }) {
+  const t = useT();
   const names = providers.map((p) => p.name);
   const provOf = (id: string) => {
     const i = id.indexOf(":");
@@ -196,7 +198,7 @@ function ComposerPickerCard({
   };
   return (
     <div className="mt-6" data-testid="composer-picker">
-      <div className={SEC_H + " mb-1.5"}>In the composer's picker</div>
+      <div className={SEC_H + " mb-1.5"}>{t("uiInPicker")}</div>
       <p className="text-[12px] text-muted mb-2.5 leading-relaxed">
         The models offered when starting a session; the black badge marks the default. Add more
         from a provider's card above.
@@ -365,6 +367,7 @@ function McpRow({
   onRemove: () => void;
   onRefresh: () => void;
 }) {
+  const t = useT();
   const [tools, setTools] = useState<{ name: string; description: string }[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [toolErr, setToolErr] = useState<string | null>(null);
@@ -396,7 +399,7 @@ function McpRow({
   return (
     <div className={CARD + " p-3.5"}>
       <div className="flex items-center gap-3">
-        <Toggle checked={server.enabled} onChange={onToggle} title="Enable this server" />
+        <Toggle checked={server.enabled} onChange={onToggle} title={t("uiEnableServer")} />
         <div className="flex-1 min-w-0">
           <div className="text-[14px] font-medium">{server.name}</div>
           <div className="text-[11.5px] text-faint">
@@ -430,7 +433,7 @@ function McpRow({
           {busy ? "…" : tools ? "hide tools" : "tools"}
         </button>
         <button className={BTN_DANGER} onClick={onRemove}>
-          remove
+          {t("uiRemoveLower")}
         </button>
       </div>
       {server.last_error && server.status !== "connected" && (
@@ -439,7 +442,7 @@ function McpRow({
       {toolErr && <div className="text-[12.5px] text-danger mt-1.5">{toolErr}</div>}
       {tools && (
         <div className="mt-2.5 pt-2.5 border-t border-line flex flex-wrap gap-1.5">
-          {tools.length === 0 && <div className="text-[12px] text-faint">No tools.</div>}
+          {tools.length === 0 && <div className="text-[12px] text-faint">{t("uiNoTools")}</div>}
           {tools.map((t) => (
             <span
               key={t.name}
@@ -533,6 +536,7 @@ export function UnauthorizedBlock({
   onChanged: () => void;
   teamId?: string;
 }) {
+  const t = useT();
   const items = (c.unauthorized ?? []).filter(
     (m) => teamId === undefined || m.team_id === teamId,
   );
@@ -562,7 +566,7 @@ export function UnauthorizedBlock({
               <button
                 className="text-[11.5px] px-2 py-1 rounded-md bg-accent text-white"
                 data-testid={`parked-allow-deliver-${m.id}`}
-                title="Add the sender to the allow-list and deliver this message now"
+                title={t("uiAllowAndDeliver")}
                 onClick={() => act(m.id, "allow_deliver")}
               >
                 Allow & deliver
@@ -570,7 +574,7 @@ export function UnauthorizedBlock({
               <button
                 className={BTN_BORDERED}
                 data-testid={`parked-allow-${m.id}`}
-                title="Add the sender to the allow-list; this message is discarded"
+                title={t("uiAllowDiscard")}
                 onClick={() => act(m.id, "allow")}
               >
                 Allow only
@@ -578,10 +582,10 @@ export function UnauthorizedBlock({
               <button
                 className="text-[11.5px] px-2 py-1 rounded-md text-faint hover:text-danger"
                 data-testid={`parked-dismiss-${m.id}`}
-                title="Throw this message away"
+                title={t("uiDiscardMessage")}
                 onClick={() => act(m.id, "dismiss")}
               >
-                Dismiss
+                {t("uiDismiss")}
               </button>
             </div>
           </div>
@@ -656,6 +660,7 @@ export function AllowlistBlock({
   allowed?: string[];
   allowedNames?: Record<string, string | null>;
 }) {
+  const t = useT();
   const allowedUsers = allowed ?? c.allowed_users;
   const names = allowedNames ?? c.allowed_user_names;
   const recent = (c.recent ?? []).filter(
@@ -666,7 +671,7 @@ export function AllowlistBlock({
   return (
     <div className="border-t border-line px-3.5 py-3 grid grid-cols-2 gap-5">
       <div>
-        <div className={SEC_H + " mb-2"}>Allowed to message</div>
+        <div className={SEC_H + " mb-2"}>{t("uiAllowedToMessage")}</div>
         <div className="flex flex-wrap gap-1.5">
           {allowedUsers.length === 0 && (
             <span className="text-[12px] text-faint">nobody yet — Allow a recent sender →</span>
@@ -683,7 +688,7 @@ export function AllowlistBlock({
               {names?.[u] || u}
               <button
                 className="w-4 h-4 grid place-items-center text-faint hover:text-danger"
-                title="remove"
+                title={t("uiRemoveLower")}
                 onClick={async () => {
                   await disallowUser(c.name, u, teamId);
                   onChanged();
@@ -696,9 +701,9 @@ export function AllowlistBlock({
         </div>
       </div>
       <div>
-        <div className={SEC_H + " mb-2"}>Recent senders</div>
+        <div className={SEC_H + " mb-2"}>{t("uiRecentSenders")}</div>
         {unknownRecent.length === 0 ? (
-          <div className="text-[12px] text-faint">None yet. Message the bot once and it'll show here.</div>
+          <div className="text-[12px] text-faint">{t("uiNoneYetMessageBot")}</div>
         ) : (
           <div className="space-y-1.5">
             {unknownRecent.map((r) => (
@@ -728,6 +733,7 @@ export function AllowlistBlock({
 }
 
 export function ConnectorTools({ c, onChanged }: { c: Connector; onChanged: () => void }) {
+  const t = useT();
   const toggle = async (toolName: string, enabled: boolean) => {
     await updateConnectorTools(c.name, { [toolName]: enabled });
     onChanged();
@@ -740,7 +746,7 @@ export function ConnectorTools({ c, onChanged }: { c: Connector; onChanged: () =
     );
   return (
     <div className="border-t border-line px-3.5 py-3">
-      <div className={SEC_H + " mb-2"}>Tools exposed to Marlo</div>
+      <div className={SEC_H + " mb-2"}>{t("uiToolsExposed")}</div>
       <div className="space-y-1.5">
         {c.tools.map((tool) => (
           <label
@@ -900,7 +906,7 @@ export function ConnectSetup({
               <button className={BTN_ACCENT + " opacity-50"} disabled data-testid="managed-coming-soon">
                 {`Connect ${c.title} with one click`}
                 <span className="ml-2 text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-white/25">
-                  Coming soon
+                  {t("uiComingSoon")}
                 </span>
               </button>
               <div className="text-[11.5px] text-faint">

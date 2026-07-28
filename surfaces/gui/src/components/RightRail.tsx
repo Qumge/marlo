@@ -201,7 +201,7 @@ export function RightRail({
                       {a.name}
                       <span className="artifact-row-meta">{formatBytes(a.size)} · {formatTime(a.modified_at)}</span>
                     </span>
-                    <span className="artifact-open">Open</span>
+                    <span className="artifact-open">{t("uiOpen")}</span>
                   </button>
                 ))}
               </div>
@@ -323,7 +323,7 @@ function ArtifactViewer({
                 await onReload();
                 setReloadKey((k) => k + 1);
               }}
-              aria-label="Reload preview"
+              aria-label={t("uiReloadPreview")}
               title={t("reload")}
             >
               <Icon name="refresh" size={16} />
@@ -333,7 +333,7 @@ function ArtifactViewer({
             <button
               className="artifact-icon-btn"
               onClick={() => revealArtifact(sessionId, artifact.path, "open")}
-              aria-label="Open in default app"
+              aria-label={t("uiOpenDefaultApp")}
               title={t("openInDefaultApp")}
             >
               <Icon name="panelOpen" size={16} />
@@ -344,7 +344,7 @@ function ArtifactViewer({
           <button
             className="artifact-icon-btn"
             onClick={() => navigator.clipboard?.writeText(artifact.abs_path || artifact.path)}
-            aria-label="Copy path"
+            aria-label={t("uiCopyPath")}
             title={t("copyFullPath")}
           >
             <Icon name="copy" size={16} />
@@ -352,7 +352,7 @@ function ArtifactViewer({
           <button
             className="artifact-icon-btn"
             onClick={() => revealArtifact(sessionId, artifact.path, "reveal")}
-            aria-label="Show in folder"
+            aria-label={t("uiShowInFolder")}
             title={t("showInFolder")}
           >
             <Icon name="folder" size={16} />
@@ -388,7 +388,7 @@ function ArtifactViewer({
             <Icon name="panelOpen" size={28} />
             <p>This {/\.pptx?$/i.test(artifact.name) ? "PowerPoint" : "Word"} file can’t be previewed here.</p>
             <button className="btn sm" onClick={() => revealArtifact(sessionId, artifact.path, "open")}>
-              Open in default app
+              {t("uiOpenDefaultApp")}
             </button>
           </div>
         ) : (
@@ -566,7 +566,7 @@ function SheetViewer({ dataUrl }: { dataUrl: string }) {
           ))}
         </div>
       )}
-      {sheet.rows.length ? <GridTable rows={sheet.rows} /> : <div className="rail-muted artifact-table-note">Empty sheet.</div>}
+      {sheet.rows.length ? <GridTable rows={sheet.rows} /> : <div className="rail-muted artifact-table-note">{t("uiEmptySheet")}</div>}
     </div>
   );
 }

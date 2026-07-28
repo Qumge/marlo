@@ -409,7 +409,7 @@ export function Composer(props: Props) {
             <button
               className={iconBtn + (attachMenuOpen ? " bg-paper text-ink" : "")}
               title={t("attach")}
-              aria-label="Attach"
+              aria-label={t("uiAttach")}
               onClick={() => setAttachMenuOpen((v) => !v)}
             >
               <Icon name="plus" size={17} />
@@ -474,7 +474,7 @@ export function Composer(props: Props) {
               className="pill model-warn chip"
               onClick={() => props.onConnectModel?.()}
               title={t("connectAModel")}
-              aria-label="No model connected — connect a model"
+              aria-label={t("uiNoModel")}
             >
               <span className="pill-label">{t("noModel")}</span>
               <span className="model-warn-ico" aria-hidden>⚠</span>
@@ -534,7 +534,7 @@ export function Composer(props: Props) {
               onClick={submit}
               disabled={!props.connected || !!dictation?.recording || !!dictationBusy}
               title={needsModel ? "Connect a model to send" : undefined}
-              aria-label="Send"
+              aria-label={t("uiSend")}
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M12 19V5M5 12l7-7 7 7" />
@@ -578,7 +578,7 @@ function ModeMenu({
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Mode"
+        aria-label={t("uiMode")}
         title={
           `Mode: ${current?.label || mode}` +
           (unattended ? " · approvals go to the Inbox" : "")

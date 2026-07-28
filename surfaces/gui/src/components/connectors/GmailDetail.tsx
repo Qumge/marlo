@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useT } from "../../i18n";
 import {
   connectManaged,
   disconnectGmailAccount,
@@ -19,6 +20,7 @@ import { FOOT, GRP, GRP_H, PILL_ACCENT, ROW, TAG_ACCENT, TAG_WARN, XBTN } from "
 const LABEL = "text-[12.5px] text-muted w-24 shrink-0";
 
 export function GmailDetail({ c, cloud, slack: _slack, onChanged }: DetailProps) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const accounts = (c.accounts ?? []) as GmailAccount[]; // email-keyed (pre-generic-layer shape)
 
@@ -43,7 +45,7 @@ export function GmailDetail({ c, cloud, slack: _slack, onChanged }: DetailProps)
                 </span>
               </>
             ) : (
-              <span>Not connected</span>
+              <span>{t("connNotConnected")}</span>
             )}
           </div>
         </div>
@@ -75,7 +77,7 @@ export function GmailDetail({ c, cloud, slack: _slack, onChanged }: DetailProps)
 
       {accounts.length > 0 && (
         <>
-          <div className={GRP_H + " !mt-0"}>Accounts</div>
+          <div className={GRP_H + " !mt-0"}>{t("connAccounts")}</div>
           <div className={GRP} data-testid="gmail-accounts">
             {accounts.map((a) => (
               <AccountRow key={a.email} a={a} onChanged={onChanged} />
@@ -96,12 +98,13 @@ export function GmailDetail({ c, cloud, slack: _slack, onChanged }: DetailProps)
 }
 
 function AccountRow({ a, onChanged }: { a: GmailAccount; onChanged: () => void }) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   return (
     <div className={ROW} data-testid={`gmail-account-${a.email}`}>
       <span className="min-w-0 flex-1 flex items-center gap-2">
         <span className="text-[13px] font-medium truncate">{a.email}</span>
-        {a.default && <span className={TAG_ACCENT}>Default</span>}
+        {a.default && <span className={TAG_ACCENT}>{t("connDefault")}</span>}
         {a.needs_reauth && <span className={TAG_WARN}>⚠ Sign in again</span>}
       </span>
       {!a.default && (
@@ -118,7 +121,7 @@ function AccountRow({ a, onChanged }: { a: GmailAccount; onChanged: () => void }
       )}
       <button
         className={XBTN}
-        title="Disconnect this mailbox"
+        title={t("connDisconnectMailbox")}
         data-testid={`gmail-disconnect-${a.email}`}
         disabled={busy}
         onClick={async () => {
@@ -135,15 +138,16 @@ function AccountRow({ a, onChanged }: { a: GmailAccount; onChanged: () => void }
 }
 
 function FiltersGroup({ c, onChanged }: Pick<DetailProps, "c" | "onChanged">) {
+  const t = useT();
   const filters = c.filters ?? { senders: [], labels: [] };
   return (
     <>
-      <div className={GRP_H}>Never show agents</div>
+      <div className={GRP_H}>{t("connNeverShowAgents")}</div>
       <div className={GRP} data-testid="gmail-filters">
         <ChipListRow
           label="Senders"
           testid="gmail-filter-senders"
-          placeholder="name@example.com or @domain.com"
+          placeholder={t("connEmailPlaceholder")}
           values={filters.senders}
           onSave={async (senders) => {
             await setGmailFilters({ senders });
@@ -153,7 +157,7 @@ function FiltersGroup({ c, onChanged }: Pick<DetailProps, "c" | "onChanged">) {
         <ChipListRow
           label="Labels"
           testid="gmail-filter-labels"
-          placeholder="Label name, e.g. Personal"
+          placeholder={t("connLabelPlaceholder")}
           values={filters.labels}
           onSave={async (labels) => {
             await setGmailFilters({ labels });
@@ -181,6 +185,7 @@ function ChipListRow({
   values: string[];
   onSave: (next: string[]) => Promise<void>;
 }) {
+  const t = useT();
   const [draft, setDraft] = useState("");
   const add = async () => {
     const v = draft.trim();
@@ -200,7 +205,7 @@ function ChipListRow({
             {v}
             <button
               className={XBTN}
-              title="remove"
+              title={t("connRemove")}
               onClick={() => onSave(values.filter((x) => x !== v))}
             >
               ×

@@ -289,7 +289,7 @@ function VoiceInputSection() {
               )}
             </div>
             <div className="border-t border-line bg-paper/50 px-4 py-3 grid grid-cols-2 gap-3 text-[12px] text-muted">
-              <div><span className="block text-ink font-medium">Mac</span>macOS 12+ · Apple Silicon M1+</div>
+              <div><span className="block text-ink font-medium">{t("uiMac")}</span>macOS 12+ · Apple Silicon M1+</div>
               <div><span className="block text-ink font-medium">Windows</span>Windows 10 22H2/11 · x64</div>
               <div><span className="block text-ink font-medium">{t("setMemory")}</span>8 GB recommended</div>
               <div><span className="block text-ink font-medium">{t("setProcessor")}</span>4 CPU cores recommended</div>

@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { useT } from "../i18n";
 import type { InboxItem } from "../api";
 import { humanizeApprovalTitle } from "../humanize";
 import { PreviewBlock, scopeNote, TitleText } from "./ApprovalCard";
@@ -36,6 +37,7 @@ export function InboxItemCard({
   chip?: ReactNode; // optional "go to session" affordance (shown in the Inbox list, not inline)
   compact?: boolean;
 }) {
+  const t = useT();
   const [answer, setAnswer] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const options = item.options || [];
@@ -54,7 +56,7 @@ export function InboxItemCard({
         }}
       />
       <button className={BTN_PRIMARY} disabled={!answer.trim()} onClick={() => onResolve(item.id, answer)}>
-        Send
+        {t("uiSend")}
       </button>
     </div>
   );
@@ -197,7 +199,7 @@ export function InboxItemCard({
       ) : (
         <div className="flex items-center gap-2 mt-2.5">
           <button className={BTN_BORDERED} onClick={() => onResolve(item.id, "seen")}>
-            Dismiss
+            {t("uiDismiss")}
           </button>
         </div>
       )}

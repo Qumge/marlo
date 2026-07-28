@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useT } from "../../i18n";
 import type { SlackWorkspace } from "../../api";
 
 // UX-027: the post-connect "how mentions reach you" card. A tabbed carousel of
@@ -170,15 +171,16 @@ const SendIcon = () => (
 );
 
 function SlackRail({ active }: { active: string }) {
+  const t = useT();
   return (
     <div className="hiw-slrail">
       <div className="hiw-ws">{WS_NAME} ▾</div>
-      <div className="hiw-slnav"><ThreadsIcon /> Threads</div>
+      <div className="hiw-slnav"><ThreadsIcon /> {t("connThreads")}</div>
       <div className="hiw-slnav"><SendIcon /> Drafts &amp; sent</div>
       <div className="hiw-sect">Channels</div>
       <div className={"hiw-ch" + (active === "general" ? " on" : "")}># general</div>
       <div className={"hiw-ch" + (active === "launch-room" ? " on" : "")}># launch-room</div>
-      <div className="hiw-sect">Direct messages</div>
+      <div className="hiw-sect">{t("connDirectMessages")}</div>
       <div className="hiw-slnav"><span className="hiw-pres" />Priya N</div>
       <div className="hiw-slnav"><span className="hiw-pres" />Emma W</div>
       <div className="hiw-sect">Agents &amp; apps</div>
@@ -234,13 +236,14 @@ function OwWin({ children }: { children: React.ReactNode }) {
 }
 
 function OwRail({ hot, hotSub, glow }: { hot?: string; hotSub?: string; glow?: boolean }) {
+  const t = useT();
   return (
     <div className="hiw-owrail">
       <div className="hiw-brand">OpenWorker</div>
       <div className="hiw-newbtn">＋ New session</div>
       <div className="hiw-ownav">⌕ Search</div>
       <div className="hiw-ownav">◷ Automations</div>
-      <div className="hiw-sect">RECENT</div>
+      <div className="hiw-sect">{t("connRecent")}</div>
       {hot && (
         <div
           className={"hiw-sess hot" + (glow ? " hiw-glow hiw-k" : " hiw-stay")}
@@ -250,7 +253,7 @@ function OwRail({ hot, hotSub, glow }: { hot?: string; hotSub?: string; glow?: b
           {hotSub}
         </div>
       )}
-      <div className="hiw-sess"><b>Jira vs Linear</b>Coworker</div>
+      <div className="hiw-sess"><b>Jira vs Linear</b>{t("connCoworker")}</div>
     </div>
   );
 }
@@ -343,6 +346,7 @@ function SceneMention({ meFirst, meInitial }: { meFirst: string; meInitial: stri
 
 /* ---- scene 2: mention INSIDE the open thread panel → the same session ---- */
 function SceneThread({ meFirst, meInitial }: { meFirst: string; meInitial: string }) {
+  const t = useT();
   return (
     <>
       <span className="hiw-spark" style={d("1.9s")} />
@@ -397,11 +401,11 @@ function SceneThread({ meFirst, meInitial }: { meFirst: string; meInitial: strin
           <div className="hiw-newbtn">＋ New session</div>
           <div className="hiw-ownav">⌕ Search</div>
           <div className="hiw-ownav">◷ Automations</div>
-          <div className="hiw-sect">RECENT</div>
+          <div className="hiw-sect">{t("connRecent")}</div>
           <div className="hiw-sess hot hiw-stay hiw-glow" style={{ "--g": "2.4s" } as React.CSSProperties}>
             <b>Summarize #launch-room</b>via Slack
           </div>
-          <div className="hiw-sess"><b>Jira vs Linear</b>Coworker</div>
+          <div className="hiw-sess"><b>Jira vs Linear</b>{t("connCoworker")}</div>
         </div>
         <div className="hiw-owmain">
           <div className="hiw-owtitle">

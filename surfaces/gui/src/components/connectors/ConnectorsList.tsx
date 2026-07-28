@@ -155,7 +155,7 @@ export function ConnectorsList({
         );
       })}
       {shown.length === 0 && (
-        <div className={ROW + " text-[12.5px] text-muted"}>Nothing matches.</div>
+        <div className={ROW + " text-[12.5px] text-muted"}>{t("connNothingMatches")}</div>
       )}
       {!showAll && !q && available.length > AVAILABLE_FOLD && (
         <div className={FOOT}>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useT } from "../i18n";
 import {
   deletePersona,
   getPersonas,
@@ -26,6 +27,7 @@ const BTN_BORDERED =
   "text-[12.5px] px-2.5 py-1.5 rounded-lg border border-line bg-paper hover:border-lineStrong shrink-0 disabled:opacity-40 disabled:hover:border-line";
 
 export function PersonasTab({ onOpenPersona }: { onOpenPersona?: (id: string) => void }) {
+  const t = useT();
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [mode, setMode] = useState<"git" | "dir">("git");
   const [src, setSrc] = useState("");
@@ -108,7 +110,7 @@ export function PersonasTab({ onOpenPersona }: { onOpenPersona?: (id: string) =>
             <div className="min-w-0 flex-1">
               <div className="text-[13.5px] font-medium flex items-center gap-1.5">
                 <span className="truncate">{p.name}</span>
-                {p.default && <span className="text-accent" title="Default for new sessions">★</span>}
+                {p.default && <span className="text-accent" title={t("uiDefaultForNewSessions")}>★</span>}
                 {p.builtin && <span className="text-[11px] text-faint font-normal">· built-in</span>}
               </div>
               <div className="text-[12px] text-muted truncate">{p.tagline}</div>
@@ -167,7 +169,7 @@ export function PersonasTab({ onOpenPersona }: { onOpenPersona?: (id: string) =>
               ) : (
                 <button
                   className="text-faint hover:text-danger shrink-0 p-1"
-                  title="Delete this persona"
+                  title={t("uiDeletePersona")}
                   aria-label={`Delete ${p.name}`}
                   data-testid={`persona-delete-${p.id}`}
                   onClick={() => setConfirmDel(p.id)}
@@ -205,7 +207,7 @@ export function PersonasTab({ onOpenPersona }: { onOpenPersona?: (id: string) =>
         ))}
       </div>
 
-      <div className={SEC_H + " mb-1.5"}>Add personas</div>
+      <div className={SEC_H + " mb-1.5"}>{t("uiAddPersonas")}</div>
       <p className="text-[12px] text-muted mb-3 leading-relaxed">
         Load from a local directory or a public GitHub repo. Files are copied into a managed area (a
         snapshot), so the persona stays stable even if the source changes. No code runs — a persona only
@@ -214,7 +216,7 @@ export function PersonasTab({ onOpenPersona }: { onOpenPersona?: (id: string) =>
       <div className="flex items-center gap-2">
         <select className={SELECT} value={mode} onChange={(e) => setMode(e.target.value as "git" | "dir")}>
           <option value="git">GitHub URL</option>
-          <option value="dir">Local directory</option>
+          <option value="dir">{t("uiLocalDirectory")}</option>
         </select>
         <input
           className={INPUT}

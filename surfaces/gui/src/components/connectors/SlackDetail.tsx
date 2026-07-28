@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useT } from "../../i18n";
 import {
   addSlackApprovalOwner,
   allowUser,
@@ -53,6 +54,7 @@ function relayHealth(slack: SlackStatus | null): { dot: string; text: string } {
 }
 
 export function SlackDetail({ c, cloud, slack, onChanged }: DetailProps) {
+  const t = useT();
   const [adding, setAdding] = useState(false);
   const [subs, setSubs] = useState<Subscription[]>([]);
   const loadSubs = () => getSubscriptions().then(setSubs).catch(() => setSubs([]));
@@ -88,7 +90,7 @@ export function SlackDetail({ c, cloud, slack, onChanged }: DetailProps) {
                 </span>
               </>
             ) : (
-              <span>Not connected</span>
+              <span>{t("connNotConnected")}</span>
             )}
           </div>
         </div>
@@ -158,7 +160,7 @@ export function SlackDetail({ c, cloud, slack, onChanged }: DetailProps) {
 
       <ToolsDisclosure c={c} onChanged={onChanged} />
       {c.connected && (
-        <div className={FOOT + " mt-2"}>Names come from Slack automatically. IDs show on hover.</div>
+        <div className={FOOT + " mt-2"}>{t("connNamesFromSlack")}</div>
       )}
 
       {adding && (
@@ -303,13 +305,14 @@ function PeopleRow({
   onRemove: (userId: string) => void;
   onChanged: () => void;
 }) {
+  const t = useT();
   // The installer's chip reads "you" — their name may still be unresolved (it's
   // fetched lazily for outbound attribution), so fall back to a literal "You".
   const label = (u: string) =>
     names?.[u] || (u === installerId ? installerName || "You" : u);
   return (
     <div className={ROW}>
-      <span className={LABEL}>People</span>
+      <span className={LABEL}>{t("connPeople")}</span>
       <span className="min-w-0 flex-1 flex flex-wrap items-center gap-1.5">
         {allowed.length === 0 && (
           <span className="text-[12px] text-faint">nobody yet — pick a name, or approve a waiting sender below</span>
@@ -329,12 +332,12 @@ function PeopleRow({
             {protectedIds?.includes(u) ? (
               <span
                 className="text-[10.5px] text-faint"
-                title="Remove approval-owner access before removing this person."
+                title={t("connRemoveApprovalFirst")}
               >
                 · owner
               </span>
             ) : (
-              <button className={XBTN} title="remove" onClick={() => onRemove(u)}>
+              <button className={XBTN} title={t("connRemove")} onClick={() => onRemove(u)}>
                 ×
               </button>
             )}
@@ -364,6 +367,7 @@ function PersonPicker({
   buttonLabel?: string;
   testId?: string;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [rows, setRows] = useState<SlackMember[]>([]);
@@ -424,7 +428,7 @@ function PersonPicker({
         ref={btn}
         className="inline-flex items-center px-2 py-0.5 rounded-full border border-dashed border-line text-[12.5px] text-muted hover:text-ink hover:border-faint"
         data-testid={testId || `add-person-${teamId || "default"}`}
-        title="Pick from the workspace directory"
+        title={t("connPickFromDirectory")}
         onClick={toggle}
       >
         {buttonLabel}
@@ -438,7 +442,7 @@ function PersonPicker({
           <input
             autoFocus
             className="w-full bg-paper border border-line rounded-lg px-2 py-1 text-[12.5px] outline-none placeholder:text-faint"
-            placeholder="Type a name…"
+            placeholder={t("connTypeName")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => {
@@ -498,6 +502,7 @@ function ApprovalOwnersRow({
   editable: boolean;
   onChanged: () => void;
 }) {
+  const t = useT();
   const [err, setErr] = useState<string | null>(null);
   const label = (u: string) =>
     names?.[u] || (u === installerId ? installerName || "You" : u);
@@ -532,7 +537,7 @@ function ApprovalOwnersRow({
             {label(u)}
             {u === installerId && <span className="text-[10.5px] text-faint">· installer</span>}
             {editable && (
-              <button className={XBTN} title="remove approval owner" onClick={() => remove(u)}>
+              <button className={XBTN} title={t("connRemoveApprovalOwner")} onClick={() => remove(u)}>
                 ×
               </button>
             )}
@@ -549,7 +554,7 @@ function ApprovalOwnersRow({
           />
         )}
         {!editable && owners.length > 0 && (
-          <span className="text-[11.5px] text-faint">Set by the workspace installer.</span>
+          <span className="text-[11.5px] text-faint">{t("connSetByInstaller")}</span>
         )}
         {err && <span className="basis-full text-[11.5px] text-warnInk">{err}</span>}
       </span>
@@ -558,13 +563,14 @@ function ApprovalOwnersRow({
 }
 
 function WaitingRow({ m, onChanged }: { m: ParkedMessage; onChanged: () => void }) {
+  const t = useT();
   const act = async (action: "dismiss" | "allow" | "allow_deliver") => {
     await resolveUnauthorized("slack", m.id, action);
     onChanged();
   };
   return (
     <div className={ROW + " bg-warnSoft/25"} data-testid={`waiting-${m.id}`}>
-      <span className={LABEL}>Waiting</span>
+      <span className={LABEL}>{t("connWaiting")}</span>
       <span className="min-w-0 flex-1">
         <span className="font-medium text-[13px]">{m.user_name || m.user_id}</span>{" "}
         <span className="text-[12.5px] text-muted">in {m.chat_name || m.chat_id}</span>
@@ -586,7 +592,7 @@ function WaitingRow({ m, onChanged }: { m: ParkedMessage; onChanged: () => void 
       >
         Allow
       </button>
-      <button className={XBTN + " px-1"} data-testid={`parked-dismiss-${m.id}`} title="Dismiss" onClick={() => act("dismiss")}>
+      <button className={XBTN + " px-1"} data-testid={`parked-dismiss-${m.id}`} title={t("connDismiss")} onClick={() => act("dismiss")}>
         ×
       </button>
     </div>
@@ -594,10 +600,11 @@ function WaitingRow({ m, onChanged }: { m: ParkedMessage; onChanged: () => void 
 }
 
 function ListeningRows({ subs, onChanged }: { subs: Subscription[]; onChanged: () => void }) {
+  const t = useT();
   if (subs.length === 0) return null;
   return (
     <div className={ROW} data-testid="listening-slack">
-      <span className={LABEL}>Listening</span>
+      <span className={LABEL}>{t("connListening")}</span>
       <span className="min-w-0 flex-1 space-y-1">
         {subs.map((s) => (
           <span key={s.session_id + s.channel} className="flex items-center gap-2 text-[12.5px]">
@@ -610,7 +617,7 @@ function ListeningRows({ subs, onChanged }: { subs: Subscription[]; onChanged: (
             </span>
             <button
               className={XBTN + " ml-auto"}
-              title="Unsubscribe this session"
+              title={t("connUnsubscribe")}
               onClick={async () => {
                 await unsubscribeChannel(s.session_id, s.channel);
                 onChanged();

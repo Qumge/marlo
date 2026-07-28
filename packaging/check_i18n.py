@@ -35,7 +35,14 @@ SRC = ROOT / "surfaces" / "gui" / "src"
 BASELINE = Path(__file__).resolve().parent / "i18n_baseline.txt"
 
 # JSX 文本节点：>Some words< —— 至少两个词，或一个首字母大写的词。
-_TEXT = re.compile(r">\s*([A-Z][A-Za-z]*(?:[  ][A-Za-z][A-Za-z'’,.!?—-]*){0,10})\s*<")
+# 两个否定环视排掉类型签名：`=> Promise<boolean>` 里的 Promise 不是界面文字，
+# 而第一版把它算了进来（基线里躺着 5 条 Promise）。同一个错我在替换脚本里也
+# 犯过，那次是把 `=> Promise<void>` 改成了 `=> {t("…")}<void>`，直接编译不过。
+#   (?<![=!<>-])>  前一个字符不是 = ! < > -（排除 =>、->）
+#   <(?![A-Za-z])  后面不是标识符（排除泛型 <boolean>、<T>）
+_TEXT = re.compile(
+    r"(?<![=!<>-])>\s*([A-Z][A-Za-z]*(?:[  ][A-Za-z][A-Za-z'’,.!?—-]*){0,10})\s*<(?![A-Za-z])"
+)
 # 面向用户的属性
 _ATTR = re.compile(r'\b(?:placeholder|title|aria-label)="([^"{}]{2,80})"')
 

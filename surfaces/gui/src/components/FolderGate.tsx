@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useT } from "../i18n";
 import { getRecentWorkspaces, openWorkspace, type RecentWorkspace } from "../api";
 import { chooseFolder } from "../tauri";
 
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function FolderGate({ onChoose, onCancel, create }: Props) {
+  const t = useT();
   const [recents, setRecents] = useState<RecentWorkspace[]>([]);
   const [path, setPath] = useState("");
   const [error, setError] = useState("");
@@ -55,7 +57,7 @@ export function FolderGate({ onChoose, onCancel, create }: Props) {
             onKeyDown={(e) => e.key === "Enter" && open(path, create)}
             autoFocus
           />
-          <button className="btn" onClick={browse} title="Pick a folder">
+          <button className="btn" onClick={browse} title={t("uiPickFolder")}>
             Browse…
           </button>
           <button className="btn primary" onClick={() => open(path, create)} disabled={!path.trim()}>
@@ -66,7 +68,7 @@ export function FolderGate({ onChoose, onCancel, create }: Props) {
 
         {recents.length > 0 && (
           <>
-            <div className="gate-label">Recent</div>
+            <div className="gate-label">{t("uiRecentLabel")}</div>
             <div className="gate-recents">
               {recents.map((w) => (
                 <div className="gate-recent" key={w.path} onClick={() => open(w.path)} title={w.path}>

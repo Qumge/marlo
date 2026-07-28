@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useT } from "../i18n";
 import {
   getConnectors,
   getRecentChannels,
@@ -257,6 +258,7 @@ export function SubscriptionsChip({
   channels: string[];
   onChanged: () => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [recent, setRecent] = useState<RecentChannel[]>([]);
   const [draft, setDraft] = useState("");
@@ -288,23 +290,23 @@ export function SubscriptionsChip({
     <div className="sub-chip-wrap" ref={ref}>
       <button
         className={"wschip sub-chip" + (open ? " active" : "")}
-        title="Channels this session listens to"
+        title={t("uiChannelsListened")}
         onClick={() => setOpen((v) => !v)}
       >
         <Icon name="plug" size={12} /> {channels.length || "+"}
       </button>
       {open && (
         <div className="sub-pop" onMouseDown={(e) => e.stopPropagation()}>
-          <div className="sub-pop-head">Channels this session listens to</div>
+          <div className="sub-pop-head">{t("uiChannelsListened")}</div>
           {channels.length === 0 ? (
-            <div className="dim sub-pop-empty">Not subscribed to any channel.</div>
+            <div className="dim sub-pop-empty">{t("uiNoChannels")}</div>
           ) : (
             channels.map((c) => {
               const nm = recent.find((r) => r.channel === c)?.name;
               return (
               <div className="sub-pop-row" key={c}>
                 <span className="sub-pop-chan" title={c}>{nm ? `#${nm}` : c}</span>
-                <button className="sub-pop-x" title="Unsubscribe" onClick={() => remove(c)}>
+                <button className="sub-pop-x" title={t("uiUnsubscribe")} onClick={() => remove(c)}>
                   ×
                 </button>
               </div>

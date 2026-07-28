@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useT } from "../i18n";
 import type { Item } from "../types";
 import { chooseFolder } from "../tauri";
 import { Icon } from "./Icon";
@@ -14,6 +15,7 @@ export function DirectoryRequestCard({
   item: DirReqItem;
   onRespond: (granted: boolean, path?: string, writable?: boolean) => void;
 }) {
+  const t = useT();
   const [path, setPath] = useState(item.path || "");
   const [writable, setWritable] = useState(!!item.writable);
 
@@ -26,17 +28,17 @@ export function DirectoryRequestCard({
     <div className="dirreq-card">
       <div className="dirreq-head">
         <Icon name="folderPlus" size={16} className="ico" />
-        <span>The agent is requesting access to a folder</span>
+        <span>{t("uiFolderRequest")}</span>
       </div>
       {item.reason && <div className="dirreq-reason">“{item.reason}”</div>}
       <div className="dirreq-pathrow">
         <input
           className="dirreq-path"
-          placeholder="Choose or paste a folder path…"
+          placeholder={t("uiFolderPathPlaceholder")}
           value={path}
           onChange={(e) => setPath(e.target.value)}
         />
-        <button className="btn icon-only" onClick={browse} title="Choose location" aria-label="Choose location">
+        <button className="btn icon-only" onClick={browse} title={t("uiChooseLocation")} aria-label={t("uiChooseLocation")}>
           <Icon name="folder" size={15} />
         </button>
       </div>

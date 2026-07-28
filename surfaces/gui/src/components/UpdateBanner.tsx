@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useT } from "../i18n";
 import {
   checkForUpdate,
   clearPendingUpdate,
@@ -41,6 +42,7 @@ const RETRY_MS = [60_000, 5 * 60_000];
 type Phase = "downloading" | "ready" | "fallback" | "installing" | "error";
 
 export function UpdateBanner() {
+  const t = useT();
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
   const [phase, setPhase] = useState<Phase>("downloading");
   const [err, setErr] = useState("");
@@ -121,7 +123,7 @@ export function UpdateBanner() {
       role="status"
       data-testid="update-banner"
     >
-      <div className="text-[13px] font-semibold">Update available</div>
+      <div className="text-[13px] font-semibold">{t("uiUpdateAvailable")}</div>
       <div className="text-[12px] text-muted mt-0.5">
         Marlo v{update.version} is ready to install.
       </div>

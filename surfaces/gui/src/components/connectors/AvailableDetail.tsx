@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useT } from "../../i18n";
 import { type CloudStatus, type Connector } from "../../api";
 import { ConnectorBadge } from "../../connectors/ConnectorIcon";
 import { AddConnectionModal } from "./AddConnectionModal";
@@ -19,6 +20,7 @@ export function AvailableDetail({
   cloud: CloudStatus | null;
   onChanged: () => void;
 }) {
+  const t = useT();
   const [connecting, setConnecting] = useState(false);
   const [showTools, setShowTools] = useState(false);
   const tools = c.tools || [];
@@ -60,7 +62,7 @@ export function AvailableDetail({
 
       {tools.length > 0 && (
         <>
-          <div className={GRP_H}>Tools</div>
+          <div className={GRP_H}>{t("connTools")}</div>
           <div className={GRP}>
             <button
               className={ROW + " w-full text-left hover:bg-paper/60 text-[13px]"}

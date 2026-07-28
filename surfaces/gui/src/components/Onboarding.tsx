@@ -255,7 +255,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
              slot keeps its place but flips to a green congrats, and every row grows a quiet
              Connect pill. The gated Google pair is ONE combined grayed row. */
           <section data-testid="ob-step-tools" className="flex-1 min-h-0 flex flex-col">
-            <h1 className="text-[19px] font-semibold">Connect your everyday tools</h1>
+            <h1 className="text-[19px] font-semibold">{t("uiConnectTools")}</h1>
             <p className="text-[13px] text-muted mt-0.5 mb-3">
               Chat can only advise. Connected, your coworker does the actual work:
             </p>
@@ -307,7 +307,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
                     Coming soon — pending Google&rsquo;s app verification.
                   </span>
                 </span>
-                {cloud?.signed_in && <span className="text-[11.5px] text-faint shrink-0">Coming soon</span>}
+                {cloud?.signed_in && <span className="text-[11.5px] text-faint shrink-0">{t("uiComingSoon")}</span>}
               </div>
             </div>
 
@@ -416,7 +416,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
                 ◷
               </span>
               <span className="flex-1 min-w-0 text-left">
-                <b className="block text-[13.5px]">Create your first automation</b>
+                <b className="block text-[13.5px]">{t("uiFirstAutomation")}</b>
                 <span className="text-[12px] text-muted">
                   A weekly digest, a morning brief — pick a template, running in two minutes.
                 </span>
@@ -432,7 +432,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
                 ✦
               </span>
               <span className="flex-1 min-w-0 text-left">
-                <b className="block text-[13.5px]">Start working with Coworker</b>
+                <b className="block text-[13.5px]">{t("uiStartWorking")}</b>
                 <span className="text-[12px] text-muted">
                   Open a session and just ask — analyze files, draft, research, build.
                 </span>

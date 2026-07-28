@@ -10,6 +10,7 @@
 // to expand it and scroll it into view.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useT } from "../i18n";
 import {
   CLOUD_CHANGED,
   getCloudStatus,
@@ -36,7 +37,6 @@ import { ConnectSetup } from "./ManageTabs";
 import { RootRow } from "./RootRow";
 import { ChannelPicker } from "./SubscriptionsChip";
 import { Toggle } from "./Toggle";
-import { useT } from "../i18n";
 
 // A channel address's platform: "slack:C0123" → "slack"; a bare id or "#mention" defaults to
 // slack (the backend's own default when no platform prefix is given).
@@ -241,7 +241,7 @@ export function AccessSection({
         </button>
       </div>
       {open && (
-        <div className="rail-section-body" role="region" aria-label="Session access">
+        <div className="rail-section-body" role="region" aria-label={t("uiSessionAccess")}>
           {connectFor ? (
             <ConnectInline
               c={connectFor}
@@ -284,7 +284,7 @@ export function AccessSection({
             <div className="space-y-4">
               {/* Sources — each toggle is a per-session override (mute for THIS session only). */}
               <div>
-                <div className={`${SEC_H} mb-1.5`}>Sources</div>
+                <div className={`${SEC_H} mb-1.5`}>{t("uiSources")}</div>
                 {connected.length === 0 && (
                   <div className="text-[12px] text-faint py-0.5">
                     No connectors enabled for this session.
@@ -315,7 +315,7 @@ export function AccessSection({
                       <Toggle
                         checked={c.enabled}
                         onChange={(next) => toggleSession(c.connector, next)}
-                        title="Enabled for this session — tap to mute here"
+                        title={t("uiEnabledTapMute")}
                       />
                     </div>
                   ))}
@@ -332,7 +332,7 @@ export function AccessSection({
                   <div className="mt-1.5">
                     <input
                       className="w-full px-2.5 py-1.5 rounded-lg border border-line bg-panel text-[12.5px] outline-none focus:border-accent"
-                      placeholder="Search connectors…"
+                      placeholder={t("uiSearchConnectors")}
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       onKeyDown={(e) => {
@@ -389,7 +389,7 @@ export function AccessSection({
 
               {recommended.length > 0 && (
                 <div>
-                  <div className={`${SEC_H} mb-1.5`}>Recommended</div>
+                  <div className={`${SEC_H} mb-1.5`}>{t("uiRecommended")}</div>
                   <div className="space-y-1">
                     {recommended.map((r) => (
                       <div className="flex items-center gap-2 py-1" key={r.connector}>
@@ -425,7 +425,7 @@ export function AccessSection({
                   a quiet "+" link, structurally identical to Sources (owner ask 2026-07-13:
                   the old drawer's card wrapper read too heavy in the rail). */}
               <div data-testid="drawer-directories">
-                <div className={`${SEC_H} mb-1.5`}>Folders</div>
+                <div className={`${SEC_H} mb-1.5`}>{t("uiFolders")}</div>
                 <div className="-mx-1.5">
                   {roots.map((r) => (
                     <RootRow
@@ -487,6 +487,7 @@ function ConnectInline({
   onDone: () => void;
   onBack: () => void;
 }) {
+  const t = useT();
   useEffect(() => {
     const timer = setInterval(async () => {
       try {
@@ -504,7 +505,7 @@ function ConnectInline({
       <button
         className="inline-flex items-center gap-1 text-[12px] text-faint hover:text-ink mb-2"
         onClick={onBack}
-        aria-label="Back to sources"
+        aria-label={t("uiBackToSources")}
       >
         <Icon name="arrowLeft" size={13} /> Connect {c.title}
       </button>
@@ -545,12 +546,13 @@ function ChannelsInline({
   onRemove: (channel: string) => void;
   onBack: () => void;
 }) {
+  const t = useT();
   return (
     <div>
       <button
         className="inline-flex items-center gap-1 text-[12px] text-faint hover:text-ink mb-2"
         onClick={onBack}
-        aria-label="Back to sources"
+        aria-label={t("uiBackToSources")}
       >
         <Icon name="arrowLeft" size={13} /> {label} channels
       </button>
@@ -577,7 +579,7 @@ function ChannelsInline({
               )}
               <button
                 className="w-5 h-5 grid place-items-center text-faint hover:text-danger shrink-0"
-                title="Stop listening"
+                title={t("uiStopListening")}
                 onClick={() => onRemove(s.channel)}
               >
                 ×
@@ -586,7 +588,7 @@ function ChannelsInline({
           ))}
         </div>
       )}
-      <div className={`${SEC_H} mt-3 mb-1.5`}>Add a channel</div>
+      <div className={`${SEC_H} mt-3 mb-1.5`}>{t("uiAddChannel")}</div>
       <div className="flex items-center gap-1.5">
         <ChannelPicker value={draft} onChange={onDraft} recent={recent} onSubmit={onAdd} />
         <button className={BTN_ACCENT} disabled={!draft.trim()} onClick={onAdd}>
