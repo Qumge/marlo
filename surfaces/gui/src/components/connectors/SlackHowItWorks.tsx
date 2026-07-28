@@ -13,12 +13,8 @@ import type { SlackWorkspace } from "../../api";
 
 const KEY = "ocw.slack.howitworks.collapsed";
 const DUR = 8000; // per-scene loop, ms
-const TABS = ["Mention → session", "Threads stay connected", "Allow teammates"];
-const CAPTIONS = [
-  "Mention @OpenWorker in any channel it's invited to — a session opens here, and the answer lands back in Slack as a thread.",
-  "Mention it again inside the thread — the conversation continues in the same session, context intact. The thread is the session.",
-  "Teammates aren't auto-trusted: their first mention waits for your OK, then they're on the People list.",
-];
+const TABS = ["hiwMentionToSession", "hiwThreads", "hiwAllowTeammates"];
+const CAPTIONS = ["hiwCap1", "hiwCap2", "hiwTeammatesNote"];
 
 function readCollapsed(): boolean {
   try { return localStorage.getItem(KEY) === "1"; } catch { return false; }
@@ -81,10 +77,10 @@ export function SlackHowItWorks({ workspaces }: { workspaces: SlackWorkspace[] }
         <button
           className="ml-auto shrink-0 inline-flex items-center gap-1.5 text-[12px] text-muted hover:text-ink"
           data-testid="hiw-collapse"
-          title={collapsed ? "Show how mentions work" : "Collapse — reopen anytime"}
+          title={collapsed ? t("hiwShow") : t("hiwCollapse")}
           onClick={toggle}
         >
-          {collapsed ? "How it works" : "Hide"}
+          {collapsed ? t("hiwHowItWorks") : "Hide"}
           <span
             className="text-[9px] transition-transform"
             style={collapsed ? { transform: "rotate(-90deg)" } : undefined}
@@ -97,22 +93,22 @@ export function SlackHowItWorks({ workspaces }: { workspaces: SlackWorkspace[] }
         <span className="text-ok font-bold">✓ </span>
         {ws?.account || "Workspace"} connected
         {mine
-          ? " — you're on the People list, so your mentions get through."
-          : " — here's how mentions reach you."}
+          ? t("hiwOnPeopleList")
+          : t("hiwHowReach")}
       </div>
 
       {!collapsed && (
         <div className="mt-3">
           <div className="flex gap-1 border-b border-line mb-3">
-            {TABS.map((t, i) => (
+            {TABS.map((tabKey, i) => (
               <button
-                key={t}
+                key={tabKey}
                 className={"hiw-tab" + (i === tab ? " on" : "")}
                 data-testid={`hiw-tab-${i}`}
                 style={{ "--hiw-dur": `${DUR}ms` } as React.CSSProperties}
                 onClick={() => jump(i)}
               >
-                {t}
+                {t(tabKey as any)}
                 <span className="hiw-prog"><i /></span>
               </button>
             ))}
@@ -124,7 +120,7 @@ export function SlackHowItWorks({ workspaces }: { workspaces: SlackWorkspace[] }
             {tab === 2 && <SceneTeammates />}
           </div>
           <div className="mt-2.5 text-[12px] text-muted" data-testid="hiw-caption">
-            {CAPTIONS[tab]}
+            {t(CAPTIONS[tab] as any)}
           </div>
         </div>
       )}
@@ -328,7 +324,7 @@ function SceneMention({ meFirst, meInitial }: { meFirst: string; meInitial: stri
         </div>
       </SlackWin>
       <OwWin>
-        <OwRail hot="Summarize #launch-room" hotSub="via Slack · now" glow />
+        <OwRail hot={t("hiwSummarize")} hotSub={t("hiwViaSlackNow")} glow />
         <div className="hiw-owmain">
           <div className="hiw-owtitle hiw-k" style={d("2.6s")}>
             Summarize #launch-room <span className="hiw-via">via Slack</span>
@@ -405,7 +401,7 @@ function SceneThread({ meFirst, meInitial }: { meFirst: string; meInitial: strin
           <div className="hiw-ownav">◷ Automations</div>
           <div className="hiw-sect">{t("connRecent")}</div>
           <div className="hiw-sess hot hiw-stay hiw-glow" style={{ "--g": "2.4s" } as React.CSSProperties}>
-            <b>Summarize #launch-room</b>via Slack
+            <b>{t("hiwSummarize")}</b>via Slack
           </div>
           <div className="hiw-sess"><b>Jira vs Linear</b>{t("connCoworker")}</div>
         </div>
@@ -429,6 +425,7 @@ function SceneThread({ meFirst, meInitial }: { meFirst: string; meInitial: strin
 
 /* ---- scene 3: a teammate's first mention waits for your OK ---- */
 function SceneTeammates() {
+  const t = useT();
   return (
     <>
       <span className="hiw-spark" style={d("1.9s")} />
@@ -455,7 +452,7 @@ function SceneTeammates() {
         </div>
       </SlackWin>
       <OwWin>
-        <OwRail hot="Summarize #launch-room" hotSub="via Slack" />
+        <OwRail hot={t("hiwSummarize")} hotSub="via Slack" />
         <div className="hiw-owmain">
           <div className="hiw-owtitle">Slack — {WS_NAME}</div>
           <div className="hiw-waitrow hiw-k hiw-glow" style={d("2s", { "--g": "2.5s" })}>

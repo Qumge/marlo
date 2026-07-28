@@ -175,7 +175,7 @@ export function AccessSection({
     const channel = raw.includes(":") || raw.startsWith("#") ? raw : `${channelsFor}:${raw}`;
     const r = await subscribeChannel(sessionId, channel);
     if (!r.ok) {
-      setAddErr(r.error || "Couldn't add that channel.");
+      setAddErr(r.error || t("acAddChannelFailed"));
       return;
     }
     setAddErr(null);
@@ -556,10 +556,10 @@ function ChannelsInline({
       >
         <Icon name="arrowLeft" size={13} /> {label} channels
       </button>
-      <div className={`${SEC_H} mb-1.5`}>Subscribed channels · {channels.length}</div>
+      <div className={`${SEC_H} mb-1.5`}>{t("acSubscribedChannels")} · {channels.length}</div>
       {channels.length === 0 ? (
         <div className="text-[12px] text-faint py-0.5">
-          Not listening to any {label} channel yet.
+          {t("acNotListening")(label)}
         </div>
       ) : (
         <div className="space-y-1">
@@ -572,7 +572,7 @@ function ChannelsInline({
               {s.collision && (
                 <span
                   className="text-[10.5px] text-warnInk bg-warnSoft/70 border border-warnInk/15 rounded px-1 shrink-0"
-                  title="This channel is also this session's Inbox-routing target — inbound and outbound collide."
+                  title={t("acChannelCollide")}
                 >
                   ⚠
                 </span>

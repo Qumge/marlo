@@ -64,7 +64,7 @@ export function QumgeConnect({ onConnected }: { onConnected: () => void }) {
   const poll = async () => {
     const res: QumgeDevicePoll = await pollQumgeDevice().catch(() => ({
       status: "error",
-      error: "couldn't reach the sign-in server",
+      error: t("qcCantReachServer"),
     }));
     if (stoppedRef.current) return;
     if (res.interval !== undefined) intervalRef.current = clampInterval(res.interval);
@@ -134,7 +134,7 @@ export function QumgeConnect({ onConnected }: { onConnected: () => void }) {
           {/* The COMPLETE uri, the one carrying ?user_code=. Showing the bare
               address meant anyone who copied it still had to retype the code
               above it by hand — and copying was the only way through while
-              "Open browser" did nothing. */}
+              t("qcOpenBrowser") did nothing. */}
           <p className="text-[13px] text-muted select-all mt-1 break-all" data-testid="qumge-verification-uri">
             {verification_uri_complete || verification_uri}
           </p>

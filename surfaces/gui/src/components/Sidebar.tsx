@@ -799,12 +799,12 @@ export function Sidebar(props: Props) {
       <div className="space-y-1 px-1.5 pb-2 pt-0.5">
         {/* Body is flush inside the expanded group's fill (provided by the wrapper) so the header +
             its sessions read as one connected block — clear where a group ends and the next begins. */}
-        {/* No per-persona "New session" here — the top split button's ▾ already starts a session
+        {/* No per-persona t("sbNewSession") here — the top split button's ▾ already starts a session
             in any persona (it was redundant + the mock's grouped cards don't have it). */}
         {workspaceSurface ? (
           <>
             {/* Codex-style Projects: a "+" header affordance, then collapsible folders whose
-                rows carry a right-aligned compact age and truncate to PROJECT_PEEK + "Show more". */}
+                rows carry a right-aligned compact age and truncate to PROJECT_PEEK + t("uiShowMore"). */}
             <div className="flex items-center justify-between px-1.5 pt-1">
               <span className="text-[10.5px] uppercase tracking-[0.07em] text-faint font-semibold">
                 {t("uiProjects")}
@@ -943,7 +943,7 @@ export function Sidebar(props: Props) {
           <button
             className="nav-pin-btn w-7 h-7 grid place-items-center rounded-md text-faint hover:text-ink hover:bg-paper shrink-0"
             title={props.collapsed ? "Dock sidebar (⌘B)" : "Collapse sidebar (⌘B)"}
-            aria-label={props.collapsed ? "Dock sidebar" : "Collapse sidebar"}
+            aria-label={props.collapsed ? t("sbDock") : t("sbCollapse")}
             onClick={props.onCollapse}
           >
             <Icon name="sidebar" size={16} />

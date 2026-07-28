@@ -386,7 +386,7 @@ function ArtifactViewer({
         ) : content.kind === "office" ? (
           <div className="artifact-open-prompt">
             <Icon name="panelOpen" size={28} />
-            <p>This {/\.pptx?$/i.test(artifact.name) ? "PowerPoint" : "Word"} file can’t be previewed here.</p>
+            <p>This {/\.pptx?$/i.test(artifact.name) ? "PowerPoint" : "Word"} {t("rrNoPreview")}</p>
             <button className="btn sm" onClick={() => revealArtifact(sessionId, artifact.path, "open")}>
               {t("uiOpenDefaultApp")}
             </button>
@@ -515,7 +515,7 @@ function PdfViewer({ dataUrl }: { dataUrl: string }) {
     };
   }, [dataUrl]);
 
-  if (error) return <div className="rail-error artifact-table-note">Could not render PDF: {error}</div>;
+  if (error) return <div className="rail-error artifact-table-note">{t("rrPdfFailed")} {error}</div>;
   return (
     <div className="artifact-pdfjs">
       {loading && <div className="rail-muted artifact-table-note">{t("renderingPdf")}</div>}
@@ -553,7 +553,7 @@ function SheetViewer({ dataUrl }: { dataUrl: string }) {
     };
   }, [dataUrl]);
 
-  if (error) return <div className="rail-error artifact-table-note">Could not parse spreadsheet: {error}</div>;
+  if (error) return <div className="rail-error artifact-table-note">{t("rrSheetFailed")} {error}</div>;
   if (!sheets) return <div className="rail-muted artifact-table-note">{t("parsingSpreadsheet")}</div>;
   const sheet = sheets[active];
   return (

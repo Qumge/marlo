@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useT } from "../../i18n";
+import { t, useT } from "../../i18n";
 import {
   addSlackApprovalOwner,
   allowUser,
@@ -43,14 +43,14 @@ const LABEL = "text-[12.5px] text-muted w-24 shrink-0";
 /** The relay status line, one honest layer at a time: sign-in → socket → live.
  * Dot color + text; never a synthetic "Slack is down" claim. */
 function relayHealth(slack: SlackStatus | null): { dot: string; text: string } {
-  if (!slack) return { dot: "bg-ok", text: "Live · managed relay" };
+  if (!slack) return { dot: "bg-ok", text: t("cxLiveRelay") };
   if (!slack.signed_in)
-    return { dot: "bg-warnInk", text: "Sign-in needed — relaying is paused" };
+    return { dot: "bg-warnInk", text: t("cxRelayNeedsSignIn") };
   if (slack.relay.state === "offline")
-    return { dot: "bg-faint/60", text: "Offline — can't reach the relay" };
+    return { dot: "bg-faint/60", text: t("cxRelayOffline") };
   if (slack.relay.state === "reconnecting")
-    return { dot: "bg-warnInk", text: "Reconnecting to the relay…" };
-  return { dot: "bg-ok", text: "Live · managed relay" };
+    return { dot: "bg-warnInk", text: t("cxRelayReconnecting") };
+  return { dot: "bg-ok", text: t("cxLiveRelay") };
 }
 
 export function SlackDetail({ c, cloud, slack, onChanged }: DetailProps) {
@@ -273,15 +273,16 @@ function WorkspaceGroup({
 }
 
 function DisconnectBtn({ teamId, busy, onClick }: { teamId: string; busy: boolean; onClick: () => void }) {
+  const t = useT();
   return (
     <button
       className="text-[12.5px] text-danger/80 hover:text-danger shrink-0"
       data-testid={`disconnect-workspace-${teamId}`}
-      title="Stops relaying this workspace to this computer. The app stays installed in Slack."
+      title={t("cxStopRelaySlack")}
       onClick={onClick}
       disabled={busy}
     >
-      {busy ? "Disconnecting…" : "Disconnect workspace"}
+      {busy ? "Disconnecting…" : t("cxDisconnectWorkspace")}
     </button>
   );
 }
@@ -357,7 +358,7 @@ function PersonPicker({
   allowed,
   onChanged,
   onPick,
-  buttonLabel = "＋ Add person",
+  buttonLabel = t("cxPlusAddPerson"),
   testId,
 }: {
   teamId: string | null;
@@ -549,7 +550,7 @@ function ApprovalOwnersRow({
             allowed={owners}
             onChanged={onChanged}
             onPick={(m) => addSlackApprovalOwner(m.id, m.name)}
-            buttonLabel="＋ Add owner"
+            buttonLabel={t("cxPlusAddOwner")}
             testId="add-approval-owner"
           />
         )}

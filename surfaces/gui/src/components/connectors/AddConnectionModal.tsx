@@ -233,7 +233,7 @@ function SlackOneClick({ c, cloud }: { c: Connector; cloud: CloudStatus | null }
       </p>
       {cloud?.signed_in ? (
         <button className={PILL_ACCENT + " w-full !py-2"} data-testid="modal-add-to-slack" onClick={go} disabled={waiting}>
-          {waiting ? t("connCheckBrowser") : "Add to Slack"}
+          {waiting ? t("connCheckBrowser") : t("cxAddToSlack")}
         </button>
       ) : cloud ? (
         <CloudSignInInline />
@@ -305,8 +305,8 @@ function HubSpotOneClick({ c, cloud }: { c: Connector; cloud: CloudStatus | null
       <div className="space-y-1.5" data-testid="hubspot-access">
         {(
           [
-            ["read", "Read-only", "search and read contacts, companies, deals, tickets"],
-            ["write", "Read & write", "adds: log notes and tasks, update records, create contacts — never delete"],
+            ["read", t("rrReadOnly"), "search and read contacts, companies, deals, tickets"],
+            ["write", t("cxReadWrite"), t("cxHubspotWrites")],
           ] as const
         ).map(([value, label, blurb]) => (
           <label key={value} className="flex items-start gap-2 text-[13px] cursor-pointer">

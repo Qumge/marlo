@@ -703,13 +703,13 @@ export function App() {
           break;
         case "turn_end":
           if (d.status === "max_iterations_exceeded")
-            setItems((p) => [...p, { kind: "notice", tone: "warn", text: "Stopped: max iterations reached." }]);
+            setItems((p) => [...p, { kind: "notice", tone: "warn", text: t("appMaxIterations") }]);
           break;
         case "model_changed":
           // Mid-session switch (server-applied): update the header fact and drop the
           // persisted marker into the live transcript (replay renders it from history).
           if (d.model) setModel(d.model);
-          setItems((p) => [...p, { kind: "notice", tone: "info", text: d.text || "Model switched" }]);
+          setItems((p) => [...p, { kind: "notice", tone: "info", text: d.text || t("appModelSwitched") }]);
           break;
         case "interrupted":
           flushPartialStream();
@@ -725,7 +725,7 @@ export function App() {
         case "input_rejected":
           setItems((p) => [
             ...p,
-            { kind: "notice", tone: "warn", text: d.error || "That message was rejected." },
+            { kind: "notice", tone: "warn", text: d.error || t("appMessageRejected") },
           ]);
           break;
         case "turn_done":
@@ -1176,7 +1176,7 @@ export function App() {
           <Icon name="logo" size={38} />
         </div>
         <div className="boot-text">
-          {resumedExisting ? "Restoring your session…" : "Starting Marlo…"}
+          {resumedExisting ? t("appRestoring") : "Starting Marlo…"}
           <span className="beta-tag">{t("beta")}</span>
         </div>
       </div>
@@ -1389,7 +1389,7 @@ export function App() {
               </div>
             )}
             {/* §32: no session-settings row up here anymore — the §23 rest/hover/click glance
-                machinery retired with the drawer. "What can this touch" lives permanently on
+                machinery retired with the drawer. t("appWhatCanTouch") lives permanently on
                 the rail's Access section header; the panel toggle is the one entry. */}
           </div>
           {/* Center: title + facts subtitle (§22, amended: the ⋯ menu removed — the nav row's
@@ -1432,8 +1432,8 @@ export function App() {
                 className="topbar-icon-btn"
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => setRailHidden((h) => !h)}
-                aria-label={railHidden ? "Show side panel" : "Hide side panel"}
-                title={railHidden ? "Show side panel" : "Hide side panel"}
+                aria-label={railHidden ? t("appShowSidePanel") : t("appHideSidePanel")}
+                title={railHidden ? t("appShowSidePanel") : t("appHideSidePanel")}
               >
                 <Icon name="sidebarRight" size={16} />
               </button>
@@ -1481,7 +1481,7 @@ export function App() {
                   <div className="hero">
                     <h1 className="greeting">
                       <span className="mark">✦</span>
-                      {agent === "chat" ? "How can I help?" : "Let's build something."}
+                      {agent === "chat" ? t("appHowCanIHelp") : t("appLetsBuild")}
                     </h1>
                     {needsWorkspace(agent) && (
                       <div className="suggestions">

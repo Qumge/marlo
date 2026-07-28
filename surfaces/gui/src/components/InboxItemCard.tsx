@@ -104,7 +104,7 @@ export function InboxItemCard({
             className={item.data?.tool ? BTN_ACCENT : BTN_PRIMARY}
             onClick={() => onResolve(item.id, "allow")}
           >
-            {item.data?.tool ? "Allow once" : t("uiApprove")}
+            {item.data?.tool ? t("apAllowOnce") : t("uiApprove")}
           </button>
           {/* Task-persistent standing grant (§25) — present only when the approval was
               raised inside an automation run AND the call can carry a tool+target rule.
@@ -160,14 +160,14 @@ export function InboxItemCard({
             </div>
           )}
           {(allowText || options.length === 0) &&
-            textRow(options.length ? "Or type your own answer…" : "Your answer…")}
+            textRow(options.length ? t("icTypeOwn") : t("icYourAnswer"))}
         </>
       ) : item.kind === "directory" ? (
         <div className="flex items-center gap-2 mt-2.5">
           <button
             className={BTN_PRIMARY}
             disabled={!item.data?.path}
-            title={item.data?.path || "No folder was suggested"}
+            title={item.data?.path || t("icNoFolder")}
             onClick={() =>
               onResolve(
                 item.id,

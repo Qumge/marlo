@@ -66,7 +66,7 @@ export function ThinkingBlock({ text, live }: { text: string; live?: boolean }) 
       >
         <Icon name="chevronDown" size={12} className={"thinking-caret" + (open ? " open" : "")} />
         <span className={live ? "thinking-live" : undefined}>
-          {live ? "Thinking…" : "Thought process"}
+          {live ? "Thinking…" : t("trThoughtProcess")}
         </span>
       </button>
       {open && (
@@ -182,7 +182,7 @@ function StepRow({ tool, approval }: { tool: ToolItem; approval?: ApprovalItem }
           <span
             className="text-[11px] text-warnInk shrink-0"
             data-testid="tool-hidden-count"
-            title="Removed by your privacy filters before the agent saw the results — agents get no trace of these."
+            title={t("trPrivacyRemoved")}
           >
             {tool.hidden} hidden
           </span>
@@ -430,7 +430,7 @@ export function Transcript({ items, running, streamingText, onRetry }: Props) {
                 <span className={"status " + (item.resolved === "granted" ? "ok" : "denied")}>
                   {item.resolved === "granted" ? "✓" : "✕"}
                 </span>
-                <span>{item.resolved === "granted" ? "Granted folder access" : "Declined folder access"}</span>
+                <span>{item.resolved === "granted" ? t("trGrantedFolder") : t("trDeclinedFolder")}</span>
                 {item.path && <span className="dim">{item.path}</span>}
               </div>
             );
@@ -444,7 +444,7 @@ export function Transcript({ items, running, streamingText, onRetry }: Props) {
                   <span className={"status " + (item.resolved === "approved" ? "ok" : "denied")}>
                     {item.resolved === "approved" ? "✓" : "✕"}
                   </span>
-                  <span>{item.resolved === "approved" ? "Plan approved" : "Sent back with feedback"}</span>
+                  <span>{item.resolved === "approved" ? t("trPlanApproved") : t("trSentBack")}</span>
                 </div>
               </div>
             );

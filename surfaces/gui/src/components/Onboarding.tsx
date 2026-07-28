@@ -35,12 +35,12 @@ import { Spinner } from "./AutomationQuickstart";
 // combined grayed "Coming soon" row — both ride the same Google app, gated on
 // Google verification/CASA; give them rows when it lands.
 const TOOL_ROWS = [
-  { name: "outlook", benefit: "Stay on top of email", detail: "Outlook — triage mail, draft replies, run your calendar." },
-  { name: "slack", benefit: "Keep up with Slack", detail: "Slack — catch up, answer mentions, post updates." },
-  { name: "github", benefit: "Ship code", detail: "GitHub — review PRs, watch issues, reply to @mentions." },
-  { name: "notion", benefit: "Keep your notes in reach", detail: "Notion — search pages, query databases, draft docs." },
-  { name: "hubspot", benefit: "Keep the CRM current", detail: "HubSpot — update deals, log notes, prep calls." },
-  { name: "attio", benefit: "Track every relationship", detail: "Attio — search records, read timelines, log notes." },
+  { name: "outlook", benefit: "obStayOnEmail", detail: "obOutlook" },
+  { name: "slack", benefit: "obKeepSlack", detail: "obSlack" },
+  { name: "github", benefit: "obShipCode", detail: "obGithub" },
+  { name: "notion", benefit: "obKeepNotes", detail: "obNotion" },
+  { name: "hubspot", benefit: "obKeepCrm", detail: "obHubspot" },
+  { name: "attio", benefit: "obTrackRelations", detail: "obAttio" },
 ];
 const TOOLS_SOON = ["gmail", "google_calendar"];
 
@@ -271,14 +271,14 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
                   >
                     <ConnectorBadge connector={c} size={34} title={c.title} />
                     <span className="min-w-0 flex-1">
-                      <span className="block text-[13.5px] font-semibold leading-tight">{benefit}</span>
-                      <span className="block text-[12px] text-muted truncate">{detail}</span>
+                      <span className="block text-[13.5px] font-semibold leading-tight">{t(benefit as any)}</span>
+                      <span className="block text-[12px] text-muted truncate">{t(detail as any)}</span>
                     </span>
                     {cloud?.signed_in &&
                       (c.connected ? (
                         <span className="text-[12px] text-ok font-medium shrink-0">✓ Connected</span>
                       ) : pendingTool === name ? (
-                        <span className="text-[12px] text-muted shrink-0">Check your browser…</span>
+                        <span className="text-[12px] text-muted shrink-0">{t("connCheckBrowser2")}</span>
                       ) : (
                         <button
                           className="shrink-0 rounded-full border border-line px-4 py-1.5 text-[12.5px] font-medium hover:border-lineStrong"

@@ -155,7 +155,7 @@ export function useProviderSetup(opts?: { onSaved?: () => void }): ProviderSetup
     setVerify({ state: "testing" });
     const res = await verifyProvider(sel, fields).catch(() => ({ ok: false, error: "unreachable" }));
     if (!res.ok) {
-      setVerify({ state: "error", msg: res.error || "couldn't verify" });
+      setVerify({ state: "error", msg: res.error || t("prCouldNotVerify") });
       return false;
     }
     if (dirty || !info?.configured) await setProvider(sel, fields).catch(() => {});
@@ -225,7 +225,7 @@ export function useProviderSetup(opts?: { onSaved?: () => void }): ProviderSetup
     if (!p.needs_key)
       return (
         <span className="block text-[11.5px] text-faint truncate">
-          {keylessOk.has(p.name) ? <span className="text-ok font-medium">✓ Running</span> : "No key needed"}
+          {keylessOk.has(p.name) ? <span className="text-ok font-medium">✓ Running</span> : t("prNoKeyNeeded")}
         </span>
       );
     return <span className="block text-[11.5px] text-faint truncate">{t("prNotSetUp")}</span>;
@@ -412,7 +412,7 @@ export function ProviderForm({
             className="text-muted underline decoration-line underline-offset-2 hover:text-ink"
             onClick={() => openExternal(KEY_HELP[sel].url)}
           >
-            Create one at {KEY_HELP[sel].label} ↗
+            {t("prCreateOneAt")} {KEY_HELP[sel].label} ↗
           </button>{" "}
           — takes about a minute.
         </p>

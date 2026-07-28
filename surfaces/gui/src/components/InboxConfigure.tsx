@@ -86,7 +86,7 @@ function InboxRoutingCard() {
     const [platform, id] = addr.includes(":") ? addr.split(":", 2) : ["slack", addr];
     const result = await setInboxBinding("default", platform, id);
     if (!result.ok) {
-      setError(result.error || "Could not update Inbox routing.");
+      setError(result.error || t("ibUpdateFailed"));
       return;
     }
     setError(null);
@@ -96,7 +96,7 @@ function InboxRoutingCard() {
   const clear = async () => {
     const result = await setInboxBinding("default", null, "");
     if (!result.ok) {
-      setError(result.error || "Could not clear Inbox routing.");
+      setError(result.error || t("ibClearFailed"));
       return;
     }
     setError(null);
@@ -130,7 +130,7 @@ function InboxRoutingCard() {
       <p className="text-[12px] text-muted mb-3">
         Channel where an Unattended session posts Approve/Deny buttons. Currently mirroring to{" "}
         <strong className="text-ink font-medium" title={target || undefined}>
-          {known ? `#${known}` : target || "in-app Inbox only"}
+          {known ? `#${known}` : target || t("ibInAppOnly")}
         </strong>
         .
       </p>
@@ -280,7 +280,7 @@ function SubscriptionsCard() {
                   {s.collision && (
                     <span
                       className="ml-1.5 text-[11px] text-warnInk bg-warnSoft/70 border border-warnInk/15 rounded px-1.5 py-0.5"
-                      title="This channel is also your Inbox-routing target — inbound and outbound on one channel conflate broadcast with request/reply."
+                      title={t("ibChannelConflict2")}
                     >
                       ⚠ collides
                     </span>

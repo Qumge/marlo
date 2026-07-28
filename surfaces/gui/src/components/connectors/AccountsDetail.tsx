@@ -60,11 +60,11 @@ export function AccountsDetail({ c, cloud, slack: _slack, onChanged }: DetailPro
           disabled={busy}
           title={
             c.managed && !cloud?.signed_in
-              ? "Sign in to OpenWorker Cloud for one-click — or add a token below"
+              ? t("cxSignInOrToken")
               : ""
           }
         >
-          {busy ? "Check your browser…" : "＋ Add account"}
+          {busy ? t("connCheckBrowser2") : t("cxPlusAddAccount")}
         </button>
       </div>
 
@@ -82,7 +82,7 @@ export function AccountsDetail({ c, cloud, slack: _slack, onChanged }: DetailPro
       {(showManual || !c.connected) && (
         <>
           <div className={GRP_H + (accounts.length ? "" : " !mt-0")}>
-            {c.managed ? "Add manually" : "Add an account"}
+            {c.managed ? t("cxAddManually") : t("cxAddAccount")}
           </div>
           <div className={GRP} data-testid="accounts-manual-add">
             <div className="px-1.5 py-1">

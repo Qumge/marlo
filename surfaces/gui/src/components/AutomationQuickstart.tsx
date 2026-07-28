@@ -67,8 +67,8 @@ const TEMPLATES: QuickTemplate[] = [
     blurb: "tplGithubBlurb",
     cadence: "Weekly",
     conns: [
-      { name: "slack", why: "Where the digest posts" },
-      { name: "github", why: "What the digest summarizes" },
+      { name: "slack", why: t("aqDigestWhere") },
+      { name: "github", why: t("aqDigestWhat") },
     ],
     needsRepo: true,
     needsChannel: true,
@@ -85,8 +85,8 @@ const TEMPLATES: QuickTemplate[] = [
     blurb: "tplPipelineBlurb",
     cadence: "Weekly",
     conns: [
-      { name: "slack", why: "Where the digest posts" },
-      { name: "hubspot", why: "Pipeline and deal activity" },
+      { name: "slack", why: t("aqDigestWhere") },
+      { name: "hubspot", why: t("aqPipelineActivity") },
     ],
     needsChannel: true,
     consent: true,
@@ -103,8 +103,8 @@ const TEMPLATES: QuickTemplate[] = [
     blurb: "tplMorningBlurb",
     cadence: "Daily",
     conns: [
-      { name: "google_calendar", why: "Today's meetings and gaps" },
-      { name: "gmail", why: "What arrived overnight" },
+      { name: "google_calendar", why: t("aqTodayMeetings") },
+      { name: "gmail", why: t("aqOvernight") },
     ],
     deliver: true,
     day: "daily",
@@ -112,7 +112,7 @@ const TEMPLATES: QuickTemplate[] = [
     instructions: ({ deliver }) =>
       `Prepare a short morning brief: today's calendar events and gaps, plus email that ` +
       `arrived since yesterday evening. ` +
-      (deliver === "app" ? "Save it as the session deliverable." : "Send it to me as a Slack DM."),
+      (deliver === "app" ? t("aqSaveDeliverable") : t("aqSendSlackDm")),
   },
   {
     key: "news",
@@ -123,18 +123,18 @@ const TEMPLATES: QuickTemplate[] = [
     day: "daily",
     time: "08:00",
     instructions: () =>
-      "Search the web for the most important technology and world news from the last 24 hours " +
-      "and write a concise 5-bullet briefing, saved as a markdown file.",
+      t("aqSearchNewsPrompt") + " " +
+      t("aqBriefingSuffix"),
   },
   {
     key: "inboxdigest",
     title: "tplInboxDigest",
     blurb: "tplInboxBlurb",
     cadence: "freqWeekdays",
-    conns: [{ name: "gmail", why: "Your unread email" }],
+    conns: [{ name: "gmail", why: t("aqYourUnread") }],
     day: "weekdays",
     time: "09:00",
-    instructions: () => "Summarize my unread email into one short digest note.",
+    instructions: () => t("aqSummarizeEmail"),
   },
   {
     key: "cleanup",
@@ -144,7 +144,7 @@ const TEMPLATES: QuickTemplate[] = [
     conns: [],
     day: "fri",
     time: "17:30",
-    instructions: () => "Sort my recent Downloads into tidy folders by file type.",
+    instructions: () => t("aqSortDownloads"),
   },
 ];
 
@@ -299,7 +299,7 @@ export function AutomationQuickstart({
         .map((c) => connState(c.name)?.title || c.name)
         .join(" and ")} to continue`
     : picked?.needsChannel && !channel
-      ? "Pick a channel to post to first"
+      ? t("aqPickChannel")
       : "";
 
   const label = "block text-[12px] text-muted mt-3 mb-1";
@@ -367,7 +367,7 @@ export function AutomationQuickstart({
             </span>
             <span className="text-[14px] font-semibold">{tr(picked.title as any)}</span>
             <span className="ml-auto text-[12px] text-faint max-sm:hidden">
-              {picked.conns.length ? "Connections, delivery & schedule" : "Delivery & schedule"} ·{" "}
+              {picked.conns.length ? t("aqConnDelivery") : t("aqDeliverySchedule")} ·{" "}
               {tr(picked.cadence as any)}
             </span>
           </div>
@@ -388,7 +388,7 @@ export function AutomationQuickstart({
                     <span className="inline-flex items-center gap-2 text-[12px] text-muted">
                       <Spinner />
                       {flow.phase === "opening"
-                        ? "Opening browser…"
+                        ? t("aqOpeningBrowser2")
                         : t("tplWaitingFor")(c?.title || name)}
                     </span>
                   ) : (
@@ -411,7 +411,7 @@ export function AutomationQuickstart({
                     <span>↗</span>
                     <span className="flex-1 min-w-0">
                       <b className="text-ink font-medium">
-                        Finish connecting {c?.title || name} in your browser.
+                        {t("aqFinishInBrowser")(c?.title || name)}
                       </b>{" "}
                       Approve it there, then come back — this page updates by itself.
                     </span>
@@ -442,7 +442,7 @@ export function AutomationQuickstart({
                   <>
                     <span className="inline-flex items-center gap-2 text-[12px]">
                       <Spinner />
-                      {signinPhase === "opening" ? "Opening browser…" : "Waiting for sign-in…"}
+                      {signinPhase === "opening" ? t("aqOpeningBrowser2") : t("aqWaitingSignIn")}
                     </span>
                     {signinPhase === "waiting" && (
                       <span className="text-[11.5px] text-faint">
@@ -524,11 +524,11 @@ export function AutomationQuickstart({
                 <>
                   <label className={label}>{tr("autoDeliverTo")}</label>
                   <SelectMenu
-                    ariaLabel="Deliver to"
+                    ariaLabel={t("aqDeliverTo")}
                     value={deliver}
                     options={[
                       { value: "app", label: "deliverInApp" },
-                      { value: "slack", label: "Slack DM (connect Slack later)" },
+                      { value: "slack", label: t("aqSlackDmLater") },
                     ]}
                     onChange={(v) => setDeliver(v as "app" | "slack")}
                   />
@@ -583,7 +583,7 @@ export function AutomationQuickstart({
               onClick={create}
               data-testid="ob-create"
             >
-              {busy ? "Creating…" : "Create automation"}
+              {busy ? "Creating…" : t("aqCreate")}
             </button>
           </div>
         </div>

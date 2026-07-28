@@ -125,7 +125,7 @@ export function ScheduledView({ onOpenRun, onRunNow, initialOpenId }: Props) {
     <Shell>
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <PanelHead title={tr("autoTitle")} sub="Recurring tasks Marlo runs on a schedule." />
+          <PanelHead title={tr("autoTitle")} sub={t("svLede")} />
         </div>
         <button
           className="text-[12.5px] px-3 py-1.5 rounded-lg border border-lineStrong bg-panel hover:border-accent hover:text-accent shrink-0"
@@ -265,7 +265,7 @@ function NewAutomationForm({
             })
           }
         >
-          {busy ? "Creating…" : "Create automation"}
+          {busy ? "Creating…" : t("aqCreate")}
         </button>
         <button className="link" onClick={onCancel}>cancel</button>
       </div>

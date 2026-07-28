@@ -103,7 +103,7 @@ function PortalRow({ p, onChanged }: { p: HubSpotPortal; onChanged: () => void }
         {p.sandbox && <span className={TAG_WARN}>{t("connSandbox")}</span>}
         {p.access && (
           <span className={TAG_QUIET} data-testid={`hubspot-access-tag-${p.hub_id}`}>
-            {p.access === "write" ? "read & write" : "read-only"}
+            {p.access === "write" ? t("cxReadWriteLower") : "read-only"}
           </span>
         )}
         {!p.managed && <span className={TAG_QUIET}>private app</span>}

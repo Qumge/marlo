@@ -147,7 +147,7 @@ export function GalleryModal({
           [
             ["all", "All"],
             ["openworker", "From OpenWorker"],
-            ["team", "From your team"],
+            ["team", t("glFromTeam")],
           ] as [Source, string][]
         ).map(([key, label]) => (
           <button
@@ -242,10 +242,10 @@ export function GalleryModal({
         {visible.length === 0 && !unavailable && (
           <div className="text-[12.5px] text-muted py-4">
             {source === "team"
-              ? "Nothing shared with your team yet."
+              ? t("glNoneShared")
               : q
-              ? "No personas match your search."
-              : "No personas published yet."}
+              ? t("glNoMatch")
+              : t("glNonePublished")}
           </div>
         )}
       </div>
@@ -336,7 +336,7 @@ export function GalleryModal({
                 <div>
                   <span className="text-muted">Permissions: </span>
                   {caps.recommended_mode} mode
-                  {caps.messaging ? " · can use messaging" : ""}
+                  {caps.messaging ? t("glCanMsg") : ""}
                   {caps.mcp.length > 0 ? ` · MCP: ${caps.mcp.join(", ")}` : ""}
                 </div>
                 {(detail.recommends?.length ?? 0) > 0 && (
@@ -419,7 +419,7 @@ export function GalleryModal({
                 </div>
               </div>
               <button className={BTN_ACCENT} onClick={signIn} disabled={signingIn}>
-                {signingIn ? "Check your browser…" : "Sign in"}
+                {signingIn ? t("connCheckBrowser2") : t("glSignIn")}
               </button>
             </div>
           ) : detailSlug ? (

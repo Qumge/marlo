@@ -185,7 +185,7 @@ function statusLine(c: Connector): string {
   }
   if ((c.accounts?.length ?? 0) > 1) return `${c.accounts!.length} accounts`;
   if ((c.portals?.length ?? 0) > 1) return `${c.portals!.length} portals`;
-  if (c.auth === "none") return "Built in";
+  if (c.auth === "none") return t("cxBuiltIn");
   return c.account || "Connected";
 }
 

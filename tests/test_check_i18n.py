@@ -185,6 +185,46 @@ def test_it_sees_bare_literals_and_text_split_by_expressions():
     assert not any("rounded-full" in f or "example.com" in f or "menu-item" in f for f in found), found
 
 
+def test_it_sees_multiline_text_that_contains_an_expression():
+    """跨行【并且】含表达式的文本 —— 两条规则各差一点，合起来就是盲区。
+
+        <div className="…">
+          Marlo v{update.version} is ready to install.
+        </div>
+
+    _TEXT_ML 的字符类里排掉了 {}，_INTERP 又是逐行的，于是这一句两条都看不见。
+
+    【它是被另一把尺子逮住的】：2026-07-28 清完 219 条、这个守卫报 0 之后，是
+    「把界面渲染出来扫 DOM 里的字符」那条测试报出来的。源码这把尺子当时全绿。
+    一把尺子量不出自己的盲区 —— 这就是两把独立尺子的理由。
+    """
+    import tempfile
+
+    sample = (
+        'const a = (\n'
+        '  <div className="x">\n'
+        '    Marlo v{u.version} is ready to install.\n'
+        '  </div>\n'
+        ');\n'
+        'const b = (\n'
+        '  <div>\n'
+        '    {host}:{port}\n'          # 纯插值，不算
+        '  </div>\n'
+        ');\n'
+    )
+    with tempfile.TemporaryDirectory() as d:
+        src = Path(d)
+        (src / "Fixture.tsx").write_text(sample, encoding="utf-8")
+        original = mod.SRC
+        try:
+            mod.SRC = src
+            found = [f.split(": ", 1)[1] for f in mod.scan()]
+        finally:
+            mod.SRC = original
+    assert any("ready to install" in f for f in found), found
+    assert not any("host" in f for f in found), found
+
+
 def test_it_still_ignores_type_signatures_across_lines():
     # 跨行匹配放宽了边界，别把 `=> Promise<void>` 这类又收回来（基线里躺过 5 条）。
     for src in ("const f = () =>\n  doThing<void>\n", "type A = Map<\n  string\n>\n"):

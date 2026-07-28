@@ -213,7 +213,7 @@ function ComposerPickerCard({
                   type="checkbox"
                   checked
                   disabled={isDefault}
-                  title={isDefault ? "The default model is always shown — make another model default first" : "Remove from the picker"}
+                  title={isDefault ? t("mtDefaultAlwaysShown") : t("mtRemoveFromPicker")}
                   onChange={() => removeModel(id).then((r) => r.ok && onChanged())}
                 />
                 <span className="mlist-name" title={id}>
@@ -404,7 +404,7 @@ function McpRow({
         <div className="flex-1 min-w-0">
           <div className="text-[14px] font-medium">{server.name}</div>
           <div className="text-[11.5px] text-faint">
-            {server.transport} · {authorizing ? "signing in…" : server.status.replace("_", " ")}
+            {server.transport} · {authorizing ? t("mtSigningIn") : server.status.replace("_", " ")}
             {server.tool_count != null ? ` · ${server.tool_count} tools` : ""}
             {server.requires_approval ? " · asks" : ""}
             {isOauth ? " · oauth" : ""}
@@ -553,7 +553,7 @@ export function UnauthorizedBlock({
       data-testid={teamId ? `unauthorized-${c.name}-${teamId}` : `unauthorized-${c.name}`}
     >
       <div className={SEC_H + " mb-2"}>
-        Messages from senders you haven't allowed · {items.length}
+        {t("mtUnallowedSenders")} · {items.length}
       </div>
       <div className="space-y-2">
         {items.map((m) => (
@@ -612,7 +612,7 @@ export function ListeningSessionsBlock({ c }: { c: Connector }) {
   const mine = (subs ?? []).filter((s) => platformOf(s.channel) === c.name);
   return (
     <div className="border-t border-line px-3.5 py-3" data-testid={`listening-${c.name}`}>
-      <div className={SEC_H + " mb-2"}>Sessions listening to {c.title} channels · {mine.length}</div>
+      <div className={SEC_H + " mb-2"}>{t("mtListeningSessions")}{c.title} · {mine.length}</div>
       {mine.length === 0 ? (
         <div className="text-[12px] text-faint">
           {t("mtNoSubs")}
@@ -765,7 +765,7 @@ export function ConnectorTools({ c, onChanged }: { c: Connector; onChanged: () =
             <span className="min-w-0">
               <span className="block text-[13px]">{tool.label}</span>
               <span className="block text-[11.5px] text-faint">
-                {tool.name} · {tool.kind} · asks approval
+                {tool.name} · {tool.kind} · {t("mtAsksApproval")}
               </span>
               <span className="block text-[11.5px] text-faint">{tool.description}</span>
             </span>

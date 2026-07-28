@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useT } from "../../i18n";
+import { t, useT } from "../../i18n";
 import {
   disallowUser,
   disconnectGithubInstallation,
@@ -30,14 +30,14 @@ const LABEL = "text-[12.5px] text-muted w-24 shrink-0";
 
 /** The relay status line, one honest layer at a time (the Slack rule). */
 function relayHealth(gh: GithubStatus | null): { dot: string; text: string } {
-  if (!gh) return { dot: "bg-ok", text: "Live · managed relay" };
+  if (!gh) return { dot: "bg-ok", text: t("cxLiveRelay") };
   if (!gh.signed_in)
-    return { dot: "bg-warnInk", text: "Sign-in needed — relaying is paused" };
+    return { dot: "bg-warnInk", text: t("cxRelayNeedsSignIn") };
   if (gh.relay.state === "offline")
-    return { dot: "bg-faint/60", text: "Offline — can't reach the relay" };
+    return { dot: "bg-faint/60", text: t("cxRelayOffline") };
   if (gh.relay.state === "reconnecting")
-    return { dot: "bg-warnInk", text: "Reconnecting to the relay…" };
-  return { dot: "bg-ok", text: "Live · managed relay" };
+    return { dot: "bg-warnInk", text: t("cxRelayReconnecting") };
+  return { dot: "bg-ok", text: t("cxLiveRelay") };
 }
 
 export function GithubDetail({ c, cloud, onChanged }: DetailProps) {
@@ -78,7 +78,7 @@ export function GithubDetail({ c, cloud, onChanged }: DetailProps) {
                 <span data-testid="github-mode-badge">
                   {relay
                     ? relayHealth(status).text
-                    : "Connected · personal access token"}
+                    : t("cxConnectedPat")}
                 </span>
               </>
             ) : (
@@ -226,15 +226,16 @@ function InstallationGroup({
 }
 
 function DisconnectBtn({ id, busy, onClick }: { id: string; busy: boolean; onClick: () => void }) {
+  const t = useT();
   return (
     <button
       className="text-[12.5px] text-danger/80 hover:text-danger shrink-0"
       data-testid={`disconnect-install-${id}`}
-      title="Stops relaying this installation to this computer. The App stays installed on GitHub."
+      title={t("cxStopRelayGithub")}
       onClick={onClick}
       disabled={busy}
     >
-      {busy ? "Disconnecting…" : "Disconnect installation"}
+      {busy ? "Disconnecting…" : t("cxDisconnectInstall")}
     </button>
   );
 }

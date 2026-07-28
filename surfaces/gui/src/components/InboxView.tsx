@@ -125,7 +125,7 @@ export function InboxView({
     return (
       <button
         className="inbox-session-chip"
-        title={exists ? t("tplOpenLabel")(label) : "Session unavailable"}
+        title={exists ? t("tplOpenLabel")(label) : t("ivSessionUnavailable")}
         disabled={!exists}
         onClick={() =>
           exists && onOpenSession(it.session_id, it.session_workspace || "", it.session_agent || "cowork")
@@ -149,7 +149,7 @@ export function InboxView({
         <div className="max-w-4xl mx-auto px-7 py-6">
           <PanelHead
             title={t("uiInbox")}
-            sub="Approvals, questions, and notifications from your coworkers — including sessions running unattended."
+            sub={t("ivLede")}
           />
 
           <div className="flex gap-5 border-b border-line mb-4">
@@ -245,7 +245,7 @@ export function InboxView({
 
               {visible.length === 0 ? (
                 <div className="manage-empty">
-                  {items.length === 0 ? "Nothing pending." : "Nothing pending for this filter."}
+                  {items.length === 0 ? t("ivNonePending") : t("ivNoneForFilter")}
                 </div>
               ) : null}
 

@@ -54,13 +54,13 @@ export function CalendarDetail({ c, cloud, slack: _slack, onChanged }: DetailPro
           disabled={busy || !cloud?.signed_in || c.managed_paused}
           title={
             c.managed_paused
-              ? "One-click Google sign-in is coming soon"
+              ? t("cxGoogleSoon")
               : cloud?.signed_in
                 ? ""
-                : "Sign in to OpenWorker Cloud first"
+                : t("cxSignInCloudFirst")
           }
         >
-          {c.managed_paused ? "＋ Add account · Coming soon" : busy ? "Check your browser…" : "＋ Add account"}
+          {c.managed_paused ? t("cxPlusAddSoon") : busy ? t("connCheckBrowser2") : t("cxPlusAddAccount")}
         </button>
       </div>
 
@@ -68,7 +68,7 @@ export function CalendarDetail({ c, cloud, slack: _slack, onChanged }: DetailPro
         <div className={GRP}>
           <div className={ROW + " text-[12.5px] text-muted"}>
             Sign in with Google — each account stays separate, agents say which one they use.
-            {cloud?.signed_in ? "" : " Requires cloud sign-in."}
+            {cloud?.signed_in ? "" : t("cxRequiresCloud")}
           </div>
         </div>
       )}

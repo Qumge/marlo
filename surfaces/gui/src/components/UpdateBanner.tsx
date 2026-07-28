@@ -125,11 +125,11 @@ export function UpdateBanner() {
     >
       <div className="text-[13px] font-semibold">{t("uiUpdateAvailable")}</div>
       <div className="text-[12px] text-muted mt-0.5">
-        Marlo v{update.version} is ready to install.
+        {t("ubReadyToInstall")(update.version)}
       </div>
       {phase === "error" && (
         <div className="text-[11.5px] text-warnInk mt-1.5">
-          The update couldn't be installed — it will be offered again next launch.
+          {t("ubInstallFailed")}
           {err && <div className="mt-1 text-faint break-words">{err}</div>}
         </div>
       )}
@@ -140,7 +140,7 @@ export function UpdateBanner() {
           disabled={busy}
           data-testid="update-install"
         >
-          {busy ? "Downloading…" : "Restart to update"}
+          {busy ? "Downloading…" : t("ubRestartToUpdate")}
         </button>
         <button
           className="px-2 py-1.5 text-[12.5px] text-faint hover:text-muted"

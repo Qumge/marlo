@@ -93,7 +93,7 @@ export function ModelChecklist({
                 type="checkbox"
                 checked={checked(id)}
                 disabled={isDefault}
-                title={isDefault ? "The default model is always shown — make another model default first" : undefined}
+                title={isDefault ? t("mtDefaultAlwaysShown") : undefined}
                 onChange={(e) => tick(id, e.target.checked)}
               />
               <span className="mlist-name" title={id}>

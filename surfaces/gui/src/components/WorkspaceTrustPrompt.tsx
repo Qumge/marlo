@@ -19,7 +19,7 @@ export function WorkspaceTrustPrompt({
     const result = await setWorkspaceTrusted(request.workspace, true).catch(() => null);
     setSaving(false);
     if (!result?.ok) {
-      setError(result?.error || "Could not save workspace trust.");
+      setError(result?.error || t("wtSaveFailed"));
       return;
     }
     onClose();
@@ -49,7 +49,7 @@ export function WorkspaceTrustPrompt({
             {t("wtKeepAsking")}
           </button>
           <button className="btn primary" onClick={() => void trust()} disabled={saving}>
-            {saving ? "Saving…" : "Trust workspace"}
+            {saving ? "Saving…" : t("wtTrustWorkspace")}
           </button>
         </div>
       </div>

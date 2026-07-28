@@ -53,7 +53,7 @@ export function PersonaView({
     setError(null);
     getPersonaDetail(personaId)
       .then((d) => live && setDetail(d))
-      .catch(() => live && setError("Could not load this persona."));
+      .catch(() => live && setError(t("pvLoadFailed")));
     getConnectors()
       .then((list) => live && setByName(indexConnectors(list)))
       .catch(() => {});
@@ -228,7 +228,7 @@ export function PersonaView({
                       checked={c.enabled}
                       disabled={!c.connected}
                       onChange={(next) => toggleDefault(c.connector, next)}
-                      title={c.connected ? "On by default for new sessions" : "Connect this first"}
+                      title={c.connected ? t("pvOnByDefault") : t("pvConnectFirst")}
                     />
                   </div>
                 ))}

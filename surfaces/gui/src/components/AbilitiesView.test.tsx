@@ -6,7 +6,7 @@
 // （用户说要做什么，Marlo 自己去找），那仍然是主路径；但 owner 的判断是用户也要
 // 能自己搜、自己看——一个东西你完全看不见里面有什么，是很难信任它的。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { AbilitiesView } from "./AbilitiesView";
 import { setLocale } from "../i18n";
 
@@ -53,6 +53,19 @@ describe("能力页", () => {
     render(<AbilitiesView />);
     await waitFor(() => expect(screen.getByTestId("ability-autowhisper")).toBeTruthy());
     expect(screen.getByText("社交媒体内容创作与发布")).toBeTruthy();
+
+    // 【扫渲染结果，不数守卫的条数】。i18n 守卫 2026-07-28 报了四次"无新增"，而
+    // 界面上整屏是英文 —— 每次都是它的判据漏了一种形状。守卫量源码，这里量用户
+    // 真正看到的字符，两把独立的尺子都得过。
+    // 必须【显式】切到中文再扫：测试默认跑在 en 下，不切的话扫到的英文是对的，
+    // 而碰巧切过的话又会因为别的测试的副作用而通过 —— 两种都不是在测东西。
+    const { englishRunsIn } = await import("../i18n/no-english");
+    const { setLocale } = await import("../i18n");
+    act(() => setLocale("zh"));
+    await act(async () => {});
+    const runs = englishRunsIn(document.body);
+    act(() => setLocale("en"));
+    expect(runs).toEqual([]);
   });
 
   it("空状态要【解释机制】，不是给一个去逛逛的按钮", async () => {

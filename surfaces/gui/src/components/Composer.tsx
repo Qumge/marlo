@@ -296,7 +296,7 @@ export function Composer(props: Props) {
       if (dictation?.recording) {
         setDictationBusy("Transcribing…");
         const transcript = await stopDictation();
-        if (transcript === null) throw new Error("Could not transcribe your recording.");
+        if (transcript === null) throw new Error(t("cmpTranscribeFailed"));
         if (transcript.trim()) {
           setText((draft) => (draft.trim() ? `${draft.trimEnd()} ${transcript.trim()}` : transcript.trim()));
         }
@@ -306,17 +306,17 @@ export function Composer(props: Props) {
       }
 
       const status = dictation || (await getDictationStatus());
-      if (!status) throw new Error("Voice dictation is unavailable.");
+      if (!status) throw new Error(t("cmpVoiceUnavailable"));
       if (!status.supported || !status.model_verified || !status.test_passed) {
         props.onConfigureVoiceInput?.();
         return;
       }
-      setDictationBusy("Starting microphone…");
+      setDictationBusy(t("cmpStartingMic"));
       const recording = await startDictation();
-      if (!recording?.recording) throw new Error("Could not start the microphone.");
+      if (!recording?.recording) throw new Error(t("cmpMicFailed"));
       setDictation(recording);
     } catch (error) {
-      setDictationError(error instanceof Error ? error.message : "Voice dictation is unavailable.");
+      setDictationError(error instanceof Error ? error.message : t("cmpVoiceUnavailable"));
       const status = await getDictationStatus();
       if (status) setDictation(status);
     } finally {
@@ -418,11 +418,11 @@ export function Composer(props: Props) {
               <>
                 <div className="fixed inset-0 z-30" onClick={() => setAttachMenuOpen(false)} />
                 <div className="absolute z-40 bottom-full mb-1 left-0 min-w-[180px] rounded-xl border border-line bg-panel shadow-2xl py-1.5">
-                  {attachItem("image", "Photo or image", () => pickFiles("image/*"))}
+                  {attachItem("image", t("cmpPhotoOrImage"), () => pickFiles("image/*"))}
                   {attachItem("file", "PDF", () => pickFiles("application/pdf,.pdf"))}
                   {attachItem(
                     "fileCode",
-                    "Other files",
+                    t("cmpOtherFiles"),
                     () => pickFiles("text/*,.md,.csv,.json,.yaml,.yml,.log,.py,.ts,.tsx,.js,.rs,.go,.toml"),
                   )}
                 </div>
@@ -506,12 +506,12 @@ export function Composer(props: Props) {
               title={
                 dictationBusy ||
                 (dictation?.recording
-                  ? "Stop recording and transcribe"
+                  ? t("cmpStopAndTranscribe")
                   : voiceReady
-                    ? "Start local voice dictation"
-                    : "Configure Voice Input in Settings")
+                    ? t("cmpStartLocalDictation")
+                    : t("cmpConfigVoice"))
               }
-              aria-label={dictation?.recording ? "Stop dictation" : voiceReady ? "Start dictation" : "Configure Voice Input in Settings"}
+              aria-label={dictation?.recording ? t("cmpStopDictation") : voiceReady ? t("cmpStartDictation") : t("cmpConfigVoice")}
               aria-disabled={!voiceReady && !dictation?.recording}
             >
               <Icon name={dictation?.recording ? "stop" : "mic"} size={16} />
@@ -533,7 +533,7 @@ export function Composer(props: Props) {
               }
               onClick={submit}
               disabled={!props.connected || !!dictation?.recording || !!dictationBusy}
-              title={needsModel ? "Connect a model to send" : undefined}
+              title={needsModel ? t("cmpConnectModel") : undefined}
               aria-label={t("uiSend")}
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -571,7 +571,7 @@ function ModeMenu({
   return (
     <div className="relative">
       {/* Borderless, and it names the CHOSEN mode (owner ask 2026-07-11, competitor composer
-          comparison): "Ask for approval ⌄" not a generic "Mode ⌄" pill. aria-label stays
+          comparison): t("cmpAskApproval") not a generic "Mode ⌄" pill. aria-label stays
           "Mode" so the accessible name is stable across mode changes. */}
       <button
         className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[12px] text-muted hover:text-ink hover:bg-paper shrink-0"
@@ -581,7 +581,7 @@ function ModeMenu({
         aria-label={t("uiMode")}
         title={
           `Mode: ${current?.label || mode}` +
-          (unattended ? " · approvals go to the Inbox" : "")
+          (unattended ? t("cmpApprovalsInboxNote") : "")
         }
       >
         {current?.label || mode}

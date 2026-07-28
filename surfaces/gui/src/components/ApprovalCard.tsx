@@ -17,13 +17,13 @@ export function shortArgs(args: any): string {
 
 // Human verbs kept for the §25 grant lines (the card title now comes from humanize.ts).
 const TOOL_VERBS: Record<string, string> = {
-  write_file: "Write a file",
-  replace_in_file: "Edit a file",
-  apply_patch: "Apply a patch",
-  apply_unified_diff: "Apply a patch",
-  run_shell: "Run a command",
-  send_message: "Send a message",
-  send_file: "Send a file",
+  write_file: t("apWriteFile"),
+  replace_in_file: t("apEditFile"),
+  apply_patch: t("apApplyPatch"),
+  apply_unified_diff: t("apApplyPatch"),
+  run_shell: t("apRunCommand"),
+  send_message: t("apSendMessage"),
+  send_file: t("apSendFile"),
 };
 
 // §35: routine workspace writes render as a compact ROW; everything else is a full card.
@@ -245,10 +245,10 @@ export function ApprovalCard({
               <Icon name="file" size={13} />
             </span>
             {String(item.args?.path ?? "").split("/").pop() || "file"}
-            {item.args?.as_screenshot ? " · as a PNG screenshot" : ""}
+            {item.args?.as_screenshot ? t("apcAsPng") : ""}
           </span>
           {item.args?.comment && (
-            <MessagePreview text={String(item.args.comment)} label="With the message" />
+            <MessagePreview text={String(item.args.comment)} label={t("apWithMessage")} />
           )}
         </>
       )}
@@ -266,7 +266,7 @@ export function ApprovalCard({
               <span className="grant-line">
                 {TOOL_VERBS[g.tool] || g.tool} <code className="approval-tool">{g.target}</code>
                 <span className="grant-note">
-                  {g.access === "write" ? " — always allowed once you approve" : " — read-only"}
+                  {g.access === "write" ? t("apcAlwaysAfter") : t("apcReadOnly")}
                 </span>
               </span>
             </div>
@@ -283,7 +283,7 @@ export function ApprovalCard({
       {item.resolved ? (
         <div className="resolved">Approved: {item.resolved.replace("_", " ")}</div>
       ) : (
-        <Buttons item={item} onApprove={onApprove} runTask={runTask} primaryLabel="Allow once" />
+        <Buttons item={item} onApprove={onApprove} runTask={runTask} primaryLabel={t("apAllowOnce")} />
       )}
     </div>
   );

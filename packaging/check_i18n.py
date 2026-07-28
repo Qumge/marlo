@@ -69,6 +69,18 @@ _ATTR = re.compile(r'\b(?:placeholder|title|aria-label)="([^"{}]{2,80})"')
 #
 # 修法：整份文件按 > … < 匹配一次，允许中间跨行。不能直接放宽上面的 _TEXT ——
 # 那条逐行跑还有行号可报。
+# 【跨行 + 含表达式】。_TEXT_ML 的字符类里排掉了 {}，_INTERP 又是逐行的，于是
+#
+#   <div className="…">
+#     Marlo v{update.version} is ready to install.
+#   </div>
+#
+# 两条都看不见。2026-07-28 清完 219 条、守卫报 0 之后，是【渲染出来扫 DOM】那把
+# 尺子把它逮住的 —— 源码那把尺子当时是全绿的。两把独立的尺子，这就是理由。
+_TEXT_ML_INTERP = re.compile(
+    r"(?<![=!<>-])>\s*\n\s*([^<>\n]*\{[^{}\n]*\}[^<>\n]*)\s*\n\s*<(?![A-Za-z])"
+)
+
 _TEXT_ML = re.compile(
     r"(?<![=!<>-])>\s*\n\s*([A-Z\u2018\u2019\u201c\u201d][^<>{}\n]{2,120}?)\s*\n\s*<(?![A-Za-z])"
 )
@@ -88,7 +100,7 @@ _ATTR_KILL = re.compile(
     r'\b(?:className|data-testid|key|id|href|src|role|type|xmlns|d|viewBox|fill|stroke|style)'
     r'\s*=\s*"[^"]*"'
 )
-_BARE = re.compile(r'"([^"\n]{4,120})"')
+_BARE = re.compile(r'"([^"\n]{4,300})"')
 _INTERP = re.compile(r"(?<![=!<>-])>([^<>\n]*\{[^{}\n]*\}[^<>\n]*)<(?![A-Za-z])")
 _ENG = re.compile(r"\b[A-Za-z]{2,}\b")
 
@@ -105,6 +117,21 @@ def _looks_like_prose(s: str) -> bool:
     if re.search(r"[{}<>=;]|\bpx-|\btext-\[|\bflex\b|rounded|border-", s):  # 残留的 css
         return False
     if re.search(r"[()\[\]]\s*[?&|.]|[?&|]\s*[\w.]+\(|\)\s*$|^\s*\)", s):  # 跨过代码匹配出来的
+        return False
+    # tailwind 类名串（"bg-accentSoft text-accent font-semibold"）：每个词都是
+    # 一个类。上面那条只挡了 text-[…] 这种带方括号的，挡不住 text-warnInk。
+    if all(re.fullmatch(r"[a-z][\w-]*(?:-[\w./\[\]%]+)?|!?[a-z]+-[\w./\[\]%]+", w)
+           for w in s.split()) and re.search(r"-", s):
+        return False
+    # 逗号分隔的扩展名/mime 列表（<input accept=…>）
+    if re.fullmatch(r"[\w*/.,\s-]+", s) and s.count(",") >= 2:
+        return False
+    # npm 包名
+    if s.startswith("@") and "/" in s:
+        return False
+    # 以逗号或运算符【开头】的：正则从一个字符串的收尾引号吃到下一个的开头引号，
+    # 中间那截是代码（`, path: d.path ||`）。真正的文案不会这么开头。
+    if re.match(r"^\s*[,;:|&?]", s) or re.search(r"(\|\||&&|\?\?)\s*$", s):
         return False
     return True
 
@@ -179,6 +206,10 @@ ALLOWED = [
     # 全小写、无空格的：连接器 id / provider key（gmail、google_calendar、slack）。
     # 它们出现在 name: "gmail" 这种字段里 —— 是 key 不是文案，翻了会让查找失败。
     re.compile(r"^[a-z][a-z0-9_-]*$"),
+    # SVG 的 preserveAspectRatio 值、打包器的 worker 路径：都是给机器看的。
+    re.compile(r"^(xMidYMid slice|pdfjs-dist/.*)$"),
+    # 模拟 Slack 截图里那个虚构的工作区名（和 Emma W / Priya N 同一类）。
+    re.compile(r"^Lumina Labs$"),
     # 路径和快捷键：翻了就不对了。~/Marlo 是真实目录名，/path/to/your/project 是
     # 让人照着替换的样例，Esc 是键帽上印的字。
     re.compile(r"^(~/Marlo|/path/to/your/project|Esc)$"),
@@ -213,6 +244,13 @@ def scan() -> list[str]:
         # 的话整份基线在那个平台上全被当成新增（CI 实测 184 条全报，构建挂掉）。
         rel = path.relative_to(SRC).as_posix()
         # 跨行的文本节点：整份文件扫一次（逐行永远看不到它们）。
+        for m in _TEXT_ML_INTERP.finditer(text):
+            body = m.group(1)
+            plain = re.sub(r"\{[^{}]*\}", " ", body).strip()
+            if _looks_like_prose(plain) and 't("' not in body:
+                sm = " ".join(body.split())
+                if not _allowed(sm):
+                    found.append(f"{rel}: >{sm}<")
         for m in _TEXT_ML.finditer(text):
             sm = " ".join(m.group(1).split())
             if len(sm) >= 3 and not _allowed(sm):
@@ -221,6 +259,13 @@ def scan() -> list[str]:
             stripped = line.strip()
             if stripped.startswith(("//", "*", "/*")):
                 continue
+            # 【行尾注释也要切掉】。原来只跳过整行注释，于是
+            #   create?: boolean; // "New project" mode: …
+            # 里那个引号字符串被当成了界面文案。替换脚本已经只改代码部分，守卫
+            # 这边漏了同一件事 —— 两边判据不一致，守卫就会报一条永远改不掉的。
+            j = line.find("//")
+            if j != -1:
+                line = line[:j]
             clean = _ATTR_KILL.sub("", line)
             for m in _BARE.finditer(clean):
                 sm = m.group(1).strip()

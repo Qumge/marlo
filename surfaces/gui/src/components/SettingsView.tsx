@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useT } from "../i18n";
+import { t, useT } from "../i18n";
 import { LanguagePicker } from "./LanguagePicker";
 import {
   getSettings,
@@ -74,6 +74,7 @@ export function SettingsView({
   initialTab?: SetTab;
   onOpenPersona?: (id: string) => void;
 }) {
+  const t = useT();
   const tr = useT();
   // Personas is flag-gated (hidden for launch) — filter the tab AND coerce a stale
   // deep-link to it (openSettings("personas") callers) so the page never opens on a
@@ -114,7 +115,7 @@ export function SettingsView({
             <section>
               <PanelHead
                 title={tr("setModels")}
-                sub="Providers and the models offered in the composer's picker. Keys are stored only on this computer."
+                sub={t("setModelsLede")}
               />
               <ModelsTab />
               {/* Token savings is model-spend behavior, so it lives here (UX-021),
@@ -136,7 +137,7 @@ export function SettingsView({
 
 // -- Voice input: deliberate model provisioning + compatibility + microphone test (§37) --------
 const voiceError = (error: unknown) =>
-  error instanceof Error ? error.message : typeof error === "string" ? error : "Voice Input could not complete that action.";
+  error instanceof Error ? error.message : typeof error === "string" ? error : t("setVoiceActionFailed");
 
 const formatBytes = (bytes: number) => {
   if (!bytes) return "0 MiB";
@@ -220,7 +221,7 @@ function VoiceInputSection() {
   };
 
   const remove = async () => {
-    if (!window.confirm("Delete the local Whisper model and disable Voice Input?")) return;
+    if (!window.confirm(t("setDeleteWhisper"))) return;
     setError(null);
     try {
       publish(await deleteDictationModel());
@@ -239,7 +240,7 @@ function VoiceInputSection() {
         setPhase("transcribing");
         const transcript = (await stopDictation()).trim();
         setTestTranscript(transcript);
-        if (!transcript) throw new Error("No speech was detected. Try again and speak for a little longer.");
+        if (!transcript) throw new Error(t("setNoSpeech"));
         publish(await markDictationTestPassed());
       } else {
         setTestTranscript("");
@@ -264,7 +265,7 @@ function VoiceInputSection() {
     <section>
       <PanelHead
         title={tr("setVoiceInput")}
-        sub="Speak naturally in the composer. Recordings and transcripts stay on this device."
+        sub={t("setVoiceLede")}
       />
 
       {!desktop ? (
@@ -280,7 +281,7 @@ function VoiceInputSection() {
               <Icon name="code" size={18} className="text-accent mt-0.5" />
               <div className="min-w-0 flex-1">
                 <div className="text-[13.5px] font-medium">{tr("setThisDevice")}</div>
-                <div className="text-[12px] text-muted mt-1">{status?.device_summary || "Checking compatibility…"}</div>
+                <div className="text-[12px] text-muted mt-1">{status?.device_summary || t("setCheckingCompat")}</div>
                 {status?.compatibility_reason && <div className="text-[12px] text-red-600 mt-1.5">{status.compatibility_reason}</div>}
               </div>
               {status && (
@@ -334,12 +335,12 @@ function VoiceInputSection() {
               <div className="min-w-0 flex-1">
                 <div className="text-[13.5px] font-medium">{tr("setMicTest")}</div>
                 <div className="text-[12px] text-muted mt-0.5">
-                  {ready ? "Your microphone and local transcription engine are working." : "Record a short phrase to enable the composer microphone."}
+                  {ready ? t("setMicWorks") : t("setRecordPhrase")}
                 </div>
               </div>
               {ready && <span className="text-[11.5px] px-2 py-1 rounded-full bg-green-50 text-green-700">● Ready</span>}
               <button className={BTN_BORDERED} disabled={!status?.supported || !status?.model_verified || phase === "transcribing"} onClick={() => void toggleTest()}>
-                {status?.recording ? "Stop and check" : phase === "transcribing" ? "Transcribing…" : ready ? "Test again" : "Test microphone"}
+                {status?.recording ? t("setStopAndCheck") : phase === "transcribing" ? "Transcribing…" : ready ? t("setTestAgain") : t("setTestMic")}
               </button>
             </div>
             {status?.recording && <div className="border-t border-line px-4 py-3 text-[12px] text-accent" role="status">● Listening… speak a short phrase, then stop.</div>}
@@ -366,7 +367,7 @@ function PersonasSection({ onOpenPersona }: { onOpenPersona?: (id: string) => vo
     <section>
       <PanelHead
         title={tr("setPersonas")}
-        sub="Which coworkers are enabled and shown in the picker, plus installing new persona bundles."
+        sub={t("setPersonasLede")}
       />
       <PersonasTab key={galleryBump} onOpenPersona={onOpenPersona} />
       <button
@@ -418,7 +419,7 @@ function AppearanceSection() {
 
   return (
     <section>
-      <PanelHead title={tr("setGeneral")} sub="How Marlo looks and behaves on this machine." />
+      <PanelHead title={tr("setGeneral")} sub={t("setAppearanceLede")} />
 
       {/* Language sits at the top of General: it is the setting most likely to be
           wrong for a reader who arrived from a non-English page, and the one that
@@ -521,8 +522,8 @@ function TrustedWorkspacesCard() {
                 <div className="text-[11.5px] text-muted mt-0.5">
                   {workspace.requested_commands.length
                     ? t("tplProjectAllowances")(workspace.requested_commands.length)
-                    : "No project command allowances currently declared"}
-                  {!workspace.exists ? " · Folder unavailable" : ""}
+                    : t("setNoAllowances")}
+                  {!workspace.exists ? t("setFolderNa") : ""}
                 </div>
               </div>
               <button
@@ -540,6 +541,7 @@ function TrustedWorkspacesCard() {
 }
 
 function UpdateInline() {
+  const t = useT();
   const [state, setState] = useState<"idle" | "checking" | "none" | "found" | "installing" | "error">("idle");
   const [version, setVersion] = useState("");
   // 真正的失败原因。原来只留一个 "error" 状态、显示一句"稍后再试"——0.3.3 发出去
@@ -577,7 +579,7 @@ function UpdateInline() {
     <span className="inline-flex items-center gap-2.5">
       {state === "found" ? (
         <button className={BTN_BORDERED} onClick={install} data-testid="settings-update-install">
-          Update to v{version} and restart
+          {t("setUpdateAndRestart")(version)}
         </button>
       ) : (
         <button
@@ -586,16 +588,16 @@ function UpdateInline() {
           disabled={state === "checking" || state === "installing"}
           data-testid="settings-update-check"
         >
-          {state === "checking" ? "Checking…" : "Check for updates"}
+          {state === "checking" ? "Checking…" : t("setCheckUpdates")}
         </button>
       )}
       {(state === "none" || state === "error" || state === "installing") && (
         <span className="text-[12px] text-muted">
           {state === "none"
-            ? "You're on the latest version."
+            ? t("setUpToDate")
             : state === "error"
               ? `Couldn't check: ${err || "unknown error"}`
-              : "Downloading — Marlo restarts by itself when it's ready."}
+              : t("setDownloadingUpdate")}
         </span>
       )}
     </span>
@@ -762,10 +764,10 @@ function FilesCard() {
     setScratchMsg(null);
     const res = await setScratchBase(scratchDraft.trim());
     if (res.ok) {
-      setScratchMsg("Saved. New conversations will use this location.");
+      setScratchMsg(t("setLocationSaved"));
       refresh();
     } else {
-      setScratchMsg(res.error || "Could not use that location.");
+      setScratchMsg(res.error || t("setBadLocation"));
     }
   };
   const browseScratch = async () => {

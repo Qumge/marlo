@@ -28,10 +28,10 @@ export function CloudSignInInline({ blurb }: { blurb?: string }) {
           });
         }}
       >
-        {waiting ? "Check your browser…" : t("aqSignInCloud")}
+        {waiting ? t("connCheckBrowser2") : t("aqSignInCloud")}
       </button>
       <div className="text-[11.5px] text-faint">
-        {blurb || "Sign-in unlocks one-click connects — or switch to Manual, which works without it."}
+        {blurb || t("cxSignInUnlocksOrManual")}
       </div>
     </div>
   );

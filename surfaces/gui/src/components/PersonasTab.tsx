@@ -245,7 +245,7 @@ export function PersonasTab({ onOpenPersona }: { onOpenPersona?: (id: string) =>
                 {c.mcp.length ? ` · mcp: ${c.mcp.join(", ")}` : ""}
               </div>
               <div className="text-[12px] text-faint mt-1">
-                Recommended mode: {c.recommended_mode}. Enable it above to use it.
+                {t("psRecommendedMode")(c.recommended_mode)}
               </div>
             </div>
           ))}

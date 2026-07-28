@@ -252,6 +252,11 @@ describe("Onboarding — step 0 (Task 4: connect to Qumge, not the gallery)", ()
     render(<Onboarding onDone={() => {}} />);
     await act(async () => {});
 
+    // 【扫渲染结果，不数守卫的条数】。守卫今天四次报"无新增"而界面是英文 ——
+    // 它量源码、这里量用户看到的字符，两把尺子必须都过。
+    const { englishRunsIn } = await import("../i18n/no-english");
+    expect(englishRunsIn(screen.getByTestId("onboarding") as HTMLElement)).toEqual([]);
+
     const box = screen.getByTestId("onboarding").textContent || "";
     expect(box).toContain("连上 Qumge 就能开始");
     expect(box).toContain("改用我自己的 API key");
