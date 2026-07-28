@@ -155,8 +155,13 @@ def build_engine(
         LocalExecutor(cwd=ws) if (agent.needs_workspace and ws is not None) else None
     )
     todo = TodoList()
+    # SkillLoader 要在 context 之前建：skills_catalog 能力（search_skills /
+    # install_skill）需要拿到它，装完技能后 refresh，本轮 load_skill 才看得见。
+    # 【必须是同一个实例】—— 建两个的话，装的那个刷新了，读的那个还是旧的。
+    skill_loader = SkillLoader(_skill_dirs(ws))
     context = AgentContext(
-        workspace=ws, executor=executor, todo=todo, roots=root_list or None
+        workspace=ws, executor=executor, todo=todo, roots=root_list or None,
+        skill_loader=skill_loader,
     )
 
     registry = ToolRegistry()
@@ -260,7 +265,6 @@ def build_engine(
         if block:
             instructions = f"{instructions}\n\n{block}"
 
-    skill_loader = SkillLoader(_skill_dirs(ws))
     registry.register_all(skill_tools(skill_loader))
     catalog = skill_catalog_text(skill_loader)
     if catalog:

@@ -122,6 +122,28 @@ def _connect(context: AgentContext) -> list:
     return [request_connector_tool(names)]
 
 
+def _skills_catalog(context: AgentContext) -> list:
+    """search_skills / install_skill —— 让 agent 自己去 Qumge 的目录里找技能。
+
+    【为什么必须给】：cowork 的提示词一直写着 "search the skill catalog with the
+    user's own words first"，而它实际拿到的工具里没有任何能碰目录的东西 ——
+    2026-07-28 跑端到端时从会话历史数出来的：九轮只用了 read_file / write_file /
+    list_files / run_shell / todo_write。提示词让它做一件它做不到的事。
+
+    【为什么不能让用户自己装】：Marlo 的用户是中小商家的白领，不懂什么是 skill，
+    也不会去翻四千条目录。他只会说"帮我把这些发票整理一下"。找技能这件事要是
+    需要他先做，这个目录对他就等于不存在。
+
+    loader 由 agent.py 建好后塞进 context —— 装完要 refresh 它，本轮才用得上。
+    """
+    loader = getattr(context, "skill_loader", None)
+    if loader is None:
+        return []
+    from .tools.skills_catalog import catalog_tools
+
+    return catalog_tools(loader)
+
+
 def _documents(context: AgentContext) -> list:
     """write_docx / write_xlsx — the formats a deliverable is actually handed over in.
 
@@ -173,6 +195,14 @@ _CAPS: list[Capability] = [
         build=_documents,
         requires=("workspace",),
         risk=(RiskClass.WRITE_LOCAL,),
+    ),
+    Capability(
+        id="skills_catalog",
+        name="Skill catalog",
+        description="Search Qumge's public skill catalog and install what fits the task.",
+        build=_skills_catalog,
+        requires=(),
+        risk=(RiskClass.READ, RiskClass.WRITE_LOCAL),
     ),
     Capability(
         id="connect",

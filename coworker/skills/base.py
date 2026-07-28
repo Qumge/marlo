@@ -27,9 +27,24 @@ class Skill:
 
 class SkillLoader:
     def __init__(self, dirs: list[str | Path]) -> None:
+        # 目录要留着：装完一个新技能之后得能重扫一遍（refresh）。
+        self._dirs = [Path(d) for d in dirs]
         self._skills: dict[str, Skill] = {}
-        for directory in dirs:
-            self._discover(Path(directory))
+        self._scan()
+
+    def _scan(self) -> None:
+        for directory in self._dirs:
+            self._discover(directory)
+
+    def refresh(self) -> None:
+        """重新扫一遍技能目录。
+
+        agent 在会话中途装了新技能时调这个 —— SkillLoader 只在会话启动时扫过，
+        不重扫的话装完立刻 load_skill 会拿到 "unknown skill"，agent 会以为装
+        失败了，去重装或者干脆放弃。装了但用不上，比没装更让人困惑。
+        """
+        self._skills.clear()
+        self._scan()
 
     def _discover(self, directory: Path) -> None:
         if not directory.is_dir():

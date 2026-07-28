@@ -23,6 +23,10 @@ class AgentContext:
     # When None, tools fall back to the single `workspace` root. Held by reference so runtime
     # add/remove of folders is seen by the file tools built from it.
     roots: Optional[list] = None
+    # 这个会话的 SkillLoader。skills_catalog 能力要用它：装完一个新技能之后
+    # refresh 一下，本轮 load_skill 才看得见 —— 不然 agent 装完立刻读会拿到
+    # "unknown skill"，以为装失败了。
+    skill_loader: Optional[Any] = None
 
 
 @dataclass
