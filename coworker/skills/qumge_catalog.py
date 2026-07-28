@@ -139,6 +139,22 @@ def search(
     return {"results": out, "has_more": "more available" in text}
 
 
+# 网关能路由到的模型 —— 给模型设置页用。
+#
+# 这个模块名字里是 skills，但它其实是"和 qumge 的 MCP 说话"的那一层：同一个端点、
+# 同一套 JSON-RPC。为一个工具再开一个模块，只会多一处要跟着 MCP 契约走的地方。
+_MODEL = re.compile(r"^\s*(qumge:\S+)\s*\n\s*(.+?)\s*$", re.MULTILINE)
+
+
+def models(query: str = "", *, limit: int = 30, client: Optional[httpx.Client] = None) -> list[dict[str, str]]:
+    """返回 [{id, label}]。id 是可以直接用的完整模型 id。"""
+    args: dict[str, Any] = {"limit": limit}
+    if query.strip():
+        args["query"] = query.strip()
+    text = _call("list_models", args, client=client)
+    return [{"id": m.group(1), "label": m.group(2)} for m in _MODEL.finditer(text)]
+
+
 def detail(slug: str, *, client: Optional[httpx.Client] = None) -> str:
     """一条技能的完整正文（框内那部分），给「装之前先看看」用。
 

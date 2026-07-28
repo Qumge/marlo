@@ -213,6 +213,11 @@ export const en = {
   abilitiesView: "What it does",
   abilitiesClose: "Close",
   abilitiesUntrusted: "This text comes from a public catalog. Marlo reads it as guidance, never as orders.",
+  gatewayBrowse: "Browse Qumge models",
+  gatewaySearch: "Filter by name or vendor…",
+  gatewayHint: "One key, every model below. Add the ones you want in the picker.",
+  gatewayAdd: "Add",
+  gatewayAdded: "Added",
   scheduledOnlyWhileOpen: "Runs only while Marlo is open — a missed schedule catches up once when you next open it.",
 
   // -- 设置页 ---------------------------------------------------------------

@@ -172,6 +172,11 @@ export const zh: Strings = {
   abilitiesView: "看看它做什么",
   abilitiesClose: "关闭",
   abilitiesUntrusted: "这段文字来自公开目录。Marlo 把它当参考读，不当命令执行。",
+  gatewayBrowse: "浏览 Qumge 的模型",
+  gatewaySearch: "按名字或厂商筛选…",
+  gatewayHint: "一个 key，下面每个都能用。把你想要的加进选择器。",
+  gatewayAdd: "加入",
+  gatewayAdded: "已加入",
   scheduledOnlyWhileOpen: "只在 Marlo 开着的时候跑 —— 错过的那次会在你下次打开时补上一遍。",
 
   // -- 设置页 ---------------------------------------------------------------

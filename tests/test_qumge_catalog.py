@@ -100,6 +100,30 @@ def test_search_of_nothing_is_not_a_network_call():
     assert r["results"] == [] and r["has_more"] is False
 
 
+MODELS_TEXT = """6 model(s) on the Qumge gateway, most used first.
+Use the full id (the `qumge:` line) as the model.
+
+  qumge:claude-opus-5
+    Claude Opus 5 · $5.00/$25.00 per Mtok · vision
+  qumge:gpt-5.6-sol
+    OpenAI: GPT-5.6 Sol · $5.00/$30.00 per Mtok · vision
+"""
+
+
+def test_models_returns_ids_that_can_be_used_verbatim():
+    # 这条工具存在的全部理由就是省掉"手打完整 id"。少了 qumge: 前缀，用户抄过去
+    # 是不能用的。
+    r = q.models(client=_Fake(MODELS_TEXT))
+    assert [m["id"] for m in r] == ["qumge:claude-opus-5", "qumge:gpt-5.6-sol"]
+    assert all(m["id"].startswith("qumge:") for m in r)
+    # 标签里要有价格 —— 一个要为 token 付钱的人，选之前得看得到。
+    assert "$5.00" in r[0]["label"]
+
+
+def test_models_survives_a_catalog_that_says_nothing():
+    assert q.models(client=_Fake("No models match 'zzz'.")) == []
+
+
 def test_detail_shows_exactly_what_install_would_write(state):
     """「看看它做什么」读到的，必须【就是】将来落到磁盘上的那段文字。
 

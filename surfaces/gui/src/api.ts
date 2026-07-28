@@ -634,6 +634,17 @@ export async function searchSkills(
   return res.json();
 }
 
+/** 网关能路由到的模型 —— 免得用户手打完整 id。 */
+export interface GatewayModel {
+  id: string;
+  label: string;
+}
+
+export async function gatewayModels(q = ""): Promise<{ models: GatewayModel[]; error?: string }> {
+  const res = await fetch(`${httpBase()}/v1/gateway/models?q=${encodeURIComponent(q)}`);
+  return res.json();
+}
+
 /** 一条技能的完整正文 —— 装之前先看看它到底会做什么。 */
 export async function skillDetail(slug: string): Promise<{ body: string; error?: string }> {
   const res = await fetch(`${httpBase()}/v1/skills/detail?slug=${encodeURIComponent(slug)}`);

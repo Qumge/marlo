@@ -575,6 +575,17 @@ def create_app(manager: SessionManager) -> FastAPI:
             # 一个空列表会被读成"什么都没搜到"，那是另一回事。
             return {"results": [], "error": str(exc)}
 
+    @app.get("/v1/gateway/models")
+    def gateway_models(q: str = "") -> dict[str, Any]:
+        # 网关能路由到的模型。在这之前，想用 4 个精选之外的，用户得手打完整 id
+        # —— 一个中小商家老板不知道有哪些模型，也不知道 id 长什么样。
+        from ..skills import qumge_catalog
+
+        try:
+            return {"models": qumge_catalog.models(q)}
+        except Exception as exc:  # noqa: BLE001
+            return {"models": [], "error": str(exc)}
+
     @app.get("/v1/skills/detail")
     def skill_detail(slug: str = "") -> dict[str, Any]:
         # 装之前先看看它到底会做什么 —— 一条技能就是一段【会被当成指令读】的

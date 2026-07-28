@@ -1,5 +1,13 @@
-import { useState } from "react";
-import { addModel, getSettings, removeModel, setDefaultModel } from "../api";
+import { useEffect, useState } from "react";
+import {
+  addModel,
+  gatewayModels,
+  getSettings,
+  removeModel,
+  setDefaultModel,
+  type GatewayModel,
+} from "../api";
+import { useT } from "../i18n";
 
 // One provider's models as a checklist: tick = shown in the composer's model picker (the
 // curated list), the black "default" badge marks the model new sessions use, and hovering any
@@ -22,7 +30,20 @@ export function ModelChecklist({
   labels?: Record<string, string>; // curated display names (full id → label); raw id when absent
   onChanged: (next: { models: string[]; model: string }) => void;
 }) {
+  const t = useT();
   const [draft, setDraft] = useState("");
+  const [browsing, setBrowsing] = useState(false);
+  const [gq, setGq] = useState("");
+  const [gModels, setGModels] = useState<GatewayModel[]>([]);
+
+  // 打开时取一次，输入时防抖再取。关着的时候不发请求 —— 这条要出网。
+  useEffect(() => {
+    if (!browsing) return;
+    const h = setTimeout(() => {
+      gatewayModels(gq.trim()).then((r) => setGModels(r.models || [])).catch(() => setGModels([]));
+    }, gq.trim() ? 400 : 0);
+    return () => clearTimeout(h);
+  }, [browsing, gq]);
 
   const provOf = (id: string) => {
     const i = id.indexOf(":");
@@ -89,6 +110,56 @@ export function ModelChecklist({
           </div>
         );
       })}
+      {/* Qumge 是【网关】：一个 key 后面有 244 个能跑 agent 的模型，而这份清单
+          里只有 4 个精选的。在这之前想用别的，用户得手打完整 id
+          （qumge:google/gemini-2.5-pro）——一个中小商家老板不知道有哪些模型，
+          也不知道 id 长什么样，等于没有这条路。
+          只对 qumge 显示：别的 provider 我们问不到它的模型清单。 */}
+      {provider === "qumge" && (
+        <div className="mt-3">
+          <button
+            className="text-[12.5px] text-accent hover:underline"
+            onClick={() => setBrowsing((v) => !v)}
+            data-testid="gateway-browse"
+          >
+            {t("gatewayBrowse")}
+          </button>
+          {browsing && (
+            <div className="mt-2 rounded-xl border border-line p-3">
+              <div className="text-[11.5px] text-faint mb-2">{t("gatewayHint")}</div>
+              <input
+                className="w-full px-3 py-1.5 mb-2 rounded-full border border-line bg-panel text-[13px] outline-none focus:border-accent"
+                placeholder={t("gatewaySearch")}
+                value={gq}
+                onChange={(e) => setGq(e.target.value)}
+                data-testid="gateway-search"
+              />
+              <div className="max-h-64 overflow-y-auto">
+                {gModels.map((m) => (
+                  <div key={m.id} className="flex items-center gap-2 py-1.5" data-testid={`gw-${m.id}`}>
+                    <span className="min-w-0 flex-1 text-[12.5px] truncate">{m.label}</span>
+                    {curated.includes(m.id) ? (
+                      <span className="text-[11.5px] text-faint shrink-0">{t("gatewayAdded")}</span>
+                    ) : (
+                      <button
+                        className="shrink-0 text-[12px] text-accent hover:underline"
+                        onClick={async () => {
+                          await addModel(m.id);
+                          await refresh();
+                        }}
+                        data-testid={`gw-add-${m.id}`}
+                      >
+                        {t("gatewayAdd")}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="mlist-add">
         <input
           placeholder="Add another model…"
