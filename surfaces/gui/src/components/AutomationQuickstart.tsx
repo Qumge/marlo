@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useT } from "../i18n";
+import { t, useT } from "../i18n";
 import {
   cloudLogin,
   connectManaged,
@@ -76,9 +76,8 @@ const TEMPLATES: QuickTemplate[] = [
     day: "mon",
     time: "09:00",
     instructions: ({ repo, channel }) =>
-      `Summarize activity since the last digest in the GitHub repository ${repo || "(the connected repository)"}: ` +
-      `merged pull requests, notable commits, and anything needing attention. ` +
-      `Post the digest to the Slack channel ${channel} using send_message.`,
+      t("tplDigestPrompt")(repo || "(the connected repository)") +
+      t("tplPostToChannel")(channel),
   },
   {
     key: "pipeline",
@@ -96,7 +95,7 @@ const TEMPLATES: QuickTemplate[] = [
     instructions: ({ channel }) =>
       `Review HubSpot activity since the last digest: deals that changed stage, deals going ` +
       `quiet, and deals past their close date. Post a short pipeline digest to the Slack ` +
-      `channel ${channel} using send_message.`,
+      t("tplChannelUsing")(channel),
   },
   {
     key: "brief",
@@ -390,7 +389,7 @@ export function AutomationQuickstart({
                       <Spinner />
                       {flow.phase === "opening"
                         ? "Opening browser…"
-                        : `Waiting for ${c?.title || name}…`}
+                        : t("tplWaitingFor")(c?.title || name)}
                     </span>
                   ) : (
                     <button

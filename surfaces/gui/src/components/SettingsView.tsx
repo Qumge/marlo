@@ -144,6 +144,7 @@ const formatBytes = (bytes: number) => {
 };
 
 function VoiceInputSection() {
+  const t = useT();
   const tr = useT();
   const [status, setStatus] = useState<DictationStatus | null>(null);
   const [progress, setProgress] = useState<DictationDownloadProgress | null>(null);
@@ -302,7 +303,7 @@ function VoiceInputSection() {
               <div className="min-w-0 flex-1">
                 <div className="text-[13.5px] font-medium">Whisper Base · English</div>
                 <div className="text-[12px] text-muted mt-0.5">
-                  {status?.model_verified ? `Installed and verified · ${formatBytes(status.model_bytes)}` : `Local voice model · ${formatBytes(status?.model_bytes || 147_964_211)}`}
+                  {status?.model_verified ? t("tplInstalledVerified")(formatBytes(status.model_bytes)) : t("tplLocalVoiceModel")(formatBytes(status?.model_bytes || 147_964_211))}
                 </div>
               </div>
               {status?.model_verified ? (
@@ -496,7 +497,7 @@ function TrustedWorkspacesCard() {
   }, []);
 
   const revoke = async (path: string) => {
-    if (!window.confirm(`Revoke command trust for ${path}?`)) return;
+    if (!window.confirm(t("tplRevokeTrust")(path))) return;
     await setWorkspaceTrusted(path, false);
     refresh();
   };
@@ -519,7 +520,7 @@ function TrustedWorkspacesCard() {
                 <div className="text-[12.5px] text-ink break-all">{workspace.workspace}</div>
                 <div className="text-[11.5px] text-muted mt-0.5">
                   {workspace.requested_commands.length
-                    ? `${workspace.requested_commands.length} project command allowance${workspace.requested_commands.length === 1 ? "" : "s"}`
+                    ? t("tplProjectAllowances")(workspace.requested_commands.length)
                     : "No project command allowances currently declared"}
                   {!workspace.exists ? " · Folder unavailable" : ""}
                 </div>

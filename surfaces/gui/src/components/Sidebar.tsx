@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useT } from "../i18n";
+import { t, useT } from "../i18n";
 import {
   AUTOMATIONS_CHANGED,
   getAutomations,
@@ -49,7 +49,7 @@ function UnseenBadge({ n, failed }: { n: number; failed?: boolean }) {
   return (
     <span
       className="text-[10px] font-semibold text-ink bg-faint/30 rounded-full px-1.5 leading-[15px] shrink-0"
-      title={failed ? `${n} new run${n > 1 ? "s" : ""} — the latest failed` : `${n} new run${n > 1 ? "s" : ""}`}
+      title={t("tplNewRuns")(n, !!failed)}
     >
       {n > 99 ? "99+" : n}
     </span>

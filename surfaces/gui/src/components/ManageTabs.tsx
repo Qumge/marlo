@@ -111,7 +111,7 @@ export function ModelsTab() {
               className="text-[12.5px] text-danger/80 hover:text-danger hover:underline underline-offset-2"
               data-testid="set-remove-key"
               onClick={() => {
-                if (window.confirm(`Remove the ${info?.title} key from this computer?`)) ps.removeKey();
+                if (window.confirm(t("tplRemoveKeyConfirm")(info?.title || ""))) ps.removeKey();
               }}
             >
               {t("mtRemoveKey")}
@@ -893,10 +893,10 @@ export function ConnectSetup({
         /* MCP-backed one-click needs no cloud sign-in — the OAuth flow is local. */
         <div className="space-y-2" data-testid="mcp-connect">
           <button className={BTN_ACCENT} onClick={mcpOneClick} disabled={waiting}>
-            {waiting ? "Check your browser…" : `Connect ${c.title} with one click`}
+            {waiting ? t("connCheckBrowser") : t("tplConnectOneClick")(c.title)}
           </button>
           {c.fields.length > 0 && (
-            <div className="text-[11.5px] text-faint">or connect manually:</div>
+            <div className="text-[11.5px] text-faint">{t("connOrManual")}</div>
           )}
         </div>
       )}
@@ -907,7 +907,7 @@ export function ConnectSetup({
             // a visibly-parked button, and the manual path below stays fully live.
             <>
               <button className={BTN_ACCENT + " opacity-50"} disabled data-testid="managed-coming-soon">
-                {`Connect ${c.title} with one click`}
+                {t("tplConnectOneClick")(c.title)}
                 <span className="ml-2 text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-white/25">
                   {t("uiComingSoon")}
                 </span>
@@ -918,11 +918,11 @@ export function ConnectSetup({
             </>
           ) : cloud?.signed_in ? (
             <button className={BTN_ACCENT} onClick={oneClick} disabled={waiting}>
-              {waiting ? "Check your browser…" : `Connect ${c.title} with one click`}
+              {waiting ? t("connCheckBrowser") : t("tplConnectOneClick")(c.title)}
             </button>
           ) : cloud ? (
             <CloudSignInInline
-              blurb={`Sign-in unlocks the one-click ${c.title} connect — or connect manually below.`}
+              blurb={t("tplSignInUnlocks")(c.title)}
             />
           ) : (
             // Status unknown (fetch pending/failed): never show the sign-in ask to a
@@ -930,7 +930,7 @@ export function ConnectSetup({
             <CloudStatusPending />
           )}
           {!c.managed_paused && cloud?.signed_in && (
-            <div className="text-[11.5px] text-faint">or connect manually:</div>
+            <div className="text-[11.5px] text-faint">{t("connOrManual")}</div>
           )}
         </div>
       )}

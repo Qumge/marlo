@@ -3,7 +3,7 @@ import { type CloudStatus, type Connector, type SlackStatus } from "../../api";
 import { ConnectorBadge } from "../../connectors/ConnectorIcon";
 import { AddConnectionModal } from "./AddConnectionModal";
 import { CHIP_OK, CHIP_OFF, CHIP_WARN, GRP, GRP_H, FOOT, PILL_QUIET, ROW } from "./ui";
-import { useT } from "../../i18n";
+import { t, useT } from "../../i18n";
 
 // The Connectors LIST (UX-DECISIONS §21): connected first in their own inset group —
 // rows navigate to the connector's detail subpage; problems surface as a chip in the
@@ -181,7 +181,7 @@ export function ConnectorsList({
 function statusLine(c: Connector): string {
   if (c.name === "slack" && c.mode === "relay") {
     const n = c.workspaces?.length ?? 0;
-    return `${n} workspace${n === 1 ? "" : "s"} · relay`;
+    return t("tplNWorkspacesRelay")(n);
   }
   if ((c.accounts?.length ?? 0) > 1) return `${c.accounts!.length} accounts`;
   if ((c.portals?.length ?? 0) > 1) return `${c.portals!.length} portals`;

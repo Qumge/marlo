@@ -402,6 +402,7 @@ function ArtifactViewer({
 const MAX_TABLE_ROWS = 500;
 
 function GridTable({ rows, note }: { rows: unknown[][]; note?: string }) {
+  const t = useT();
   const [head, ...body] = rows;
   return (
     <div className="artifact-tablewrap">
@@ -420,7 +421,7 @@ function GridTable({ rows, note }: { rows: unknown[][]; note?: string }) {
       {(note || body.length > MAX_TABLE_ROWS) && (
         <div className="rail-muted artifact-table-note">
           {note}
-          {body.length > MAX_TABLE_ROWS ? ` Showing first ${MAX_TABLE_ROWS} of ${body.length} rows.` : ""}
+          {body.length > MAX_TABLE_ROWS ? t("tplShowingFirstRows")(MAX_TABLE_ROWS, body.length) : ""}
         </div>
       )}
     </div>

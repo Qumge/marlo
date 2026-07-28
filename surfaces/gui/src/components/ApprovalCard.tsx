@@ -3,7 +3,7 @@ import type { ApprovalDecision, Item } from "../types";
 import { humanizeApprovalTitle, type HumanLine } from "../humanize";
 import { Icon } from "./Icon";
 
-import { useT } from "../i18n";
+import { t, useT } from "../i18n";
 export function shortArgs(args: any): string {
   if (!args || typeof args !== "object") return "";
   return Object.entries(args)
@@ -66,14 +66,14 @@ export function scopeNote(
   args: any,
   category?: string,
 ): { text: string; external: boolean } {
-  if (category === "connector") return { text: "acts on a connected service", external: true };
+  if (category === "connector") return { text: t("scActsOnService"), external: true };
   if (EXTERNAL.has(name)) {
     const platform = String(args?.target ?? "").split(":")[0];
     const names: Record<string, string> = { slack: "Slack", telegram: "Telegram" };
-    return { text: `leaves this Mac → ${names[platform] || platform || "a connected chat"}`, external: true };
+    return { text: t("tplLeavesMac")(names[platform] || platform || "a connected chat"), external: true };
   }
   const overwrite = name === "write_file" && args?.overwrite;
-  return { text: "stays on this Mac" + (overwrite ? " · overwrites the existing file" : ""), external: false };
+  return { text: t("scStaysOnMac") + (overwrite ? t("scOverwrites") : ""), external: false };
 }
 
 // The proposed content/command, straight from the tool call's ARGS — the file/action
@@ -84,6 +84,7 @@ const PREVIEW_LINES = 5;
 const PREVIEW_CHARS = 420;
 
 export function PreviewBlock({ text, mono = true }: { text: string; mono?: boolean }) {
+  const t = useT();
   const [all, setAll] = useState(false);
   const lines = text.split("\n");
   const clipped = lines.length > PREVIEW_LINES || text.length > PREVIEW_CHARS;
@@ -100,7 +101,7 @@ export function PreviewBlock({ text, mono = true }: { text: string; mono?: boole
           {all
             ? "show less"
             : lines.length > PREVIEW_LINES
-              ? `show all ${lines.length} lines`
+              ? t("tplShowAllLines")(lines.length)
               : "show the full message"}
         </button>
       )}
@@ -143,7 +144,7 @@ function Buttons({
       {offerStanding && (
         <button
           className="btn"
-          title={`Always allow ${item.name} → ${item.standingTarget} for “${runTask?.title || "this automation"}” — revoke any time on its Automations page`}
+          title={t("tplAlwaysAllowAuto")(item.name, item.standingTarget || "", runTask?.title || "this automation")}
           onClick={() => onApprove("always_task")}
         >
           {t("apAllowEveryTime")}
@@ -157,7 +158,7 @@ function Buttons({
       {!connector && !offerStanding && item.name !== "run_shell" && (
         <button
           className="btn"
-          title={`Always allow ${TOOL_VERBS[item.name]?.toLowerCase() || item.name} for this session`}
+          title={t("tplAlwaysAllowSession2")(TOOL_VERBS[item.name]?.toLowerCase() || item.name)}
           onClick={() => onApprove("always_tool")}
         >
           {t("apAlwaysAllow")}

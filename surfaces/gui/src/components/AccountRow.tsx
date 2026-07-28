@@ -248,7 +248,7 @@ export function AccountRow({
               aria-label={
                 totalAttention > 0 ? t("inboxNeedsYou")(totalAttention) : t("inbox")
               }
-              title={totalAttention > 0 ? `Inbox — ${totalAttention} items need you` : "Inbox"}
+              title={totalAttention > 0 ? t("tplInboxAttention")(totalAttention) : "Inbox"}
               onClick={(e) => {
                 // The chip goes STRAIGHT to Inbox — the menu is the row's target, not the chip's.
                 e.stopPropagation();

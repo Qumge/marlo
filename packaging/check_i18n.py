@@ -73,6 +73,21 @@ _TEXT_ML = re.compile(
     r"(?<![=!<>-])>\s*\n\s*([A-Z\u2018\u2019\u201c\u201d][^<>{}\n]{2,120}?)\s*\n\s*<(?![A-Za-z])"
 )
 
+# 【守卫的第四个盲区】：模板字符串。
+#
+#   {`Connect ${c.title} with one click`}
+#   title={`${n} awaiting your attention`}
+#
+# 反引号里的英文照样渲染给用户看，而上面三条正则一条都匹配不到（它们只认双引号和
+# >…<）。2026-07-28 owner 截图问"模态框标题怎么是英文"时，界面上是「连接 Google
+# Calendar」旁边一个英文按钮 —— 全中文界面里夹着英文，而守卫报"无新增"。
+#
+# 判据：反引号里【去掉所有 ${...} 之后仍然有英文单词】。纯插值（`${a}:${b}`）、
+# 路径、URL、className 不算。
+_TPL = re.compile(r"`([^`\n]*\$\{[^`\n]*)`")
+_TPL_BAD = re.compile(r"(className|data-testid|aria-|key=|/v1/|https?://|\.json|Bearer )")
+_TPL_WORD = re.compile(r"[A-Za-z]{3,}\s")
+
 # 【守卫的盲区】：写死的界面文字不只在 JSX 里，也在【数据数组】里 ——
 #
 #   const SET_TABS = [{ key: "models", label: "Models", ... }]
@@ -141,6 +156,14 @@ def scan() -> list[str]:
             stripped = line.strip()
             if stripped.startswith(("//", "*", "/*")):
                 continue
+            if not _TPL_BAD.search(line):
+                for m in _TPL.finditer(line):
+                    body = m.group(1)
+                    plain = re.sub(r"\$\{[^}]*\}", " ", body)
+                    if _TPL_WORD.search(plain) and 't("' not in body:
+                        sm = " ".join(body.split())
+                        if not any(a.match(sm) for a in ALLOWED):
+                            found.append(f"{rel}: `{sm}`")
             for m in (*_TEXT.finditer(line), *_ATTR.finditer(line), *_DATA.finditer(line)):
                 s = m.group(1).strip()
                 if len(s) < 3 or any(a.match(s) for a in ALLOWED):

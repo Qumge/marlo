@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useT } from "../i18n";
+import { t, useT } from "../i18n";
 import type { ApprovalDecision, Item } from "../types";
 import { shortArgs } from "./ApprovalCard";
 import { humanizeAsk, humanizeTool, type HumanLine } from "../humanize";
@@ -140,7 +140,7 @@ function approvalChip(resolved: ApprovalDecision | undefined) {
   return (
     <span
       className="text-[10.5px] px-1.5 rounded-full bg-okSoft text-ok shrink-0"
-      title={resolved ? `approved · ${resolved.replace(/_/g, " ")}` : "approved"}
+      title={resolved ? t("tplApprovedVia")(resolved.replace(/_/g, " ")) : "approved"}
     >
       ✓ approved
     </span>
@@ -173,7 +173,7 @@ function StepRow({ tool, approval }: { tool: ToolItem; approval?: ApprovalItem }
           <span
             className="text-[10.5px] px-1.5 rounded-full bg-tealSoft text-tealInk shrink-0"
             data-testid="tool-standing-rule"
-            title={`Auto-allowed by this automation's standing approval: ${tool.standingRule}. Revoke on its Automations page.`}
+            title={t("tplAutoAllowedFull")(tool.standingRule)}
           >
             auto-allowed
           </span>
@@ -218,6 +218,7 @@ function TurnGroup({
   // the header as the live line; expanded → the small quiet line under the steps.
   streamingText?: string;
 }) {
+  const t = useT();
   // Turns start COLLAPSED, running or not (owner call 2026-07-14) — the header's live
   // line is the pulse; expanding is opt-in.
   const rows = buildRows(items);
@@ -231,7 +232,7 @@ function TurnGroup({
   const nSteps = rows.filter((r) => r.type !== "narr").length;
   const declined = items.filter((it) => it.kind === "approval" && it.resolved === "deny").length;
   const hiddenTotal = tools.reduce((n, t) => n + (t.hidden || 0), 0);
-  const stepsLabel = `${nSteps} step${nSteps === 1 ? "" : "s"}`;
+  const stepsLabel = t("tplNSteps")(nSteps);
 
   return (
     <details className="stepgroup" open={open}>
@@ -244,7 +245,7 @@ function TurnGroup({
       >
         <span className={"chev inline-block transition-transform" + (open ? " rotate-90" : "")}>›</span>
         <span>
-          <span>{running ? `Running ${stepsLabel}…` : stepsLabel}</span>
+          <span>{running ? t("tplRunningSteps")(stepsLabel) : stepsLabel}</span>
           {declined > 0 && (
             <>
               {" · "}

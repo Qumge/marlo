@@ -120,6 +120,37 @@ def test_it_sees_text_whose_bracket_is_on_another_line():
     assert not any(mod._TEXT.search(line) for line in sample.splitlines())
 
 
+def test_it_sees_english_inside_template_literals():
+    """反引号里的英文照样渲染给用户看。
+
+    0.4.2 那张截图上，全中文界面里是「连接 Google Calendar」旁边一个英文按钮
+    "Connect Google Calendar with one click" —— 它是 `Connect ${c.title} with one
+    click`，三条正则一条都匹配不到（它们只认双引号和 >…<）。守卫报"无新增"。
+
+    判据是【去掉所有 ${...} 之后仍然有英文单词】：纯插值和路径不算。已经调了 t(
+    的也不算 —— 那是做完了，不是漏了（嵌套模板会被外层正则截出一段，看着像漏）。
+    """
+    import tempfile
+
+    sample = (
+        'const a = <button>{`Connect ${c.title} with one click`}</button>;\n'
+        'const b = `${host}:${port}`;\n'                       # 纯插值，不算
+        'const c2 = <b>{`${t("artifacts")} ${n}`}</b>;\n'      # 已经走 t()，不算
+        'const d = <img className={`w-${n} h-${n}`} />;\n'     # className，不算
+    )
+    with tempfile.TemporaryDirectory() as d:
+        src = Path(d)
+        (src / "Fixture.tsx").write_text(sample, encoding="utf-8")
+        original = mod.SRC
+        try:
+            mod.SRC = src
+            found = [f.split(": ", 1)[1] for f in mod.scan()]
+        finally:
+            mod.SRC = original
+    assert any("with one click" in f for f in found), found
+    assert not any("host" in f or "artifacts" in f or "w-" in f for f in found), found
+
+
 def test_it_still_ignores_type_signatures_across_lines():
     # 跨行匹配放宽了边界，别把 `=> Promise<void>` 这类又收回来（基线里躺过 5 条）。
     for src in ("const f = () =>\n  doThing<void>\n", "type A = Map<\n  string\n>\n"):

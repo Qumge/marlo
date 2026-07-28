@@ -92,7 +92,7 @@ export function PersonasTab({ onOpenPersona }: { onOpenPersona?: (id: string) =>
     }
     setConsent(r.consent || []);
     if (r.personas) setPersonas(r.personas);
-    setMsg(`Installed ${(r.consent || []).length} persona(s) — review and enable below.`);
+    setMsg(t("tplInstalledPersonas")((r.consent || []).length));
     setSrc("");
   };
 
@@ -144,8 +144,8 @@ export function PersonasTab({ onOpenPersona }: { onOpenPersona?: (id: string) =>
             {onOpenPersona && (
               <button
                 className="text-faint hover:text-ink shrink-0 p-1"
-                title={`Configure ${p.name}`}
-                aria-label={`Configure ${p.name}`}
+                title={t("tplConfigureName")(p.name)}
+                aria-label={t("tplConfigureName")(p.name)}
                 data-testid={`persona-configure-${p.id}`}
                 onClick={() => onOpenPersona(p.id)}
               >

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useT } from "../i18n";
+import { t, useT } from "../i18n";
 import {
   createAutomation,
   deleteAutomation,
@@ -161,21 +161,21 @@ export function ScheduledView({ onOpenRun, onRunNow, initialOpenId }: Props) {
         )
       ) : (
         <div className="flex flex-col gap-2.5">
-          {tasks.map((t) => (
+          {tasks.map((task) => (
             <div
               className={CARD + " sched-card px-4 py-3 cursor-pointer hover:border-lineStrong transition-colors"}
-              key={t.id}
-              onClick={() => setOpenId(t.id)}
+              key={task.id}
+              onClick={() => setOpenId(task.id)}
             >
               <div className="flex items-center justify-between gap-2.5 mb-1">
-                <span className="text-[13.5px] font-semibold truncate">{t.title}</span>
+                <span className="text-[13.5px] font-semibold truncate">{task.title}</span>
                 <button
                   className="sched-card-del"
                   title={tr("autoDelete")}
-                  aria-label={`Delete ${t.title}`}
+                  aria-label={`Delete ${task.title}`}
                   onClick={async (e) => {
                     e.stopPropagation();
-                    await deleteAutomation(t.id);
+                    await deleteAutomation(task.id);
                     refresh();
                   }}
                 >
@@ -184,8 +184,8 @@ export function ScheduledView({ onOpenRun, onRunNow, initialOpenId }: Props) {
               </div>
               <div className="flex items-center gap-1.5 text-[12px] text-muted">
                 <Icon name="clock" size={13} className="text-faint shrink-0" />
-                {t.enabled ? t.schedule : "Paused"} · next {fmt(t.next_run)} · {t.run_count} run{t.run_count === 1 ? "" : "s"}
-                {t.last_status ? ` · last ${t.last_status}` : ""}
+                {task.enabled ? task.schedule : t("svPaused")}{t("tplNextRunCount")(fmt(task.next_run), task.run_count)}
+                {task.last_status ? t("tplLastStatus")(task.last_status) : ""}
               </div>
             </div>
           ))}
@@ -427,7 +427,7 @@ function TaskDetail({
               <input type="checkbox" checked={task.enabled} onChange={toggle} />
               <span className="slider" />
             </label>{" "}
-            {task.enabled ? `Active · next ${fmt(task.next_run)}` : "Paused"} · {task.schedule}
+            {task.enabled ? t("tplActiveNext")(fmt(task.next_run)) : "Paused"} · {task.schedule}
           </div>
         )}
 

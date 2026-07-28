@@ -125,7 +125,7 @@ export function InboxView({
     return (
       <button
         className="inbox-session-chip"
-        title={exists ? `Open “${label}”` : "Session unavailable"}
+        title={exists ? t("tplOpenLabel")(label) : "Session unavailable"}
         disabled={!exists}
         onClick={() =>
           exists && onOpenSession(it.session_id, it.session_workspace || "", it.session_agent || "cowork")

@@ -112,7 +112,7 @@ export function InboxItemCard({
           {item.data?.task_id && item.data?.standing_target && (
             <button
               className={BTN_BORDERED}
-              title={`Always allow against ${item.data.standing_target} for “${item.data.task_title || "this automation"}” — revoke any time on its Automations page`}
+              title={t("tplAlwaysAllowAgainst")(item.data.standing_target, item.data.task_title || "this automation")}
               onClick={() => onResolve(item.id, "always_task")}
             >
               {t("apAllowEveryTime")}

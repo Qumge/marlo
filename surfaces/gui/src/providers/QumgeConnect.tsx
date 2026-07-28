@@ -91,7 +91,7 @@ export function QumgeConnect({ onConnected }: { onConnected: () => void }) {
         // a "waiting" panel.
         setPhase({
           kind: "error",
-          message: res.error || `unexpected sign-in status: ${String(res.status)}`,
+          message: res.error || t("tplUnexpectedStatus")(String(res.status)),
         });
         return;
     }

@@ -34,6 +34,7 @@ export function AddConnectionModal({
   onClose: () => void;
   onChanged: () => void;
 }) {
+  const t = useT();
   // MCP-backed one-click (§42): local OAuth against the vendor's hosted MCP server —
   // with manual fields alongside (jira, asana) it's a second mode; alone (monday)
   // it IS the connect flow.
@@ -59,14 +60,14 @@ export function AddConnectionModal({
       <div
         className="absolute left-1/2 top-[14%] -translate-x-1/2 w-[480px] max-w-[calc(100vw-2rem)] bg-panel rounded-2xl border border-line shadow-2xl"
         role="dialog"
-        aria-label={title || `Connect ${c.title}`}
+        aria-label={title || t("tplConnectName")(c.title)}
       >
         <div className="flex items-center gap-3 px-5 pt-5">
           <ConnectorBadge connector={c} size={34} title={c.title} />
           <div className="flex-1 font-semibold text-[16px] tracking-tight">
-            {title || `Connect ${c.title}`}
+            {title || t("tplConnectName")(c.title)}
           </div>
-          <button className="text-faint hover:text-ink text-[18px] leading-none" onClick={onClose} title="Close">
+          <button className="text-faint hover:text-ink text-[18px] leading-none" onClick={onClose} title={t("uiClose")}>
             ×
           </button>
         </div>
@@ -85,7 +86,7 @@ export function AddConnectionModal({
                     }
                     onClick={() => setPane(p)}
                   >
-                    {p === "one" ? "One click" : "Manual"}
+                    {p === "one" ? t("connTabOneClick") : t("connTabManual")}
                   </button>
                 ))}
               </div>
@@ -105,7 +106,7 @@ export function AddConnectionModal({
             ) : c.name === "slack" ? (
               <SlackManual onConnected={() => { onChanged(); onClose(); }} />
             ) : (
-              <div className="px-1.5 pb-2">
+              <div className="px-1.5 pt-4 pb-2">
                 <ConnectSetup c={c} cloud={cloud} onConnected={() => { onChanged(); onClose(); }} manualOnly />
               </div>
             )}
@@ -114,7 +115,7 @@ export function AddConnectionModal({
           /* MCP-backed with no manual fields (monday): one-click IS the flow. */
           <McpOneClick c={c} onConnected={() => { onChanged(); onClose(); }} />
         ) : (
-          <div className="px-1.5 pb-2">
+          <div className="px-1.5 pt-4 pb-2">
             {/* Existing combined setup (managed button + manual fields) for everything else. */}
             <ConnectSetup c={c} cloud={cloud} onConnected={() => { onChanged(); onClose(); }} />
           </div>
@@ -163,7 +164,7 @@ function McpOneClick({ c, onConnected }: { c: Connector; onConnected: () => void
         onClick={go}
         disabled={waiting}
       >
-        {waiting ? "Check your browser…" : `Connect ${c.title}`}
+        {waiting ? t("connCheckBrowser") : t("tplConnectName")(c.title)}
       </button>
       {error && <div className="text-[12.5px] text-danger">{error}</div>}
       <p className="text-[12px] text-faint text-center flex items-center justify-center gap-1.5">
@@ -199,7 +200,7 @@ function GenericOneClick({ c, cloud }: { c: Connector; cloud: CloudStatus | null
           onClick={go}
           disabled={waiting}
         >
-          {waiting ? "Check your browser…" : `Connect ${c.title}`}
+          {waiting ? t("connCheckBrowser") : t("tplConnectName")(c.title)}
         </button>
       ) : cloud ? (
         <CloudSignInInline />
@@ -232,7 +233,7 @@ function SlackOneClick({ c, cloud }: { c: Connector; cloud: CloudStatus | null }
       </p>
       {cloud?.signed_in ? (
         <button className={PILL_ACCENT + " w-full !py-2"} data-testid="modal-add-to-slack" onClick={go} disabled={waiting}>
-          {waiting ? "Check your browser…" : "Add to Slack"}
+          {waiting ? t("connCheckBrowser") : "Add to Slack"}
         </button>
       ) : cloud ? (
         <CloudSignInInline />
@@ -269,7 +270,7 @@ function GithubOneClick({ c, cloud }: { c: Connector; cloud: CloudStatus | null 
            redirects the same tab on to the install page (the old "Already installed? Link
            it" question and the Configure dead-end are gone). */
         <button className={PILL_ACCENT + " w-full !py-2"} data-testid="modal-install-github-app" onClick={() => go()} disabled={waiting}>
-          {waiting ? "Check your browser…" : "Connect GitHub"}
+          {waiting ? t("connCheckBrowser") : "Connect GitHub"}
         </button>
       ) : cloud ? (
         <CloudSignInInline />
@@ -326,7 +327,7 @@ function HubSpotOneClick({ c, cloud }: { c: Connector; cloud: CloudStatus | null
       </div>
       {cloud?.signed_in ? (
         <button className={PILL_ACCENT + " w-full !py-2"} data-testid="modal-connect-hubspot" onClick={go} disabled={waiting}>
-          {waiting ? "Check your browser…" : "Connect HubSpot"}
+          {waiting ? t("connCheckBrowser") : "Connect HubSpot"}
         </button>
       ) : cloud ? (
         <CloudSignInInline />

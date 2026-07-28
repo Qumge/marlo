@@ -220,7 +220,7 @@ export function Composer(props: Props) {
     for (const file of list) {
       if (isPdfFile(file) && file.size > maxMb * 1024 * 1024) {
         showAttachNotice(
-          `${file.name} skipped — ${(file.size / 1024 / 1024).toFixed(1)} MB is over your ${maxMb} MB limit (Settings → Token savings)`,
+          t("tplSkippedSize")(file.name, (file.size / 1024 / 1024).toFixed(1), maxMb),
         );
         continue;
       }
@@ -233,12 +233,12 @@ export function Composer(props: Props) {
         const info = await inspectPdf(a.data_url).catch(() => null);
         if (info?.ok && (info.pages ?? 0) > maxPages) {
           showAttachNotice(
-            `${a.name} skipped — ${info.pages} pages is over your ${maxPages}-page limit (Settings → Token savings)`,
+            t("tplSkippedPages")(a.name, info.pages ?? 0, maxPages),
           );
           continue;
         }
         if (info && !info.ok) {
-          showAttachNotice(`${a.name} skipped — ${info.error || "could not read PDF"}`);
+          showAttachNotice(t("tplSkippedPdfError")(a.name, info.error || t("tplCouldNotReadPdf")));
           continue;
         }
       }
