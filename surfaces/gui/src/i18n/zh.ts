@@ -411,6 +411,7 @@ export const zh: Strings = {
   autoWillAskAgain: "这条自动化会重新征求你同意",
   cancel: "取消",
   abilitiesSearchFailed: "连不上目录：",
+  abilitiesTranslated: "目录里的技能大多是英文写的，已按英文搜索：",
 
   accountOf: (email) => `${email} · Qumge`,
   accountAria: (email) => `账号：${email}`,

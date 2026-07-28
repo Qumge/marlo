@@ -75,6 +75,17 @@ _ENTRY = re.compile(
 )
 
 
+# 目录搜不到中文时会翻成英文再搜，表头写着实际搜的词：
+#
+#   5 skill(s) for "营销内容自动生成" (searched in English as "marketing content
+#   generation"), best first:
+#
+# 【必须把它接出来给用户看】：不接的话，一个用中文搜的人得到一屏英文标题的结果，
+# 没有任何东西解释这是怎么来的——也就没法判断翻得对不对。对话那条路上模型能读到
+# 这句话，界面这条路上读不到，因为解析只看框内。
+_TRANSLATED = re.compile(r'\(searched in English as "([^"]+)"\)')
+
+
 def _between_markers(text: str) -> str:
     i = text.find(_OPEN)
     if i == -1:
@@ -136,7 +147,13 @@ def search(
             "needs": needs,
             "group": group,
         })
-    return {"results": out, "has_more": "more available" in text}
+    m = _TRANSLATED.search(text.split("\n", 1)[0])
+    return {
+        "results": out,
+        "has_more": "more available" in text,
+        # 没翻就是空串，界面据此决定显不显示那行说明。
+        "searched_as": m.group(1) if m else "",
+    }
 
 
 # 网关能路由到的模型 —— 给模型设置页用。

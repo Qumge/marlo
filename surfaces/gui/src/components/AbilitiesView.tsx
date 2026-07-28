@@ -47,6 +47,8 @@ export function AbilitiesView() {
   const [busy, setBusy] = useState<string | null>(null);
   const [skillsDir, setSkillsDir] = useState("");
   const [hasMore, setHasMore] = useState(false);
+  // 目录把非英文查询翻成英文搜时，实际搜的那串词。
+  const [searchedAs, setSearchedAs] = useState("");
   const [loadingMore, setLoadingMore] = useState(false);
   // 装之前先看看它到底会做什么 —— 一条技能就是一段【会被当成指令读】的文字。
   const [detail, setDetail] = useState<{ name: string; body: string } | null>(null);
@@ -76,6 +78,7 @@ export function AbilitiesView() {
         .then((r) => {
           setResults(r.results || []);
           setHasMore(!!r.has_more);
+          setSearchedAs(r.searched_as || "");
           setSearchErr(r.error || "");
         })
         .catch((e) => setSearchErr(String(e?.message || e)));
@@ -134,6 +137,14 @@ export function AbilitiesView() {
               data-testid="abilities-search"
             />
           </div>
+
+          {/* 用中文搜出来一屏英文标题，得说清楚为什么。不说的话，用户既无法理解
+              这些结果从哪来，也无从发现翻错了——而翻错时改用词是他唯一的补救。 */}
+          {searchedAs && !searchErr && (
+            <div className="text-[12px] text-dim mb-4" data-testid="abilities-translated">
+              {t("abilitiesTranslated")} “{searchedAs}”
+            </div>
+          )}
 
           {searchErr && (
             <div className="text-[12px] text-warnInk mb-4" data-testid="abilities-error">

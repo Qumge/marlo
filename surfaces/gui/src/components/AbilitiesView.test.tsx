@@ -24,6 +24,7 @@ const serve = (skills: any[], results: any[] = [], opts: any = {}) =>
           json: async () => ({
             results: off ? opts.page2 || [] : results,
             has_more: off ? false : !!opts.hasMore,
+            searched_as: opts.searchedAs,
             error: opts.searchError,
           }),
         };
@@ -150,6 +151,27 @@ describe("能力页", () => {
     await waitFor(() => expect(screen.getByText("# 它会做什么")).toBeTruthy());
     // 这句不是免责声明，是在说明我们怎么读它。
     expect(screen.getByText(/当参考读，不当命令执行/)).toBeTruthy();
+  });
+
+  it("中文搜出英文结果时，说清楚实际搜的是什么", async () => {
+    // 用中文搜却出来一屏英文标题，不解释的话没人知道这是怎么来的 —— 也无从发现
+    // 翻错了，而换个说法重搜是用户唯一的补救手段。
+    serve([], [{ name: "autowhisper", summary: "s", slug: "o/r/a", meta: "m", needs: "", group: "g" }],
+          { searchedAs: "product promotional video" });
+    render(<AbilitiesView />);
+    await waitFor(() => expect(screen.getByTestId("abilities-translated")).toBeTruthy(),
+                  { timeout: 2000 });
+    expect(screen.getByTestId("abilities-translated").textContent)
+      .toContain("product promotional video");
+  });
+
+  it("没翻译时不说自己翻了", async () => {
+    // 【否定对照】。英文查询冒出一句"已按英文搜索"是句假话，而用户没法分辨界面上
+    // 哪些说明是真的。
+    serve([], [{ name: "a", summary: "s", slug: "o/r/a", meta: "m", needs: "", group: "g" }]);
+    render(<AbilitiesView />);
+    await waitFor(() => expect(screen.getByTestId("view-a")).toBeTruthy(), { timeout: 2000 });
+    expect(screen.queryByTestId("abilities-translated")).toBeNull();
   });
 
   it("英文界面用英文文案", async () => {

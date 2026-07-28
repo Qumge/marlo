@@ -625,7 +625,14 @@ export interface CatalogSkill {
 export async function searchSkills(
   q: string,
   offset = 0,
-): Promise<{ results: CatalogSkill[]; has_more?: boolean; error?: string }> {
+): Promise<{
+  results: CatalogSkill[];
+  has_more?: boolean;
+  // 目录搜不到非英文查询时会翻成英文再搜一次；这是它【实际搜的词】。没翻就是空。
+  // 必须显示出来：用中文搜却出来一屏英文标题，不解释的话没人知道这是怎么来的。
+  searched_as?: string;
+  error?: string;
+}> {
   // 空 q 不是"不搜"，是【浏览】：返回排名靠前的一批，用来铺默认列表。
   // has_more 由目录给，界面不自己猜——猜的结果是一个可能点空的"加载更多"。
   const res = await fetch(

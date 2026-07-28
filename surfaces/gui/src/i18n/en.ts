@@ -452,6 +452,7 @@ export const en = {
   autoWillAskAgain: "This automation will ask for approval again",
   cancel: "Cancel",
   abilitiesSearchFailed: "Couldn't reach the catalog:",
+  abilitiesTranslated: "Most catalog skills are written in English, so this was searched as:",
 
   // -- account (sidebar footer) ---------------------------------------------
   // The footer used to report sign-in to OpenWorker Cloud — a third party whose

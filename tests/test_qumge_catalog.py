@@ -142,6 +142,27 @@ def test_detail_refuses_a_malformed_slug():
             q.detail(bad, client=_Fake(FENCED_SKILL))
 
 
+def test_search_surfaces_the_english_words_it_actually_searched():
+    """中文搜出一屏英文标题，界面必须说清楚为什么。
+
+    对话那条路上模型读得到表头里这句话；界面这条路读不到，因为解析只看框内。
+    不接出来的话，用中文搜的人拿到的是一组来路不明的结果——也就无从发现翻错了。
+    """
+    zh = FENCED_SEARCH.replace(
+        '8 skill(s) for "video", best first:',
+        '8 skill(s) for "产品软广视频" (searched in English as "product promotional video"), best first:',
+    )
+    r = q.search("产品软广视频", client=_Fake(zh))
+    assert r["searched_as"] == "product promotional video"
+    assert [x["name"] for x in r["results"]] == ["autowhisper", "video-recap"]
+
+
+def test_search_says_nothing_when_no_translation_happened():
+    # 【否定对照】。英文查询不该冒出一句"已按英文搜索"——那是句假话，而用户没法
+    # 分辨界面上哪些说明是真的。
+    assert q.search("video", client=_Fake(FENCED_SEARCH))["searched_as"] == ""
+
+
 def test_search_reports_whether_more_pages_exist():
     # 界面据此决定显不显示"加载更多"。自己猜的结果是一个可能点空的按钮。
     with_more = FENCED_SEARCH + "\n(more available — pass offset=30)"
