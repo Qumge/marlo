@@ -189,6 +189,14 @@ export const en = {
   // 邮件类的死胡同有出路：同一个邮箱用 IMAP 连得上。别让人以为是坏了。
   connectorUseImapInstead: "Use Email (IMAP) →",
 
+  // 「能力」页。分类是【能力 / 连接】两类，而能力之前一个界面都没有。
+  // 它是【管理台】不是发现入口：发现发生在对话里（规格 D'）。
+  abilities: "Abilities",
+  abilitiesSub: "What Marlo knows how to do. It finds new ones itself while you work.",
+  abilitiesEmpty: "Nothing installed yet.",
+  abilitiesEmptyHow: "You don't pick these from a list — tell Marlo what you need done and it looks for one.",
+  abilitiesWhere: "Installed to ~/.config/coworker/skills",
+
   // -- account (sidebar footer) ---------------------------------------------
   // The footer used to report sign-in to OpenWorker Cloud — a third party whose
   // connectors this build does not support — so someone signed in to Qumge read

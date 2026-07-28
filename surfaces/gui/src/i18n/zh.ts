@@ -148,6 +148,14 @@ export const zh: Strings = {
   // 邮件类的死胡同有出路：同一个邮箱用 IMAP 连得上。别让人以为是坏了。
   connectorUseImapInstead: "改用邮箱（IMAP）→",
 
+  // 「能力」页。分类是【能力 / 连接】两类，而能力之前一个界面都没有。
+  // 它是【管理台】不是发现入口：发现发生在对话里（规格 D'）。
+  abilities: "能力",
+  abilitiesSub: "Marlo 会做的事。干活过程中它自己会去找新的。",
+  abilitiesEmpty: "还没装任何能力。",
+  abilitiesEmptyHow: "这些不用你从列表里挑 —— 跟 Marlo 说你要做什么，它自己会去找。",
+  abilitiesWhere: "装在 ~/.config/coworker/skills",
+
   accountOf: (email) => `${email} · Qumge`,
   accountAria: (email) => `账号：${email}`,
   accountAriaSignedOut: "账号：未登录",

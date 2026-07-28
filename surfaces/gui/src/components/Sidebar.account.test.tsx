@@ -61,6 +61,8 @@ const baseProps = {
   onOpenInbox: vi.fn(),
   scheduledActive: false,
   integrationsActive: false,
+    onOpenAbilities: vi.fn(),
+    abilitiesActive: false,
   auditActive: false,
   inboxActive: false,
 };

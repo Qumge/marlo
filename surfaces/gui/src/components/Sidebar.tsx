@@ -120,10 +120,12 @@ interface Props {
   // Scheduled-band row click: open the Automations surface ON that automation (UX-023).
   onOpenAutomation: (id: string) => void;
   onOpenIntegrations: () => void;
+  onOpenAbilities: () => void;
   onOpenAudit: () => void;
   onOpenInbox: () => void;
   scheduledActive: boolean;
   integrationsActive: boolean;
+  abilitiesActive: boolean;
   auditActive: boolean;
   inboxActive: boolean;
   // Collapse controls (⌘B / hover-peek). `onCollapse` docks/undocks; `onPeekLeave` hides the
@@ -1072,7 +1074,9 @@ export function Sidebar(props: Props) {
         onOpenInbox={props.onOpenInbox}
         inboxActive={!!props.inboxActive}
         onOpenIntegrations={props.onOpenIntegrations}
+        onOpenAbilities={props.onOpenAbilities}
         integrationsActive={!!props.integrationsActive}
+        abilitiesActive={!!props.abilitiesActive}
         onManage={props.onManage}
         onOpenScheduled={props.onOpenScheduled}
         scheduledActive={!!props.scheduledActive}

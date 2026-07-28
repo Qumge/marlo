@@ -599,6 +599,17 @@ const COMMON_NOUN_TITLES: Record<string, "connectorTitleBrowser" | "connectorTit
   email: "connectorTitleEmail",
 };
 
+/** 装在这台机器上的技能（能力）。后端 /v1/skills 早就有，只是前端一直没用过。 */
+export interface InstalledSkill {
+  name: string;
+  description: string;
+}
+
+export async function getSkills(): Promise<InstalledSkill[]> {
+  const res = await fetch(`${httpBase()}/v1/skills`);
+  return (await res.json()).skills ?? [];
+}
+
 export async function getConnectors(): Promise<Connector[]> {
   const res = await fetch(`${httpBase()}/v1/connectors`);
   const list: Connector[] = (await res.json()).connectors ?? [];

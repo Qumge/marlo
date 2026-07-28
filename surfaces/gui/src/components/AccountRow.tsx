@@ -28,6 +28,8 @@ export function AccountRow({
   inboxActive,
   onOpenIntegrations,
   integrationsActive,
+  onOpenAbilities,
+  abilitiesActive,
   onManage,
   onOpenScheduled,
   scheduledActive,
@@ -40,6 +42,8 @@ export function AccountRow({
   inboxActive: boolean;
   onOpenIntegrations: () => void;
   integrationsActive: boolean;
+  onOpenAbilities: () => void;
+  abilitiesActive: boolean;
   onManage: () => void;
   onOpenScheduled: () => void;
   scheduledActive: boolean;
@@ -150,6 +154,7 @@ export function AccountRow({
                 inboxActive,
                 <AttnBadge n={totalAttention} />,
               )}
+              {appMenuItem("sparkle", t("abilities"), onOpenAbilities, abilitiesActive)}
               {appMenuItem("plug", t("connectors"), onOpenIntegrations, integrationsActive)}
               <div className="h-px bg-line my-1 mx-2" />
               {appMenuItem(

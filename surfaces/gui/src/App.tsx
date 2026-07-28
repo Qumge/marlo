@@ -45,6 +45,7 @@ import { SessionIntro } from "./components/SessionIntro";
 import { FolderGate } from "./components/FolderGate";
 import { Onboarding } from "./components/Onboarding";
 import { UpdateBanner } from "./components/UpdateBanner";
+import { AbilitiesView } from "./components/AbilitiesView";
 import { ScheduledView } from "./components/ScheduledView";
 import { RightRail } from "./components/RightRail";
 import { IntegrationsView } from "./components/IntegrationsView";
@@ -204,7 +205,7 @@ export function App() {
   // load; corrected by loadSettings.
   const [modelReady, setModelReady] = useState(true);
   const [surface, setSurface] = useState<
-    "session" | "scheduled" | "integrations" | "audit" | "inbox" | "persona" | "settings"
+    "session" | "scheduled" | "integrations" | "abilities" | "audit" | "inbox" | "persona" | "settings"
   >("session");
   // A remembered Scheduled-detail target must not outlive the surface (see the
   // scheduledOpenId comment above): nav re-entry lands on the list, never a
@@ -1307,10 +1308,12 @@ export function App() {
           setSurface("scheduled");
         }}
         onOpenIntegrations={() => setSurface("integrations")}
+        onOpenAbilities={() => setSurface("abilities")}
         onOpenAudit={() => setSurface("audit")}
         onOpenInbox={() => setSurface("inbox")}
         scheduledActive={surface === "scheduled"}
         integrationsActive={surface === "integrations"}
+        abilitiesActive={surface === "abilities"}
         auditActive={surface === "audit"}
         inboxActive={surface === "inbox"}
         collapsed={navCollapsed}
@@ -1323,6 +1326,8 @@ export function App() {
           onRunNow={runTaskNow}
           initialOpenId={scheduledOpenId}
         />
+      ) : surface === "abilities" ? (
+        <AbilitiesView />
       ) : surface === "integrations" ? (
         <IntegrationsView />
       ) : surface === "settings" ? (
@@ -1342,6 +1347,7 @@ export function App() {
             personaViewReturn === "settings" ? openSettings("personas") : setSurface("session")
           }
           onOpenIntegrations={() => setSurface("integrations")}
+          
         />
       ) : (
       <div className={"main" + (surface === "session" && agent !== "chat" && !railHidden ? " rail-open" : "")}>
@@ -1624,6 +1630,7 @@ export function App() {
             scratchPrimary={agent === "cowork"}
             openAccessKey={accessKey}
             onOpenIntegrations={() => setSurface("integrations")}
+            
           />
         </div>
       </div>

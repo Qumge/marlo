@@ -57,6 +57,8 @@ const baseProps = {
   onOpenScheduled: vi.fn(),
   onOpenAutomation: vi.fn(),
   onOpenIntegrations: vi.fn(),
+  onOpenAbilities: vi.fn(),
+  abilitiesActive: false,
   onOpenAudit: vi.fn(),
   onOpenInbox: vi.fn(),
   scheduledActive: false,
