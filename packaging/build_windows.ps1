@@ -68,8 +68,9 @@ Write-Host "==> [0/3] checking bundled icons and product name" -ForegroundColor 
 & python3 (Join-Path $Here "check_icons.py")
 if ($LASTEXITCODE -ne 0) { throw "icon check failed (exit $LASTEXITCODE)" }
 & python3 (Join-Path $Here "check_branding.py")
-& python3 (Join-Path $Here "check_i18n.py")
 if ($LASTEXITCODE -ne 0) { throw "branding check failed (exit $LASTEXITCODE)" }
+& python3 (Join-Path $Here "check_i18n.py")
+if ($LASTEXITCODE -ne 0) { throw "i18n check failed (exit $LASTEXITCODE)" }
 
 Write-Host "==> [1/3] PyInstaller: bundling openworker-server ($Triple)" -ForegroundColor Cyan
 & $PyInst --noconfirm --clean `

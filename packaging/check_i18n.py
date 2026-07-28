@@ -51,7 +51,9 @@ def scan() -> list[str]:
         if _is_test(path):
             continue
         text = path.read_text(encoding="utf-8")
-        rel = path.relative_to(SRC)
+        # as_posix()：Windows 上分隔符是反斜杠，而基线里存的是正斜杠 —— 不统一
+        # 的话整份基线在那个平台上全被当成新增（CI 实测 184 条全报，构建挂掉）。
+        rel = path.relative_to(SRC).as_posix()
         for lineno, line in enumerate(text.splitlines(), 1):
             stripped = line.strip()
             if stripped.startswith(("//", "*", "/*")):
