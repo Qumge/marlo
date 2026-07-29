@@ -469,6 +469,9 @@ export interface Connector {
   tools: ConnectorTool[];
   managed: boolean; // one-click managed OAuth available (needs cloud sign-in)
   managed_paused?: boolean; // one-click temporarily off (e.g. Google CASA pending) — badge "Coming soon"
+  // 自家服务的设备码授权（RFC 8628）。和 managed 的区别是【没有第三方经手】：
+  // 授权页是我们自己的，token 直接落到本机，不过 OpenWorker Cloud。
+  device_auth?: boolean;
   managed_profile: boolean; // current profile came from managed OAuth (vs manual paste)
   mode?: string; // "relay" for the managed cloud path; "" for manual/token connect
   workspaces?: SlackWorkspace[]; // Slack only: connected workspaces (managed relay)
@@ -572,6 +575,21 @@ export async function connectManaged(
 export async function connectMcpBacked(name: string): Promise<{ ok: boolean; error?: string }> {
   const res = await fetch(
     `${httpBase()}/v1/connectors/${encodeURIComponent(name)}/mcp-connect`,
+    { method: "POST" },
+  );
+  return res.json();
+}
+
+/** 一键授权（设备码）——给声明了 device_auth_base 的自家服务。
+ *
+ * 返回 user_code 是【必须显示给用户】的：设备码流程要求他在浏览器里核对这串码
+ * 和屏幕上一致，否则他无法确认自己批准的是这台机器。只开浏览器不给码，等于
+ * 让他闭着眼睛点同意。device_code（机密）不出后端。 */
+export async function connectDeviceBacked(
+  name: string,
+): Promise<{ ok: boolean; error?: string; user_code?: string; verification_uri?: string }> {
+  const res = await fetch(
+    `${httpBase()}/v1/connectors/${encodeURIComponent(name)}/device-connect`,
     { method: "POST" },
   );
   return res.json();

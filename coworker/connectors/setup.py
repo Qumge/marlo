@@ -103,6 +103,10 @@ def connector_list(secrets: SecretStore) -> list[dict[str, Any]]:
             "risk_notice": d.risk_notice,
             "managed": d.managed,
             "managed_paused": d.managed_paused,
+            # 声明了 device_auth_base 的自家服务：设置页可以直接起设备码授权。
+            # 【只送布尔，不送 base_url】——前端不需要知道打哪个域名，
+            # 端点在后端按 name 自己查 descriptor。少一处能被前端改掉的地方。
+            "device_auth": bool(getattr(d, "device_auth_base", "")),
             # Whether THIS profile came from managed OAuth (vs manual paste).
             "managed_profile": bool(profile.get("managed")),
             # "relay" for the managed cloud path; empty for manual/token connect.

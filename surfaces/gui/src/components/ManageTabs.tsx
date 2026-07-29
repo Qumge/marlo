@@ -6,6 +6,7 @@ import {
   connectConnector,
   connectManaged,
   connectMcpBacked,
+  connectDeviceBacked,
   connectMcp,
   deleteMcpServer,
   disallowUser,
@@ -887,6 +888,20 @@ export function ConnectSetup({
     else setError(res.error || "could not start the connect");
   };
 
+  // 设备码一键（自家服务）。和上面两个的区别：这条要【把 user_code 显示出来】——
+  // RFC 8628 的核对码，用户得比对浏览器里那串和这里一致，才知道自己批准的是这台机器。
+  const [userCode, setUserCode] = useState("");
+  const deviceOneClick = async () => {
+    setError(null);
+    const res = await connectDeviceBacked(c.name);
+    if (!res.ok) {
+      setError(res.error || "could not start the sign-in");
+      return;
+    }
+    setUserCode(res.user_code || "");
+    setWaiting(true);
+  };
+
   return (
     <div className="border-t border-line px-3.5 py-3 space-y-3">
       {c.mcp && !manualOnly && (
@@ -900,7 +915,33 @@ export function ConnectSetup({
           )}
         </div>
       )}
-      {c.managed && !c.mcp && !manualOnly && (
+      {/* 自家服务的设备码授权。放在 managed 之前：两者都不成立时才轮到 managed 的
+          云中转分支，而 device_auth 是【没有第三方经手】的那条路，优先。
+
+          【这一段之前不存在】——所以 AutoWhisper 的说明第一条写着「一键：在浏览器里
+          批准一次」，而那一屏上只有一个 token 输入框。后端的设备码流程一直是好的，
+          只有 agent 发起时能走到；设置页里没有入口。文案承诺了界面做不到的事。 */}
+      {c.device_auth && !c.mcp && !manualOnly && (
+        <div className="space-y-2" data-testid="device-connect">
+          <button className={BTN_ACCENT} onClick={deviceOneClick} disabled={waiting}>
+            {waiting ? t("connCheckBrowser") : t("tplConnectOneClick")(c.title)}
+          </button>
+          {userCode && (
+            /* 核对码。字号放大 + 等宽 + 拉开字距 —— 它是要被【逐字比对】的，
+               不是拿来读的。 */
+            <div className="text-[12.5px] text-muted">
+              {t("connDeviceCodeHint")}
+              <span className="ml-1.5 font-mono text-[15px] tracking-[0.18em] text-ink">
+                {userCode}
+              </span>
+            </div>
+          )}
+          {c.fields.length > 0 && (
+            <div className="text-[11.5px] text-faint">{t("connOrManual")}</div>
+          )}
+        </div>
+      )}
+      {c.managed && !c.mcp && !c.device_auth && !manualOnly && (
         <div className="space-y-2" data-testid="managed-connect">
           {c.managed_paused ? (
             // One-click temporarily off (e.g. Google pending CASA verification):

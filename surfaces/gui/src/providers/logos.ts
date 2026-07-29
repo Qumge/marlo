@@ -19,6 +19,9 @@ import qwen from "./logos/qwen.svg";
 import minimax from "./logos/minimax.svg";
 import xai from "./logos/xai.svg";
 import meta from "./logos/meta.svg";
+// 我们自己的标。lobe-icons 是第三方图标集，当然不会有它 —— 少了这一个，
+// ProviderMark 会退回首字母，Qumge 那张卡上就只有一个灰色的 "Q"。
+import qumge from "./logos/qumge.svg";
 
 export const PROVIDER_LOGOS: Record<string, string> = {
   anthropic,
@@ -35,9 +38,13 @@ export const PROVIDER_LOGOS: Record<string, string> = {
   qwen,
   minimax,
   xai,
+  qumge,
 };
 
 export const PROVIDER_ORDER = [
+  // 自家网关排第一：这个顺序的原则是"先放认得出的"，
+  // 而 Marlo 的用户是从 qumge.com 下载来的。
+  "qumge",
   "anthropic",
   "openai",
   "gemini",

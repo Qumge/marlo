@@ -837,6 +837,72 @@ def create_app(manager: SessionManager) -> FastAPI:
         asyncio.create_task(manager.mcp_connect_connector(name))
         return {"ok": True, "started": True}
 
+    @app.post("/v1/connectors/{name}/device-connect")
+    async def connector_device_connect(name: str) -> dict[str, Any]:
+        """设置页里的一键授权，给声明了 device_auth_base 的自家服务用。
+
+        【为什么要有这个】：设备码流程本来就实现了，但【只有 agent 能发起】——
+        它走的是 connect_requester 那条路：agent 调工具 → 发一张带 user_code 的
+        卡片 → 用户点头。而「连接」设置页里，一键按钮只在 c.mcp 或 c.managed 时
+        渲染，两者 AutoWhisper 都不是。
+
+        于是界面上出现了一句做不到的话：AutoWhisper 的说明第一条写着
+        「一键：在浏览器里批准一次，之后不用再管」，而那一屏上只有一个 token 输入框。
+        用户读完去找按钮，找不到。
+
+        返回 user_code 是【必须的】：设备码流程要求用户在浏览器里核对这串码和
+        屏幕上的一致，否则他没法确认自己批准的是这台机器。只开浏览器不给码，
+        等于让他闭着眼睛点同意。
+        """
+        from ..connectors.descriptors import get_descriptor
+        from ..connectors import device_connect
+
+        d = get_descriptor(name)
+        base = getattr(d, "device_auth_base", "") if d else ""
+        if not base:
+            return {"ok": False, "error": f"{name} has no device sign-in path"}
+
+        try:
+            flow = await asyncio.to_thread(device_connect.start, base, name)
+        except Exception as exc:
+            return {"ok": False, "error": f"could not start sign-in: {exc}"}
+
+        async def _finish() -> None:
+            """后台跑完剩下的：开浏览器 + 轮询 + 存 token。
+
+            前端拿到 user_code 就返回，不等这一趟 —— 浏览器那一步可能要几分钟，
+            HTTP 请求挂在那里等只会超时。连接状态由「连接」页自己的轮询接上。
+            """
+            import webbrowser
+
+            webbrowser.open(flow.verification_uri_complete)
+            interval = flow.interval
+            deadline = asyncio.get_event_loop().time() + CONNECT_TIMEOUT_S
+            while asyncio.get_event_loop().time() < deadline:
+                await asyncio.sleep(interval)
+                state, token = await asyncio.to_thread(
+                    device_connect.exchange, base, flow.device_code
+                )
+                if state == "connected" and token:
+                    await asyncio.to_thread(
+                        manager.connect_connector, name, {"api_token": token}
+                    )
+                    return
+                if state == "slow_down":
+                    # RFC 8628 §3.5：收到它必须【加宽】间隔，不是照原速再来一次。
+                    interval += 5
+                elif state in ("denied", "expired", "error"):
+                    return
+
+        asyncio.create_task(_finish())
+        # device_code 是机密，不出这个进程 —— 只把给人看的那串码交出去。
+        return {
+            "ok": True,
+            "started": True,
+            "user_code": flow.user_code,
+            "verification_uri": flow.verification_uri_complete,
+        }
+
     @app.post("/v1/connectors/{name}/disconnect")
     async def connector_disconnect(name: str) -> dict[str, Any]:
         # Managed profiles: best-effort flip of the cloud metadata record first

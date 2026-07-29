@@ -243,6 +243,7 @@ export const en = {
   tplNWorkspacesRelay: (n: number) => `${n} workspace${n === 1 ? "" : "s"} · relay`,
   tplProjectAllowances: (n: number) => `${n} project command allowance${n === 1 ? "" : "s"}`,
   connCheckBrowser: "Check your browser…",
+  connDeviceCodeHint: "Check this code matches the one in your browser:",
   connOrManual: "or connect manually:",
   connTabOneClick: "One click",
   connTabManual: "Manual",

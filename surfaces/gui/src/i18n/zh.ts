@@ -225,6 +225,7 @@ export const zh: Strings = {
   tplNWorkspacesRelay: (n: number) => `${n} 个工作区 · 中继`,
   tplProjectAllowances: (n: number) => `${n} 条项目命令授权`,
   connCheckBrowser: "去浏览器里看看…",
+  connDeviceCodeHint: "在浏览器里核对这串码：",
   connOrManual: "或者手动连接：",
   connTabOneClick: "一键",
   connTabManual: "手动",
