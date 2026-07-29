@@ -20,7 +20,22 @@ dependencies = [
     "docstring_parser",
     "pyyaml>=6",  # persona manifest frontmatter (YAML)
     "pydantic>=2",
-    "mcp>=1.1",  # MCP client (stdio + streamable-http); we use our own async layer on it
+    # MCP client (stdio + streamable-http); we use our own async layer on it.
+    #
+    # 【上界不能省】。这里曾经是裸的 mcp>=1.1，于是 2026-07-28 mcp 2.0.0 一发布，
+    # CI 就直接装了它，而 2.0 把 streamablehttp_client 删了（1.28 起改名
+    # streamable_http_client，且【签名不同】：headers/timeout/auth 收进一个现成的
+    # httpx.AsyncClient）。coworker/mcp/client.py:21 那行 import 当场失败。
+    #
+    # 后果比「CI 红了」严重：几乎每个测试模块都 import 这条链，于是从 7-28 起
+    # CI 三次运行【一条测试都没真正跑过】—— 它不是在报告失败，是什么都没测。
+    # 一个长期红的 CI 和一个长期绿的假守卫，信息量一样是零。
+    #
+    # 大版本号本来就是「允许破坏兼容」的信号。<2 是这类依赖的默认写法，
+    # 省掉它等于把「上游哪天发大版本」变成我们的定时炸弹。
+    # 迁到 2.x 是另一件事：要先把 2.0 装上、把 client.py 的调用改成新签名、
+    # 真跑一遍测试再合——不能靠读旧版本里那个新名字的签名去猜。
+    "mcp>=1.1,<2",
     "httpx>=0.27",  # sync outbound senders for messaging connectors (send_message tool)
     "websockets>=13",  # managed Slack relay client transport (relay_client.py)
     "ddgs>=9",
