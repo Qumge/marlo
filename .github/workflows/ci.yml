@@ -16,7 +16,11 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[messaging,dev]"
+          # -c requirements-ci.txt：CI 装的永远是锁里写死的版本。
+          # 没有它的时候，pyproject 里那些没上界的依赖会让 CI 每天装到不同的东西 ——
+          # 2026-07-28 mcp 2.0.0 发布当天，CI 就换成了一个删掉我们用的符号的版本，
+          # 之后三次运行一条测试都没真正跑过。见 requirements-ci.txt 头部。
+          pip install -e ".[messaging,dev]" -c requirements-ci.txt
       - name: Test
         run: pytest tests -q
 
