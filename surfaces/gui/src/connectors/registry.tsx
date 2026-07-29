@@ -120,6 +120,16 @@ const McpLogo = strokeLogo(
   </>,
 );
 
+// AutoWhisper 是我们自家产品，没有第三方图标包会收它。沿用 Qumge 那个标：
+// 圆环 + 人字（同一套视觉，用户在 qumge.com 和这里看到的是一个东西）。
+// 24x24 网格，半径 7.6 ≈ 与 simple-icons 的视觉重量对齐。
+const AutoWhisperLogo = strokeLogo(
+  <>
+    <circle cx="12" cy="12" r="7.6" />
+    <path d="M10.4 9.1 13.6 12l-3.2 2.9" />
+  </>,
+);
+
 const AttioLogo = strokeLogo(
   <>
     <path d="M4.5 19.5 12 4.5l7.5 15M7.6 13.4h8.8" />
@@ -232,6 +242,7 @@ export const CONNECTORS: Record<string, ConnectorRegistryEntry> = {
   amplitude: { label: "Amplitude", logo: AmplitudeLogo },
   apollo: { label: "Apollo.io", logo: ApolloLogo },
   hunter: { label: "Hunter", logo: HunterLogo },
+  autowhisper: { label: "AutoWhisper", logo: AutoWhisperLogo },
   // Non-brand utilities.
   email: { label: "connEmailLabel", logo: EmailLogo },
   browser: { label: "connBrowserLabel", logo: BrowserLogo },

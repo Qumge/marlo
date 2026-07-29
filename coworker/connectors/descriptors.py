@@ -451,6 +451,11 @@ DESCRIPTORS: list[ConnectorDescriptor] = [
         name="autowhisper",
         title="AutoWhisper",
         icon="sparkle",
+        # 【icon 不是图标】：ConnectorIcon 读的是 logo（registry 里的 id）+ brand_color，
+        # 它根本不看 icon 这个字段。两个都没设的后果是退回中性插头 —— 目录里
+        # Telegram/Slack/GitHub 都有自己的标，只有我们自家产品是个插头。
+        logo="autowhisper",
+        brand_color="#2563eb",
         blurb="社交媒体内容创作与发布 —— 生成、排期、发布，以及看数据。",
         auth="api_token",
         two_way=False,

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { t, useT } from "../i18n";
+import type { Strings } from "../i18n/en";
 import {
   cloudLogin,
   connectManaged,
@@ -45,11 +46,24 @@ const cronFor = (dayKey: string, hhmm: string) => {
   return `${Number(m) || 0} ${Number(h) || 9} * * ${DAYS[dayKey]?.dow ?? "*"}`;
 };
 
+// 【只要值是字符串的那些 key】。keyof Strings 里混着模板函数
+// （tplConnectOneClick 之类是 (title: string) => string），直接用它，
+// tr() 的返回类型就是 "string | 一堆函数"，塞进 JSX 会被 tsc 拒。
+type TextKey = { [K in keyof Strings]: Strings[K] extends string ? K : never }[keyof Strings];
+
 interface QuickTemplate {
   key: string;
-  title: string;
-  blurb: string;
-  cadence: string; // the card's footer label
+  // title / blurb 同理：也是翻译 key。它们现在填的碰巧都是合法 key，
+  // 但类型是 string + 调用点 as any，同一个坑一直开着 —— 谁哪天填一句
+  // 字面文案进来，卡片上就又是一个 undefined。
+  title: TextKey;
+  blurb: TextKey;
+  // 【必须是翻译 key，不能是字面串】。这里曾经是 string，而调用点写着
+  // tr(t.cadence as any) —— 两道类型防线都被主动关掉了。于是 6 个模板里有 5 个
+  // 填的是字面英文 "Weekly" / "Daily"，tr() 找不到这个 key 就返回 undefined，
+  // 卡片上直接印出 "不需要连接任何账号 · undefined"。
+  // 收紧成 keyof Strings 之后，再填字面串编译期就过不去。
+  cadence: TextKey; // the card's footer label
   conns: { name: string; why: string }[]; // [] = no connections needed
   needsRepo?: boolean;
   needsChannel?: boolean;
@@ -60,12 +74,14 @@ interface QuickTemplate {
   instructions: (ctx: { repo: string; channel: string; deliver: "app" | "slack" }) => string;
 }
 
-const TEMPLATES: QuickTemplate[] = [
+// 导出：AutomationQuickstart.keys.test.tsx 要逐条核对这些 key 在两个语种里
+// 都真的有译文 —— 类型只能证明「这是个 key」，证不了「这个 key 有值」。
+export const TEMPLATES: QuickTemplate[] = [
   {
     key: "github",
     title: "tplGithubDigest",
     blurb: "tplGithubBlurb",
-    cadence: "Weekly",
+    cadence: "freqWeekly",
     conns: [
       { name: "slack", why: t("aqDigestWhere") },
       { name: "github", why: t("aqDigestWhat") },
@@ -83,7 +99,7 @@ const TEMPLATES: QuickTemplate[] = [
     key: "pipeline",
     title: "tplPipelineDigest",
     blurb: "tplPipelineBlurb",
-    cadence: "Weekly",
+    cadence: "freqWeekly",
     conns: [
       { name: "slack", why: t("aqDigestWhere") },
       { name: "hubspot", why: t("aqPipelineActivity") },
@@ -101,7 +117,7 @@ const TEMPLATES: QuickTemplate[] = [
     key: "brief",
     title: "tplMorningBrief",
     blurb: "tplMorningBlurb",
-    cadence: "Daily",
+    cadence: "freqDaily",
     conns: [
       { name: "google_calendar", why: t("aqTodayMeetings") },
       { name: "gmail", why: t("aqOvernight") },
@@ -118,7 +134,7 @@ const TEMPLATES: QuickTemplate[] = [
     key: "news",
     title: "tplNewsBriefing",
     blurb: "tplNewsBlurb",
-    cadence: "Daily",
+    cadence: "freqDaily",
     conns: [],
     day: "daily",
     time: "08:00",
@@ -140,7 +156,7 @@ const TEMPLATES: QuickTemplate[] = [
     key: "cleanup",
     title: "tplFolderCleanup",
     blurb: "tplFolderBlurb",
-    cadence: "Weekly",
+    cadence: "freqWeekly",
     conns: [],
     day: "fri",
     time: "17:30",
@@ -283,7 +299,7 @@ export function AutomationQuickstart({
     if (!picked) return;
     onCreate({
       // 存翻译后的文字，不是键 —— 键会原样显示在任务列表里。
-      title: tr(picked.title as any),
+      title: tr(picked.title),
       instructions: picked.instructions({ repo, channel, deliver }),
       cron: cronFor(day, time),
       permissions:
@@ -326,8 +342,8 @@ export function AutomationQuickstart({
             }
             onClick={() => pick(t)}
           >
-            <span className="text-[13.5px] font-semibold">{tr(t.title as any)}</span>
-            <span className="text-[12px] text-muted leading-relaxed flex-1">{tr(t.blurb as any)}</span>
+            <span className="text-[13.5px] font-semibold">{tr(t.title)}</span>
+            <span className="text-[12px] text-muted leading-relaxed flex-1">{tr(t.blurb)}</span>
             <span className="flex items-center gap-1.5 mt-1">
               {t.conns.map((c) => {
                 const cs = connState(c.name);
@@ -347,7 +363,7 @@ export function AutomationQuickstart({
                 );
               })}
               <span className="text-[11px] text-faint ml-0.5">
-                {t.conns.length === 0 ? `${tr("tplNoConnections")} · ${tr(t.cadence as any)}` : tr(t.cadence as any)}
+                {t.conns.length === 0 ? `${tr("tplNoConnections")} · ${tr(t.cadence)}` : tr(t.cadence)}
               </span>
             </span>
           </button>
@@ -365,7 +381,7 @@ export function AutomationQuickstart({
             <span className="text-[11px] uppercase tracking-[0.05em] text-accent font-semibold">
               {t("aqSetUp")}
             </span>
-            <span className="text-[14px] font-semibold">{tr(picked.title as any)}</span>
+            <span className="text-[14px] font-semibold">{tr(picked.title)}</span>
             <span className="ml-auto text-[12px] text-faint max-sm:hidden">
               {picked.conns.length ? t("aqConnDelivery") : t("aqDeliverySchedule")} ·{" "}
               {tr(picked.cadence as any)}

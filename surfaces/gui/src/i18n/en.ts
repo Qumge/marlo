@@ -783,6 +783,7 @@ export const en = {
   tplFolderBlurb: "Sort recent Downloads into tidy folders by type.",
   tplNoConnections: "No connections needed",
   freqDaily: "Every day",
+  freqWeekly: "Weekly",
   freqWeekdays: "Weekdays",
   freqMon: "Mondays",
   freqTue: "Tuesdays",

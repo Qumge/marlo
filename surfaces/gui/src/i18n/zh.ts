@@ -741,6 +741,7 @@ export const zh: Strings = {
   tplFolderBlurb: "把最近的下载按类型归到干净的文件夹里。",
   tplNoConnections: "不需要连接任何账号",
   freqDaily: "每天",
+  freqWeekly: "每周",
   freqWeekdays: "工作日",
   freqMon: "每周一",
   freqTue: "每周二",
