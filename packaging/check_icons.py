@@ -21,6 +21,21 @@ import struct
 import sys
 from pathlib import Path
 
+# Windows 的控制台默认 cp1252，编码不了中文 —— 守卫会因为【自己的提示语】崩掉，
+# 报出来的是 UnicodeEncodeError，和它要检查的事情毫无关系。
+#
+# check_i18n.py 头上写着同一段话，因为那边先撞过一次。2026-08-01 这边又撞了一次：
+# 给托盘图标那条检查加了中文输出（"tray: 字形占 90.9%…"）却没抄这一段，于是
+# v0.5.0 的 Windows 发版构建挂在 icon check 上 —— 报的正是这个错，而图标本身没问题。
+#
+# 防这类"抄了一半"的办法不是记住，是让测试自己发现新守卫：
+# tests/test_check_i18n.py 的名单已经从手写改成扫 packaging/check_*.py。
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):  # 非 TTY / 老版本
+        pass
+
 ICONS = Path(__file__).resolve().parent.parent / "surfaces/gui/src-tauri/icons"
 
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"

@@ -37,6 +37,19 @@ from __future__ import annotations
 import subprocess
 import sys
 
+# 这个脚本满屏中文，而 Windows 控制台默认 cp1252 —— 不加这段，它会因为【自己的
+# 输出】崩掉，报一个和上游漂移毫无关系的 UnicodeEncodeError。check_i18n.py、
+# check_branding.py、check_icons.py 头上都有同一段（最后那个是 2026-08-01 才补的，
+# 补之前挂掉了一次 Windows 发版构建）。
+#
+# 这条不在 tests/test_check_i18n.py 的名单里 —— 它要 upstream remote，CI 的克隆
+# 没有。所以这段防护只能靠人抄对，这行注释就是给下一个人看的。
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):  # 非 TTY / 老版本
+        pass
+
 UPSTREAM = "upstream/main"
 TOP_N = 12
 

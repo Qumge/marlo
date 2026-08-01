@@ -55,11 +55,29 @@ def test_the_guards_survive_a_cp1252_console():
     挂掉的检查器，比没有检查器更让人困惑。
 
     在 macOS 上直接跑验不了（这里是 UTF-8），得把子进程的编码真的换掉。
+
+    【名单改成自动发现】原来这里手写着 ("check_i18n.py", "check_branding.py")。
+    2026-08-01 给 check_icons.py 加了一行中文输出（"tray: 字形占 90.9%…"），
+    但没给它加 reconfigure 那段防护 —— 而它不在这张手写名单里，所以本地和 CI
+    全绿，直到 Windows 的发版构建挂在 icon check 上，报的正是这条测试要防的
+    UnicodeEncodeError。
+
+    一张手写的名单，默认把【下一个】新守卫漏掉。扫目录才不会。
     """
     import subprocess
 
     root = Path(__file__).resolve().parent.parent
-    for script in ("check_i18n.py", "check_branding.py"):
+    # check_upstream_drift.py 排除，理由是【它要 upstream remote】：CI 克隆的是
+    # origin，没有那个 remote，脚本必然非零退出 —— 那和编码毫无关系，会把这条测试
+    # 变成一个假红。它自己的 docstring 也写着"不进 CI 的必跑项"。
+    #
+    # 排除的是【这一个】，不是回到手写名单：新加的守卫默认仍然被这条测试盯着。
+    needs_remote = {"check_upstream_drift.py"}
+    scripts = sorted(
+        p.name for p in (root / "packaging").glob("check_*.py") if p.name not in needs_remote
+    )
+    assert len(scripts) >= 3, f"只发现 {scripts} —— 目录大概不对"
+    for script in scripts:
         r = subprocess.run(
             [sys.executable, str(root / "packaging" / script)],
             env={**os.environ, "PYTHONIOENCODING": "cp1252"},
