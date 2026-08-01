@@ -266,8 +266,22 @@ jobs:
           # 官网下载】这条路 —— 也就是获客那条。
           #
           # marlo/$TAG/ 那份【不动】：那个前缀里的内容永远不变，长缓存是对的。
-          for f in dist/Marlo-macos-arm64.dmg dist/Marlo-windows-setup.exe \
-                   dist/Marlo-windows.msi dist/latest.json; do
+          #
+          # 【文件名不能手写】这里原来列的是
+          #   Marlo-macos-arm64.dmg / Marlo-windows-setup.exe / Marlo-windows.msi / latest.json
+          # 写它的时候还没有 Intel。0.5.0 第一次产出 Marlo-macos-x64.dmg，而它不在
+          # 名单里 —— 发版全绿，cdn.qumge.com/marlo/latest/Marlo-macos-x64.dmg 是 404，
+          # Intel 用户从官网下载直接扑空。自动更新不受影响（它读清单，清单指向
+          # marlo/$TAG/，那份是整目录传的）。
+          #
+          # 同一类遗漏在 packaging/make_update_manifest.py 里也有一份（那边是平台
+          # 映射表，同一次补的）。两处都是【手写的产物名单】—— 加一个平台要记得改
+          # 两个地方，而漏了不会有任何东西报错。
+          #
+          # 改成从 dist/ 里【捞】：稳定名 = 不带版本号的那些（版本化的副本形如
+          # Marlo_0.5.0_aarch64.dmg，它们只进 marlo/$TAG/）。
+          for f in $(ls dist/Marlo-*.dmg dist/Marlo-*.exe dist/Marlo-*.msi dist/latest.json \
+                        2>/dev/null | grep -Ev '/Marlo_[0-9]'); do
             [ -f "$f" ] || continue
             aws s3 cp "$f" "s3://$R2_BUCKET/marlo/latest/$(basename "$f")" \
               --endpoint-url "$R2_ENDPOINT" --no-progress \
