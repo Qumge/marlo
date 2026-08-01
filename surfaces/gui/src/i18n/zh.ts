@@ -161,6 +161,7 @@ export const zh: Strings = {
   ibNoSubs: "还没有订阅频道 —— 在下面添加一个，或者让某个同事去盯一个频道。",
   ibNothingHere: "这里没有内容 —— 没有丢失的消息，也没有失败的回合。",
   ibDmSession: "处理发给机器人的私信的会话。不设的话，私信会堆在下面的「未分派」里。",
+  ibDmParkNone: "不指定会话 —— 私信先堆着",
   uiSet: "设置",
   uiApprove: "批准",
   uiReject: "驳回",

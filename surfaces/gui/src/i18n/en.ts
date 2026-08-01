@@ -179,6 +179,7 @@ export const en = {
   ibNoSubs: "No channel subscriptions yet — add one below or ask a coworker to watch a channel.",
   ibNothingHere: "Nothing here — no dropped messages or failed turns.",
   ibDmSession: "Session that handles DMs to the bot. With none, DMs park under Unrouted below.",
+  ibDmParkNone: "No session — park DMs",
   uiSet: "Set",
   uiApprove: "Approve",
   uiReject: "Reject",

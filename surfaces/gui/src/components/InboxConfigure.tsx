@@ -140,7 +140,7 @@ function InboxRoutingCard() {
         </span>
         <ChannelPicker value={draft} onChange={setDraft} recent={recent} onSubmit={save} />
         <button
-          className={BTN_ACCENT_SM}
+          className={BTN_ACCENT_SM + " self-stretch"}
           disabled={!draft.trim() || missingSlackOwner}
           onClick={save}
         >
@@ -148,7 +148,7 @@ function InboxRoutingCard() {
         </button>
         {target && (
           <button className="text-[12px] text-danger/80 hover:text-danger" onClick={clear}>
-            clear
+            {t("uiClear")}
           </button>
         )}
       </div>
@@ -195,8 +195,8 @@ function DmRouteCard() {
         <span className="text-muted shrink-0">
           <Icon name="chat" size={16} />
         </span>
-        <select className={"flex-1 " + SELECT} value={dm} onChange={(e) => choose(e.target.value)}>
-          <option value="">No session — park DMs</option>
+        <select className={"flex-1 min-w-0 " + SELECT} value={dm} onChange={(e) => choose(e.target.value)}>
+          <option value="">{t("ibDmParkNone")}</option>
           {real.map((s) => (
             <option key={s.session_id} value={s.session_id}>
               {s.title || s.session_id}
