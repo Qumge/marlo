@@ -57,3 +57,20 @@ test("英文界面拿到的仍然是原文 —— tx 查不到就回退，不是
   await expect(pop).toContainText("Session totals");
   await expect(page.getByRole("button", { name: "Attach" })).toBeVisible();
 });
+
+// 回填之后的抽查：这些原文分布在不同文件、不同形状（整句、碎片、带符号前缀），
+// 而且【源码里全是裸英文】。抽查而不是全查：全查 252 条等于把 zh-text.ts 抄一遍，
+// 那只证明表等于表自己。这里证的是"表里的东西真的走到了屏幕上"。
+test("回填的译文真的渲染出来（抽查几个不同形状）", async ({ page }) => {
+  await inChinese(page);
+  await page.goto("/");
+  await page.getByText("Draft the launch note").first().click();
+
+  await page.getByTestId("access-toggle").click();
+  const rail = page.getByTestId("access-section");
+  // 整句 + 碎片拼接（"Off mutes it for" + <b>this session only</b> + "— …"）
+  await expect(rail).toContainText("本次会话");
+  await expect(rail).not.toContainText("this session only");
+  // 带符号前缀的："+ Add a source…"
+  await expect(rail).toContainText("添加来源");
+});

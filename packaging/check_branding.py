@@ -103,6 +103,22 @@ def _is_test(path: Path) -> bool:
 # before the app sends the user to opencoworker.us.auth0.com.
 EXEMPT_DIRS = {"connectors"}
 
+# zh-text.ts 是【按英文原文索引的译文表】—— 它的每一个键都是别处某个 .tsx 里逐字
+# 存在的字符串，而那个位置已经被这个守卫判过一次了。
+#
+# 2026-08-01 回填 148 条译文时撞上这件事：connectors/ 目录整个是豁免的（那里的
+# "OpenWorker Cloud"、"approve OpenWorker there" 描述的是真实的代授权链路，改名
+# 等于对用户撒谎 —— 0.2.2 就这么错过一次）。译文搬进目录表之后，同样的句子掉出了
+# 那个目录，于是守卫开始拦【它自己刚判过合法的东西】。
+#
+# 豁免要跟着【字符串】走，不是跟着目录走。所以这张表在这里跳过，判据仍然施加在
+# 原文所在的那个文件上。
+#
+# 【残余风险，以及它是怎么被堵住的】有人可能在【译文】里写进一个原文没有的品牌名。
+# check_i18n_text.mjs 因此同时检查【反方向】：表里的键必须在源码里真实存在。
+# 键都是真的，值就是那个键的译文，而不是一段没人看过的新文案。
+EXEMPT_FILES = {"zh-text.ts"}
+
 # 白名单管不到的一类：字符串本身合法，但【用错了地方】。
 #
 # 2026-07-28：自动化页对用户说 "Runs only while openworker-server is up"。
@@ -169,7 +185,7 @@ def main() -> int:
         for path in sorted(src.rglob("*")):
             if path.suffix not in SUFFIXES or not path.is_file():
                 continue
-            if _is_self(path) or _is_test(path):
+            if _is_self(path) or _is_test(path) or path.name in EXEMPT_FILES:
                 continue
             if EXCLUDE_DIRS & set(path.parts):
                 continue

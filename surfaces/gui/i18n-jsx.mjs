@@ -28,6 +28,25 @@ export function isProse(s) {
   return true;
 }
 
+/** 键要【和排版无关】。
+ *
+ * 多行的 JSX 文本，原始 value 里带着换行和缩进：
+ *
+ *   <p className="…">
+ *     Filters are enforced on this computer, before an agent sees
+ *     results.
+ *   </p>
+ *
+ * 拿它原样当键的话，Prettier 换一次行、或者有人多缩进两格，键就对不上了 ——
+ * 而失效是【静默】的：tx() 查不到就回退英文，界面悄悄变回英文，没有任何报错。
+ * 这正是这套机制最容易烂掉的方式。
+ *
+ * 折叠成单空格，恰好也是 React 渲染 JSX 文本时做的事，所以键和用户看到的字符串
+ * 是同一个东西。 */
+export function normalize(s) {
+  return String(s).replace(/\s+/g, " ").trim();
+}
+
 export function shouldSkip(id) {
   return (
     !id.endsWith(".tsx") ||
@@ -55,7 +74,7 @@ export function walk(code, visit) {
       // JSX 折叠首尾空白，但把它们留在外面更安全：它们决定相邻元素之间有没有空格。
       const lead = raw.match(/^\s*/)[0];
       const tail = raw.match(/\s*$/)[0];
-      const body = raw.slice(lead.length, raw.length - tail.length);
+      const body = normalize(raw.slice(lead.length, raw.length - tail.length));
       if (!isProse(body)) return;
       visit(body, path.node.start, path.node.end, "text", { lead, tail });
     },
@@ -64,7 +83,7 @@ export function walk(code, visit) {
       if (typeof name !== "string" || !ATTRS.has(name)) return;
       const v = path.node.value;
       if (!v || v.type !== "StringLiteral" || !isProse(v.value)) return;
-      visit(v.value, v.start, v.end, "attr", {});
+      visit(normalize(v.value), v.start, v.end, "attr", {});
     },
   });
   return true;
