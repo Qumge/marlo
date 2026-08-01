@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Marlo",
+  "version": "0.4.5",
+  "identifier": "com.qumge.marlo",
+  "bundle": {
+    "publisher": "Qumge Infotech (Shanghai) Co., Ltd."
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://cdn.qumge.com/marlo/latest/latest.json",
+        "https://github.com/Qumge/marlo/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVFQkM5REJDQjRCNTYyOUMKUldTY1lyVzB2SjI4N2x2bzMxM01VdjlmSUFwNjhZeHh0and2QWE3Tk4zUDd5T0FEdVptNzI3bjkK"
+    }
+  }
+}

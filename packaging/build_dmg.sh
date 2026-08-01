@@ -40,9 +40,20 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 PLATFORM="$(cd "$HERE/.." && pwd)"
 GUI="$PLATFORM/surfaces/gui"
-APP="Marlo"
-# Single source of truth for the version: tauri.conf.json (also stamps the bundle).
-VERSION="$(node -p "require('$GUI/src-tauri/tauri.conf.json').version")"
+# 【品牌 overlay】tauri.conf.json 保持和上游【字节相同】，我们只覆盖 6 个值：
+# productName / version / identifier / bundle.publisher / updater 的 endpoints 和 pubkey。
+#
+# 为什么不就地改那个文件：productName、identifier、endpoints 一年不动，version 每次
+# 发版都动 —— 而上游也每次发版都动同一行。就地改的结果是【每一次上游发版都必然冲突】，
+# 而且冲突内容永远相同（他们的版本号 vs 我们的版本号），每次都要人手工做同一个判断。
+# 抽成 overlay 之后，上游那个文件我们一个字节都不碰，他们改他们的，合并自动通过。
+#
+# --config 是 Tauri 的合并语义（"merged in the order they are provided"），既吃文件路径
+# 也吃内联 JSON，所以下面第 3 步可以叠两层：品牌 overlay + 构建期的 updater/图标 overlay。
+BRAND_CONF="$GUI/src-tauri/tauri.marlo.conf.json"
+APP="$(node -p "require('$BRAND_CONF').productName")"
+# Single source of truth for the version: 品牌 overlay（它也是最终 stamp 进 bundle 的那个）。
+VERSION="$(node -p "require('$BRAND_CONF').version")"
 TRIPLE="$(rustc -vV | sed -n 's/host: //p')"   # e.g. aarch64-apple-darwin
 ARCH="${TRIPLE%%-*}"
 
@@ -174,7 +185,8 @@ else
   # The icon still rides along: a keyless dev build should look like the real one.
   BUILD_OVERLAY="{\"bundle\":{$ICON_RES}}"
 fi
-( cd "$GUI" && npm run tauri build -- --bundles app --config "$BUILD_OVERLAY" )
+( cd "$GUI" && npm run tauri build -- --bundles app \
+    --config "src-tauri/tauri.marlo.conf.json" --config "$BUILD_OVERLAY" )
 
 echo "==> [4/5] hdiutil: wrapping into .dmg"
 BUNDLE="$GUI/src-tauri/target/release/bundle"

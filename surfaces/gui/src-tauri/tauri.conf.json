@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Marlo",
-  "version": "0.4.5",
-  "identifier": "com.qumge.marlo",
+  "productName": "OpenWorker",
+  "version": "0.1.7",
+  "identifier": "com.openworker.desktop",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -19,7 +19,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "publisher": "Qumge Infotech (Shanghai) Co., Ltd.",
+    "publisher": "OpenWorker",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -46,10 +46,10 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://cdn.qumge.com/marlo/latest/latest.json",
-        "https://github.com/Qumge/marlo/releases/latest/download/latest.json"
+        "https://download.openworker.com/latest.json",
+        "https://github.com/andrewyng/openworker/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVFQkM5REJDQjRCNTYyOUMKUldTY1lyVzB2SjI4N2x2bzMxM01VdjlmSUFwNjhZeHh0and2QWE3Tk4zUDd5T0FEdVptNzI3bjkK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVCNzEzRjY5OTkzNUNBNjkKUldScHlqV1phVDl4VzBvTnFLLytzaDkzNVd3WWNuUm8yNE95WTBFNnBtcGF1RENxeTRuNVhQeloK",
       "windows": {
         "installMode": "passive"
       }

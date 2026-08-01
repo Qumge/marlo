@@ -96,13 +96,17 @@ Write-Host "==> [3/3] tauri build (--bundles $Bundles)" -ForegroundColor Cyan
 # signing key env is present (CI secret TAURI_SIGNING_PRIVATE_KEY). Keyless builds skip
 # the overlay so dev builds keep working; keyless RELEASES strand installs without
 # auto-update.
-$UpdaterArgs = @()
+# 【品牌 overlay】tauri.conf.json 和上游字节相同，品牌值全在 tauri.marlo.conf.json 里。
+# 就地改那个文件的话，上游每次发版都会在 version 那一行和我们撞车 —— 每次都是同一个
+# 判断，做一辈子。--config 是合并语义，所以品牌 overlay 排在构建期 overlay 前面。
+# 详见 build_dmg.sh 里同一处的注释。
+$UpdaterArgs = @("--config", "src-tauri/tauri.marlo.conf.json")
 if ($env:TAURI_SIGNING_PRIVATE_KEY) {
     # Pass the overlay as a FILE: inline JSON loses its quotes through the
     # PowerShell -> npm.cmd -> cmd hop ("key must be a string", v0.1.3 run).
     $Overlay = Join-Path ([IO.Path]::GetTempPath()) "ocw-updater-overlay.json"
     Set-Content -Path $Overlay -Value '{"bundle":{"createUpdaterArtifacts":true}}' -Encoding ascii
-    $UpdaterArgs = @("--config", $Overlay)
+    $UpdaterArgs += @("--config", $Overlay)
 } else {
     Write-Host "    WARNING: no updater signing key - building WITHOUT auto-update artifacts (not releasable)." -ForegroundColor Yellow
 }

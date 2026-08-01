@@ -178,7 +178,69 @@ def main() -> int:
             scanned += 1
             _scan(path, src, offenders)
 
-    return _report(scanned, offenders)
+    rc = _report(scanned, offenders)
+    return check_tauri_overlay() or rc
+
+
+# tauri.conf.json 现在【和上游字节相同】，品牌值全部搬进 tauri.marlo.conf.json，构建时
+# 用 --config 叠上去（Tauri 的合并语义）。这么做是为了让上游每次发版改 version 那一行时
+# 不再和我们撞车 —— 那个冲突每次内容都一样，做一辈子也不会变得更容易。
+#
+# 代价是多了一种【静默失效】：谁忘了传 --config，构建出来的就是一个叫 OpenWorker、
+# 指向上游更新源的 .app —— 它能签名、能安装、能启动，然后把用户更新到别人的产品上。
+# 没有任何测试会看见这件事。所以这里检查两件不变量：
+#   1. overlay 里那几个键确实是我们的（不是从上游那边抄回来的）
+#   2. 每一处会调 tauri build/dev 的地方都带上了这个 overlay
+_BRAND_KEYS = {
+    "productName": "Marlo",
+    "identifier": "com.qumge.marlo",
+}
+
+
+def check_tauri_overlay() -> int:
+    import json
+
+    conf = ROOT / "surfaces/gui/src-tauri/tauri.conf.json"
+    overlay = ROOT / "surfaces/gui/src-tauri/tauri.marlo.conf.json"
+    if not overlay.is_file():
+        print(f"{overlay.name} 不见了 —— 构建会打出上游品牌的包", file=sys.stderr)
+        return 1
+
+    data = json.loads(overlay.read_text(encoding="utf-8"))
+    bad = [f"{k}={data.get(k)!r}（应为 {v!r}）" for k, v in _BRAND_KEYS.items() if data.get(k) != v]
+    for ep in data.get("plugins", {}).get("updater", {}).get("endpoints", []):
+        if "openworker" in ep.lower():
+            bad.append(f"updater endpoint 指向上游：{ep}")
+    if bad:
+        print(f"{overlay.name} 里的品牌值不对：", file=sys.stderr)
+        print("\n".join(f"  {b}" for b in bad), file=sys.stderr)
+        return 1
+
+    # 上游那份仍然写着 OpenWorker 是【预期的】—— 它就该和上游一样。真正要防的是
+    # 有人把品牌值写回去，两处各留一份，然后开始漂。
+    base = json.loads(conf.read_text(encoding="utf-8"))
+    if base.get("productName") == _BRAND_KEYS["productName"]:
+        print(f"{conf.name} 里又出现了品牌名 —— 它应当和上游保持字节相同，"
+              f"品牌只写在 {overlay.name}", file=sys.stderr)
+        return 1
+
+    # 会调 tauri build/dev 的地方必须带 overlay，否则打出来的是上游品牌的包。
+    callers = {
+        ROOT / "packaging/build_dmg.sh",
+        ROOT / "packaging/build_windows.ps1",
+    }
+    missing = [
+        p.name for p in sorted(callers)
+        if p.is_file() and "tauri build" in p.read_text(encoding="utf-8")
+        and overlay.name not in p.read_text(encoding="utf-8")
+    ]
+    if missing:
+        print(f"这些地方调了 tauri build 但没传 {overlay.name}："
+              f"{', '.join(missing)} —— 会打出上游品牌的包", file=sys.stderr)
+        return 1
+
+    print(f"branding: tauri 品牌 overlay 就位（{conf.name} 与上游一致）")
+    return 0
 
 
 def _scan(path: Path, src: Path, offenders: list) -> None:

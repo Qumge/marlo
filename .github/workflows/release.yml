@@ -178,14 +178,19 @@ jobs:
       - name: Compose the auto-update manifest (latest.json)
         # Shipped apps poll this repo's releases/latest/download/latest.json —
         # publishing this release IS pushing the update.
-        # The tag must match tauri.conf.json's version or installed apps would
-        # see a permanent phantom update; fail loudly on drift. Runs only when signed
-        # updater artifacts exist (i.e. the TAURI_SIGNING_PRIVATE_KEY secret is set).
+        # The tag must match the version that gets stamped into the bundle, or installed
+        # apps would see a permanent phantom update; fail loudly on drift. Runs only when
+        # signed updater artifacts exist (i.e. the TAURI_SIGNING_PRIVATE_KEY secret is set).
+        #
+        # 读的是 tauri.marlo.conf.json，不是 tauri.conf.json —— 后者现在和上游字节相同，
+        # 里面躺着【上游的】版本号。构建时 --config 让 overlay 覆盖它，所以 overlay 才是
+        # 真正 stamp 进 bundle 的那个。
         run: |
           TAG="${GITHUB_REF_NAME}"
-          CONF_VERSION=$(python3 -c "import json; print(json.load(open('surfaces/gui/src-tauri/tauri.conf.json'))['version'])")
+          CONF="surfaces/gui/src-tauri/tauri.marlo.conf.json"
+          CONF_VERSION=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['version'])" "$CONF")
           if [ "${TAG#v}" != "$CONF_VERSION" ]; then
-            echo "::error::tag $TAG != tauri.conf.json version $CONF_VERSION — bump the config before tagging"
+            echo "::error::tag $TAG != $CONF version $CONF_VERSION — bump the overlay before tagging"
             exit 1
           fi
           if ls dist/*.sig >/dev/null 2>&1; then
