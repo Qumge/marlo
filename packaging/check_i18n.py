@@ -17,6 +17,7 @@
 """
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -223,8 +224,39 @@ ALLOWED = [
 ]
 
 
+# 【两把尺子的边界】2026-08-01 起，界面英文有两条翻译路径：
+#
+#   t("key")  —— 我们自己写的组件。键比原文稳定，支持带参数的函数值。这把尺子管它。
+#   tx(原文)  —— 上游的 JSX，由构建期 transform 自动包起来（i18n-transform.ts），
+#                译文按【原文】索引存在 i18n/zh-text.ts。那把尺子是
+#                packaging/check_i18n_text.mjs，判据和 transform 共用一份 AST 规则。
+#
+# 走第二条路的字符串，在源码里【就是裸英文】—— 那正是它的目的：上游的文件一个字节
+# 都不改，合并才不冲突。所以这把尺子看到它们必须闭嘴，否则两把尺子会互相要求对方
+# 不可能满足的事：这把要求"改成 t()"，那把要求"保持原文"。
+#
+# 判据是"zh-text.ts 里有没有它"，不是"在哪个文件里"：翻过了就是翻过了，走哪条路
+# 不改变用户看到的东西。
+def _by_text_translated() -> set[str]:
+    p = SRC / "i18n" / "zh-text.ts"
+    if not p.is_file():
+        return set()
+    out = set()
+    for m in re.finditer(r'^\s{2}("(?:[^"\\]|\\.)*")\s*:', p.read_text(encoding="utf-8"), re.M):
+        try:
+            out.add(json.loads(m.group(1)))
+        except ValueError:
+            pass
+    return out
+
+
+_BY_TEXT = _by_text_translated()
+
+
 def _allowed(s: str) -> bool:
     """豁免吗？专名【组成的】字符串豁免；以专名【开头的句子】不豁免。"""
+    if s in _BY_TEXT:
+        return True
     if _brands_only(s):
         return True
     return any(a.match(s) for a in ALLOWED[1:])

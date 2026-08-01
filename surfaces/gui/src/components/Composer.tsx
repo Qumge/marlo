@@ -368,7 +368,7 @@ export function Composer(props: Props) {
           <button
             className="shrink-0 opacity-60 hover:opacity-100"
             onClick={() => setAttachNotice(null)}
-            title={t("dismiss")}
+            title="Dismiss"
           >
             ✕
           </button>
@@ -417,8 +417,8 @@ export function Composer(props: Props) {
           <div className="relative">
             <button
               className={iconBtn + (attachMenuOpen ? " bg-paper text-ink" : "")}
-              title={t("attach")}
-              aria-label={t("uiAttach")}
+              title="Attach"
+              aria-label="Attach"
               onClick={() => setAttachMenuOpen((v) => !v)}
             >
               <Icon name="plus" size={17} />
@@ -471,7 +471,7 @@ export function Composer(props: Props) {
             />
           ) : null}
 
-          {dictationBusy === "Transcribing…" && <span className="text-[11.5px] text-accent">{t("transcribing")}</span>}
+          {dictationBusy === "Transcribing…" && <span className="text-[11.5px] text-accent">Transcribing…</span>}
 
           <span className="ml-auto" />
 
@@ -495,10 +495,10 @@ export function Composer(props: Props) {
             <button
               className="pill model-warn chip"
               onClick={() => props.onConnectModel?.()}
-              title={t("connectAModel")}
-              aria-label={t("uiNoModel")}
+              title="Connect a model"
+              aria-label="No model connected — connect a model"
             >
-              <span className="pill-label">{t("noModel")}</span>
+              <span className="pill-label">No model</span>
               <span className="model-warn-ico" aria-hidden>⚠</span>
             </button>
           ) : modelsLoaded ? (
@@ -508,9 +508,9 @@ export function Composer(props: Props) {
               className="pill chip text-faint cursor-default"
               disabled
               data-testid="models-loading"
-              title={t("fetchingModels")}
+              title="Fetching the model list from the server"
             >
-              <span className="pill-label">{t("loadingModels")}</span>
+              <span className="pill-label">Loading models…</span>
             </button>
           ))}
 
@@ -556,7 +556,7 @@ export function Composer(props: Props) {
               onClick={submit}
               disabled={!props.connected || !!dictation?.recording || !!dictationBusy}
               title={needsModel ? t("cmpConnectModel") : undefined}
-              aria-label={t("uiSend")}
+              aria-label="Send"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M12 19V5M5 12l7-7 7 7" />
@@ -616,7 +616,7 @@ function UsageChip({
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={tr("usageTokenUsage")}
+        aria-label="Token usage"
         title={
           showBar
             ? tr("usageChipTitleBar")(pct as number, formatTokens(total))
@@ -649,7 +649,7 @@ function UsageChip({
             {contextWindow ? (
               <div className="mb-2.5">
                 <div className="text-[10.5px] uppercase tracking-[0.06em] text-faint font-semibold mb-1">
-                  {tr("usageContextWindow")}
+                  Context window
                 </div>
                 <div className="h-1.5 rounded-full bg-line overflow-hidden">
                   <div
@@ -667,7 +667,7 @@ function UsageChip({
               </div>
             ) : null}
             <div className="text-[10.5px] uppercase tracking-[0.06em] text-faint font-semibold mb-1">
-              {tr("usageSessionTotals")}
+              Session totals
             </div>
             <div className="flex flex-col gap-1.5">
               {Object.entries(usage.byModel).map(([id, t]) => (
@@ -696,12 +696,12 @@ function UsageChip({
               ))}
             </div>
             <div className="mt-2 pt-2 border-t border-line flex items-baseline justify-between text-[11.5px]">
-              <span className="text-faint">{tr("usageTotal")}</span>
+              <span className="text-faint">Total</span>
               <span className="text-ink tabular-nums">{tr("usageNTokens")(formatTokens(total))}</span>
             </div>
             {model && !modelLabels?.[model] && contextWindow === undefined && (
               <div className="mt-1 text-[10.5px] text-faint leading-snug">
-                {tr("usageNoMeterCustom")}
+                Context meter unavailable for custom models.
               </div>
             )}
           </div>
@@ -739,7 +739,7 @@ function ModeMenu({
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={t("uiMode")}
+        aria-label="Mode"
         title={
           `Mode: ${current?.label || mode}` +
           (unattended ? t("cmpApprovalsInboxNote") : "")
@@ -781,15 +781,15 @@ function ModeMenu({
                 <div className="my-1 border-t border-line" />
                 <div className="flex items-center gap-2 px-2.5 py-1.5">
                   <span className="flex-1 min-w-0">
-                    <span className="block text-[13px] text-ink">{t("sendApprovalsToInbox")}</span>
+                    <span className="block text-[13px] text-ink">Send approvals to Inbox</span>
                     <span className="block text-[11px] text-faint leading-snug">
-                      {t("cmpApprovalsToInbox")}
+                      Approvals & questions go to the Inbox; the agent keeps working.
                     </span>
                   </span>
                   <Toggle
                     checked={!!unattended}
                     onChange={onUnattendedChange}
-                    title={t("sendApprovalsToInboxTitle")}
+                    title="Send approvals to the Inbox"
                   />
                 </div>
               </>
@@ -814,7 +814,8 @@ function attachItem(icon: "image" | "file" | "fileCode", label: string, onClick:
 }
 
 function AttachChip({ a, onRemove }: { a: Attachment; onRemove: () => void }) {
-  const t = useT();
+  // 这个组件的两条文案（title="Remove"、alt）现在由构建期的 transform 接管，
+  // 不再需要 useT —— 它是 t("key") 那条路退场的第一处痕迹。
   return (
     <div className={"attach-chip" + (a.kind === "image" ? " img" : "")}>
       {a.kind === "image" ? (
@@ -825,7 +826,7 @@ function AttachChip({ a, onRemove }: { a: Attachment; onRemove: () => void }) {
           <span className="attach-name">{a.name}</span>
         </>
       )}
-      <button className="attach-x" onClick={onRemove} title={t("remove")}>
+      <button className="attach-x" onClick={onRemove} title="Remove">
         ✕
       </button>
     </div>

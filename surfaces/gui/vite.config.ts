@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { i18nText } from "./i18n-transform";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -26,7 +27,8 @@ export default defineConfig(({ command }) => {
   }
   return {
     base: "./",
-    plugins: [react()],
+    // i18nText 在 react() 之前：它要在 esbuild 把 JSX 编译掉之前拿到源码。
+    plugins: [i18nText(), react()],
     server: { port: 1420, strictPort: true },
     define: { __COWORKER_DEV_TOKEN__: JSON.stringify(devToken) },
     // Tauri CLI looks for these; harmless for the browser build.
