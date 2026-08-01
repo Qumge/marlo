@@ -10,6 +10,7 @@ Looks for the updater artifacts by their STABLE names (the same names release.ym
 uploads):
 
     Marlo-macos-arm64.app.tar.gz(.sig)   -> platforms["darwin-aarch64"]
+    Marlo-macos-x64.app.tar.gz(.sig)     -> platforms["darwin-x86_64"]
     Marlo-windows-setup.exe(.sig)        -> platforms["windows-x86_64"]
 
 URLs point at the TAG-pinned download path, never at `latest/` — a manifest must
@@ -38,6 +39,11 @@ import sys
 # stable asset name -> Tauri platform key
 ARTIFACTS = {
     "Marlo-macos-arm64.app.tar.gz": "darwin-aarch64",
+    # Intel：release.yml 的 matrix 从 7-28 起就在 macos-15-intel 上产出
+    # Marlo-macos-x64.app.tar.gz，但这张表里一直没有它 —— 于是 Intel 用户装完
+    # 之后【永远收不到自动更新】，而发布流程一路是绿的。上游 0.1.7 加同一行时
+    # 才暴露出来：我们比他们更早支持 Intel，却漏了更新清单这一半。
+    "Marlo-macos-x64.app.tar.gz": "darwin-x86_64",
     "Marlo-windows-setup.exe": "windows-x86_64",
 }
 

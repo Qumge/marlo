@@ -95,6 +95,60 @@ export const zh: Strings = {
   appTryATask: "试一件事",
   appViewRun: "查看运行 ›",
   appWaitingForAgent: "等待助手响应…",
+  appCompacting: "正在压缩上下文…",
+  appContextCompacted: "上下文已压缩",
+
+  // -- 用量小条（上游 OPE-42，随 0.1.7 到来）--------------------------------
+  usageTokenUsage: "Token 用量",
+  usageChipTitleBar: (pct, total) => `上下文窗口已用 ${pct}% · 本次会话 ${total} tokens`,
+  usageChipTitlePlain: (total) => `本次会话 Token 用量：${total}`,
+  usageContextWindow: "上下文窗口",
+  usageOfWindow: (used, window, pct) => `${used} / ${window} · ${pct}%`,
+  usageInContextNow: (n) => `当前上下文中：${n} tokens`,
+  usageSessionTotals: "本次会话合计",
+  usageUnknownModel: "未知模型",
+  // 三个输入行是三种【计费类别】，不是三个阶段：未命中缓存 + 读缓存 + 写缓存 = 输入合计。
+  usageUncachedInput: "未命中缓存",
+  usageCacheReads: "读缓存",
+  usageCacheWrites: "写缓存",
+  usageTotalInput: "输入合计",
+  usageInput: "输入",
+  usageOutput: "输出",
+  usageTotal: "合计",
+  usageNTokens: (n) => `${n} tokens`,
+  usageNoMeterCustom: "自定义模型没有上下文窗口信息，无法显示用量条。",
+
+  // -- 上下文压缩设置（上游 OPE-27）----------------------------------------
+  setCompaction: "上下文压缩",
+  setCompactionHelp:
+    "长会话会自动压缩：把靠前的轮次总结掉，这样它可以一直干下去，而不是撞上上下文上限。" +
+    "你看到的对话记录不会被改动 —— 只在压缩发生的位置留一个小标记。",
+  setCompactAt: "达到",
+  setPctOfWindow: "% 上下文窗口时压缩",
+  setOrAt: "或达到",
+  setTokensWhicheverSmaller: "tokens 时压缩，以先到者为准",
+  setCompactionCapHelp:
+    "这个上限让超大上下文的模型提前压缩 —— 它们的质量和速度在远没到标称上限时就开始下降。",
+  setSummarizerModel: "做总结的模型",
+  setSessionOwnModel: "跟随会话自己的模型（默认）",
+  setSummarizerHelp: "总结由这个模型来写。默认跟随该会话正在用的模型。",
+  setComposer: "输入框",
+  setShowContextBar: "显示上下文窗口条",
+  setShowContextBarHelp:
+    "一个小刻度，显示模型的上下文窗口用了多少。关掉它会改为显示本次会话的 token 总数；" +
+    "无论哪种，完整明细都只有一次点击的距离。",
+
+  // -- 模型家族选择（上游为 Bedrock/Vertex 的分家族调度加的）----------------
+  // -- provider 认证改版（上游 0.1.7）--------------------------------------
+  psCopyCommand: "复制命令",
+  psTestedAndSaved: "已验证并保存",
+  psRunsOneCheck: "会做一次只读校验，然后保存。",
+
+  mcModelFamily: "模型家族",
+  mcClaudeFamily: "Claude 系列",
+  mcGeminiFamily: "Gemini 系列",
+  mcOpenWeight: "开放权重",
+  mcOtherModels: "其他模型",
   uiBrowse: "浏览",
   uiClear: "清除",
   uiPinned: "已置顶",

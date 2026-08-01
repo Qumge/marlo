@@ -8,6 +8,25 @@ import {
   type GatewayModel,
 } from "../api";
 import { useT } from "../i18n";
+import type { Strings } from "../i18n/en";
+
+// Cloud-account providers dispatch by a family segment baked into the model id
+// (`bedrock:claude/…`, `vertex:openweight/…`). The add-model row shows a dropdown so
+// users pick the family instead of memorizing the prefix; curated matrix ids already
+// carry theirs.
+// label 存的是 i18n 【键】不是英文：常量因此保持纯数据，不需要在模块作用域调 hook，
+// 渲染时才 t(key)。这是这个代码库里数据数组的既有写法（见 check_i18n.py 的 ALLOWED）。
+const MODEL_FAMILIES: Record<string, { value: string; label: keyof Strings }[]> = {
+  bedrock: [
+    { value: "claude", label: "mcClaudeFamily" },
+    { value: "other", label: "mcOtherModels" },
+  ],
+  vertex: [
+    { value: "gemini", label: "mcGeminiFamily" },
+    { value: "claude", label: "mcClaudeFamily" },
+    { value: "openweight", label: "mcOpenWeight" },
+  ],
+};
 
 // One provider's models as a checklist: tick = shown in the composer's model picker (the
 // curated list), the black "default" badge marks the model new sessions use, and hovering any
@@ -45,6 +64,12 @@ export function ModelChecklist({
     return () => clearTimeout(h);
   }, [browsing, gq]);
 
+  // 上游 0.1.7 加的 family 下拉：Bedrock/Vertex 的同一个 provider 下挂着不同
+  // 模型家族（Anthropic / Nova / Nemotron…），加模型时要先选家族。和上面那个
+  // 网关浏览器互不相干 —— 两边都留。
+  const families = MODEL_FAMILIES[provider];
+  const [family, setFamily] = useState(families?.[0]?.value || "");
+
   const provOf = (id: string) => {
     const i = id.indexOf(":");
     return i > 0 && knownProviders.includes(id.slice(0, i)) ? id.slice(0, i) : "openai";
@@ -73,8 +98,12 @@ export function ModelChecklist({
     await refresh();
   };
   const add = async () => {
-    const typed = draft.trim();
+    let typed = draft.trim();
     if (!typed) return;
+    // Fold the family choice into the id unless the user already typed one.
+    if (families && !families.some((f) => typed.startsWith(`${f.value}/`))) {
+      typed = `${family}/${typed}`;
+    }
     const res = await addModel(prefixed(typed));
     if (res.ok) {
       setDraft("");
@@ -161,6 +190,20 @@ export function ModelChecklist({
       )}
 
       <div className="mlist-add">
+        {families && (
+          <select
+            value={family}
+            onChange={(e) => setFamily(e.target.value)}
+            aria-label={t("mcModelFamily")}
+            data-testid="mlist-family"
+          >
+            {families.map((f) => (
+              <option key={f.value} value={f.value}>
+                {t(f.label) as string}
+              </option>
+            ))}
+          </select>
+        )}
         <input
           placeholder={t("uiAddAnotherModel")}
           value={draft}

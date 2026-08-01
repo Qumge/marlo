@@ -142,6 +142,9 @@ export interface ConversationMessage {
   tool_calls?: any[];
   tool_call_id?: string;
   source?: MessageSource;
+  // Token counts for the round-trip that produced an assistant message
+  // ({model, input, output, cache_read, cache_write}); absent on older servers.
+  usage?: import("./types").TurnUsage;
   [key: string]: any;
 }
 
@@ -818,13 +821,25 @@ export interface ModelSettings {
   nav_layout?: "flat" | "grouped";
   // Sidebar: sessions shown per group before "Show more" (default 5, 1–50).
   sessions_peek?: number;
+  // Composer: show the context-window fill bar (default FALSE; absent → the chip shows
+  // the session total). The usage popover keeps both numbers regardless.
+  context_bar?: boolean;
   // Curated-matrix display names ({full id → "GLM-5.2 · via Together"}); custom models absent.
   model_labels?: Record<string, string>;
+  // {full id → context window in tokens}, verified matrix entries only — drives the
+  // composer's context-fill meter (absent id → the meter hides). Optional for older backends.
+  model_context_windows?: Record<string, number>;
   // Token savings (PDF attachments): fallback for models without native PDF support,
   // and attach-time thresholds. Optional so the GUI is robust to an older backend.
   pdf_fallback?: "text" | "images";
   pdf_max_pages?: number; // default 20, 1–100
   pdf_max_mb?: number; // default 10, 1–10
+  // Auto-compaction of long histories (OPE-27): trigger = min(threshold% × context
+  // window, cap tokens); model pins the summarizer ("" → the session's own model).
+  // Optional so the GUI is robust to an older backend.
+  compaction_threshold_pct?: number; // default 0.8, 0.10–0.95
+  compaction_cap_tokens?: number; // default 250000
+  compaction_model?: string;
 }
 
 export interface PdfSettings {
@@ -845,6 +860,24 @@ export async function setPdfSettings(
   return res.json();
 }
 
+export interface CompactionSettings {
+  compaction_threshold_pct: number;
+  compaction_cap_tokens: number;
+  compaction_model: string;
+}
+
+/** Persist the auto-compaction overrides (threshold %, token cap, summarizer model). */
+export async function setCompactionSettings(
+  patch: Partial<CompactionSettings>,
+): Promise<{ ok: boolean; error?: string }> {
+  const res = await fetch(`${httpBase()}/v1/settings/compaction`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  return res.json();
+}
+
 /** Local page/size probe for a PDF data URL — the composer's attach-time threshold check. */
 export async function inspectPdf(
   dataUrl: string,
@@ -853,6 +886,18 @@ export async function inspectPdf(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ data_url: dataUrl }),
+  });
+  return res.json();
+}
+
+/** Persist whether the composer shows the context-window fill bar. */
+export async function setContextBar(
+  shown: boolean,
+): Promise<{ ok: boolean; context_bar?: boolean; error?: string }> {
+  const res = await fetch(`${httpBase()}/v1/settings/context-bar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ context_bar: shown }),
   });
   return res.json();
 }
@@ -1394,6 +1439,10 @@ export interface ProviderField {
   help: string;
   placeholder: string;
   default?: string; // pre-filled editable value (e.g. an OpenAI-compatible vendor's endpoint)
+  // Non-empty → segmented choice, not a text input. tag = tiny badge ("Easiest");
+  // desc = one-liner atop the method panel; command = copyable terminal command.
+  choices?: { value: string; label: string; tag?: string; desc?: string; command?: string }[];
+  show_when?: Record<string, string> | null; // render only while these fields hold these values
 }
 
 export interface ProviderInfo {
@@ -1453,6 +1502,7 @@ export function detectProvider(apiKey: string): string | null {
   const key = (apiKey || "").trim();
   if (!key) return null;
   if (key.startsWith("sk-ant-")) return "anthropic";
+  if (key.startsWith("sk-or-")) return "openrouter";
   if (key.startsWith("AIza")) return "gemini";
   if (key.startsWith("sk-") || key.startsWith("sk_")) return "openai";
   return null;

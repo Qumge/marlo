@@ -28,10 +28,19 @@ import {
   type SurfaceVisibility,
   type WorkspaceCommandTrust,
 } from "./api";
-import type { ApprovalDecision, Attachment, Item, SessionInfo, TodoItem, WsEvent } from "./types";
+import type {
+  ApprovalDecision,
+  Attachment,
+  Item,
+  SessionInfo,
+  SessionUsage,
+  TodoItem,
+  WsEvent,
+} from "./types";
 import { isProjectScoped } from "./personaScope";
 import { baseName } from "./paths";
 import { itemsFromMessages } from "./itemsFromMessages";
+import { addTurnUsage, emptyUsage, usageFromMessages } from "./usage";
 import { streamMode } from "./streamGate";
 import { InboxItemCard } from "./components/InboxItemCard";
 import { isTauri, platformOS, startWindowDrag } from "./tauri";
@@ -58,7 +67,7 @@ import { DirectoryRequestCard } from "./components/DirectoryRequestCard";
 import { ConnectorRequestCard } from "./components/ConnectorRequestCard";
 import { PlanCard } from "./components/PlanCard";
 import { WorkspaceTrustPrompt } from "./components/WorkspaceTrustPrompt";
-import { useT } from "./i18n";
+import { t as tr, useT } from "./i18n";
 
 const newId = () =>
   (crypto as any).randomUUID ? crypto.randomUUID().slice(0, 12) : Math.random().toString(36).slice(2, 14);
@@ -157,10 +166,23 @@ export function App() {
   const [model, setModel] = useState("gpt-5.6-sol");
   const [models, setModels] = useState<string[]>([]);
   const [modelLabels, setModelLabels] = useState<Record<string, string>>({});
+  // {full model id → context window in tokens} from the curated matrix (verified only);
+  // drives the composer usage chip's context-fill meter.
+  const [modelContextWindows, setModelContextWindows] = useState<Record<string, number>>({});
+  // Settings: show the composer's context-window fill bar. OFF by default (owner ask),
+  // so an older backend without the field also shows the session total.
+  const [contextBar, setContextBar] = useState(false);
+  // Per-session token usage (OPE-42): rebuilt from the transcript on session load,
+  // accumulated live from assistant_message events, reset with the transcript.
+  const [usage, setUsage] = useState<SessionUsage>(emptyUsage());
   const [surfaces, setSurfaces] = useState<SurfaceVisibility>({ cowork: true, chat: false, code: false });
   const [mode, setMode] = useState("interactive");
   const [connected, setConnected] = useState(false);
   const [running, setRunning] = useState(false);
+  // Transient "Compacting context…" indicator (OPE-27): set by the `compacting` event,
+  // cleared by whatever the engine emits next — the summarizer call is otherwise a
+  // multi-second silent stall mid-turn.
+  const [compacting, setCompacting] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
   const [streaming, setStreamingState] = useState("");
   // Ref mirror of `streaming`: the WS handler closure is built once per socket and can't read
@@ -396,9 +418,12 @@ export function App() {
           setBranch(null);
         }
         try {
-          setItems(itemsFromMessages(await getSessionMessages(last.session_id)));
+          const messages = await getSessionMessages(last.session_id);
+          setItems(itemsFromMessages(messages));
+          setUsage(usageFromMessages(messages));
         } catch {
           setItems([]);
+          setUsage(emptyUsage());
         }
         setSessionId(last.session_id);
         setShowGate(false);
@@ -487,6 +512,8 @@ export function App() {
       .then((s) => {
         setModels(s.models || []);
         setModelLabels(s.model_labels || {});
+        setModelContextWindows(s.model_context_windows || {});
+        setContextBar(s.context_bar === true);
         setModelReady(s.model_ready);
         if (s.surfaces) setSurfaces(s.surfaces);
       })
@@ -561,6 +588,9 @@ export function App() {
           },
         ]);
       };
+      // Any engine event after `compacting` means the summarizer finished (compacted /
+      // silent no-op / failure prompt) — the transient must never outlive it.
+      if (ev.type !== "compacting") setCompacting(false);
       switch (ev.type) {
         case "ready":
           setConnected(true);
@@ -602,6 +632,7 @@ export function App() {
           setReasoningStream(reasoningRef.current + (d.text || ""));
           break;
         case "assistant_message": {
+          if (d.usage) setUsage((u) => addTurnUsage(u, d.usage));
           // The event's reasoning is authoritative (covers background-delivered turns);
           // the local buffer is the fallback for older servers.
           const reasoning = d.reasoning || reasoningRef.current;
@@ -710,6 +741,15 @@ export function App() {
           // persisted marker into the live transcript (replay renders it from history).
           if (d.model) setModel(d.model);
           setItems((p) => [...p, { kind: "notice", tone: "info", text: d.text || t("appModelSwitched") }]);
+          break;
+        case "compacting":
+          setCompacting(true);
+          break;
+        case "compacted":
+          // Auto-compaction marker (OPE-27): outbound-only — the transcript stays intact,
+          // this divider just shows where the model's memory was summarized.
+          // 事件回调不在渲染里，用模块级的 t()（useT 是给组件订阅语言切换用的）。
+          setItems((p) => [...p, { kind: "notice", tone: "info", text: d.text || tr("appContextCompacted") }]);
           break;
         case "interrupted":
           flushPartialStream();
@@ -909,6 +949,7 @@ export function App() {
     const target = forAgent || agent;
     setSurface("session"); // return to the conversation view if we were on a sub-view
     setItems([]);
+    setUsage(emptyUsage());
     setStreaming("");
     setTodo([]);
     setRunning(false);
@@ -973,8 +1014,10 @@ export function App() {
     try {
       const messages = await getSessionMessages(id);
       setItems(itemsFromMessages(messages));
+      setUsage(usageFromMessages(messages));
     } catch {
       setItems([]);
+      setUsage(emptyUsage());
     }
   };
   const switchAgent = async (name: string) => {
@@ -987,6 +1030,7 @@ export function App() {
 
     setAgent(name);
     setItems([]);
+    setUsage(emptyUsage());
     setStreaming("");
     setTodo([]);
     setRunning(false);
@@ -1015,9 +1059,12 @@ export function App() {
       else setShowGate(true);
       setSessionId(target.sessionId);
       try {
-        setItems(itemsFromMessages(await getSessionMessages(target.sessionId)));
+        const messages = await getSessionMessages(target.sessionId);
+        setItems(itemsFromMessages(messages));
+        setUsage(usageFromMessages(messages));
       } catch {
         setItems([]);
+        setUsage(emptyUsage());
       }
       return;
     }
@@ -1041,6 +1088,7 @@ export function App() {
     setShowGate(false);
     setGateCreate(false);
     setItems([]);
+    setUsage(emptyUsage());
     setStreaming("");
     setTodo([]);
     setSessionId(newId());
@@ -1053,6 +1101,7 @@ export function App() {
     const target = forAgent || agent;
     setSurface("session");
     setItems([]);
+    setUsage(emptyUsage());
     setStreaming("");
     setTodo([]);
     setRunning(false);
@@ -1077,6 +1126,7 @@ export function App() {
     // Archiving the open chat: leave it and start fresh (it moves to the Archived section).
     if (archived && id === sessionId) {
       setItems([]);
+      setUsage(emptyUsage());
       setStreaming("");
       setTodo([]);
       setRunning(false);
@@ -1089,6 +1139,7 @@ export function App() {
     refreshSessions();
     if (id === sessionId) {
       setItems([]);
+      setUsage(emptyUsage());
       setStreaming("");
       setTodo([]);
       setRunning(false);
@@ -1516,7 +1567,11 @@ export function App() {
                       <ThinkingBlock text={reasoningStream} live />
                     </div>
                   )}
+                  {/* Compaction runs between provider turns (nothing streams during it), so
+                      the transient takes over the waiting slot with a specific label. */}
+                  {running && compacting && <WaitingForAgent label={t("appCompacting")} />}
                   {running &&
+                    !compacting &&
                     !reasoningStream &&
                     (!streaming || streamMode(streaming, items, running) === "hold") &&
                     !lastItemIsAssistant(items) && <WaitingForAgent />}
@@ -1568,6 +1623,9 @@ export function App() {
               onUnattendedChange={agent !== "chat" ? toggleUnattended : undefined}
               prefill={composerPrefill}
               resetKey={sessionId}
+              usage={usage}
+              contextWindow={modelContextWindows[model]}
+              contextBar={contextBar}
               placeholder={
                 agent === "code"
                   ? "Ask the coder to build, fix, or explain…  (drop or paste files)"
@@ -1683,13 +1741,13 @@ function lastItemIsAssistant(items: Item[]): boolean {
   return false;
 }
 
-function WaitingForAgent() {
+function WaitingForAgent({ label }: { label?: string }) {
   const t = useT();
   return (
     <div className="waiting-transcript">
       <div className="waiting-row" aria-live="polite">
         <span className="waiting-spinner" />
-        <span>{t("appWaitingForAgent")}</span>
+        <span>{label || t("appWaitingForAgent")}</span>
       </div>
     </div>
   );

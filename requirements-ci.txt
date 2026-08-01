@@ -50,6 +50,12 @@ attrs==26.1.0
     #   aiohttp
     #   jsonschema
     #   referencing
+boto3==1.43.62
+    # via coworker (pyproject.toml)
+botocore==1.43.62
+    # via
+    #   boto3
+    #   s3transfer
 brotli==1.2.0
     # via httpx
 certifi==2026.7.22
@@ -94,7 +100,9 @@ frozenlist==1.8.0
     #   aiohttp
     #   aiosignal
 google-auth==2.56.2
-    # via google-genai
+    # via
+    #   coworker (pyproject.toml)
+    #   google-genai
 google-genai==2.14.0
     # via coworker (pyproject.toml)
 h11==0.16.0
@@ -135,6 +143,10 @@ jiter==0.16.0
     # via
     #   anthropic
     #   openai
+jmespath==1.1.0
+    # via
+    #   boto3
+    #   botocore
 jsonschema==4.26.0
     # via mcp
 jsonschema-specifications==2025.9.1
@@ -214,7 +226,9 @@ pytest==9.1.1
 pytest-asyncio==1.4.0
     # via coworker (pyproject.toml)
 python-dateutil==2.9.0.post0
-    # via croniter
+    # via
+    #   botocore
+    #   croniter
 python-docx==1.2.0
     # via coworker (pyproject.toml)
 python-dotenv==1.2.2
@@ -243,6 +257,8 @@ rpds-py==2026.6.3
     # via
     #   jsonschema
     #   referencing
+s3transfer==0.19.2
+    # via boto3
 six==1.17.0
     # via python-dateutil
 slack-bolt==1.30.0
@@ -296,7 +312,9 @@ typing-inspection==0.4.2
 uc-micro-py==2.0.0
     # via linkify-it-py
 urllib3==2.7.0
-    # via requests
+    # via
+    #   botocore
+    #   requests
 uvicorn==0.52.0
     # via
     #   coworker (pyproject.toml)

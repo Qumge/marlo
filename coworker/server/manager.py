@@ -76,6 +76,7 @@ from ..agents import list_agents as _list_agents
 from ..providers import (
     ProviderClient,
     ProviderRouter,
+    descriptor_configured,
     get_descriptor,
     provider_descriptors,
     verify_provider_key,
@@ -276,6 +277,14 @@ class SessionManager(QumgeManagerMixin):
             "required": bool(commands and not trusted),
         }
 
+    def _mcp_workspace_trusted(self, workspace: Optional[str | Path]) -> bool:
+        """Whether workspace `.coworker/mcp.json` may be loaded (#213).
+
+        Same consent boundary as repository ``allowed_commands``: an untrusted
+        clone must not define stdio processes that spawn at session open.
+        """
+        return bool(workspace and self.workspace_trust.is_trusted(workspace))
+
     def set_workspace_trust(
         self, path: str | Path, *, trusted: bool
     ) -> dict[str, Any]:
@@ -465,6 +474,13 @@ class SessionManager(QumgeManagerMixin):
             )
         if record is not None and record.grants:
             self._apply_grants(engine, record.grants)
+        # Auto-compaction (OPE-27): restore the persisted view boundary and wire the live
+        # Settings getter — post-construction, so build_engine's signature stays put.
+        if record is not None and record.compaction:
+            from ..compaction import CompactionState
+
+            engine.compaction_state = CompactionState.from_dict(record.compaction)
+        engine.compaction_settings = self.compaction_settings
         self._engines[session_id] = engine
         if is_new_session:
             self._emit_session_created(session_id, agent_name)
@@ -886,7 +902,11 @@ class SessionManager(QumgeManagerMixin):
         loop = asyncio.get_running_loop()
         effective: Optional[set[str]] = None  # computed lazily, once
         out: list[Any] = []
-        for server in load_mcp_servers(ws, secrets=self.secrets):
+        for server in load_mcp_servers(
+            ws,
+            secrets=self.secrets,
+            workspace_trusted=self._mcp_workspace_trusted(ws),
+        ):
             if not server.enabled:
                 continue
             if server.auth == "oauth" and not mcp_oauth.has_tokens(
@@ -1002,7 +1022,11 @@ class SessionManager(QumgeManagerMixin):
         """Connect one server NOW — for OAuth servers this may open the browser and wait
         for the loopback callback, so callers run it as a background task and watch
         list_mcp for the status flip."""
-        for server in load_mcp_servers(self.default_workspace, secrets=self.secrets):
+        for server in load_mcp_servers(
+            self.default_workspace,
+            secrets=self.secrets,
+            workspace_trusted=self._mcp_workspace_trusted(self.default_workspace),
+        ):
             if server.name != name:
                 continue
             self._mcp_authorizing.add(name)
@@ -1080,7 +1104,11 @@ class SessionManager(QumgeManagerMixin):
 
     async def mcp_tools(self, name: str) -> dict[str, Any]:
         """Connect one server and list its tools (name + description)."""
-        for server in load_mcp_servers(self.default_workspace, secrets=self.secrets):
+        for server in load_mcp_servers(
+            self.default_workspace,
+            secrets=self.secrets,
+            workspace_trusted=self._mcp_workspace_trusted(self.default_workspace),
+        ):
             if server.name == name:
                 try:
                     conn = await self.mcp.ensure(server)
@@ -1228,32 +1256,40 @@ class SessionManager(QumgeManagerMixin):
             ".doc",
             ".docm",
         }
-        for path in root.rglob("*"):
-            try:
-                rel = path.relative_to(root)
-                if any(
-                    part.startswith(".")
-                    or part in {"node_modules", "target", "dist", "__pycache__"}
-                    for part in rel.parts
-                ):
+        # os.walk with in-place pruning, NOT rglob: rglob descends first and filters after,
+        # so a home-directory workspace walked into ~/Library and tripped the macOS App Data
+        # TCC prompt ("Marlo would like to access data from other apps") on every turn.
+        # Pruning here means those directories are never entered at all.
+        from ..tools.search import OS_DATA_DIRS
+
+        skip = {"node_modules", "target", "dist", "__pycache__"} | OS_DATA_DIRS
+        for dirpath, dirs, files in os.walk(root):
+            dirs[:] = [d for d in dirs if not d.startswith(".") and d not in skip]
+            for name in files:
+                if name.startswith("."):
                     continue
-                if not path.is_file() or path.suffix.lower() not in suffixes:
+                path = Path(dirpath) / name
+                if path.suffix.lower() not in suffixes:
                     continue
-                st = path.stat()
-                out.append(
-                    {
-                        "path": str(rel),
-                        # Absolute path for "Copy path" — the relative one is useless outside
-                        # the app (tester catch 2026-07-12: it copied just the filename).
-                        "abs_path": str(path),
-                        "name": path.name,
-                        "kind": _artifact_kind(path),
-                        "size": st.st_size,
-                        "modified_at": st.st_mtime,
-                    }
-                )
-            except OSError:
-                continue
+                try:
+                    st = path.stat()
+                    if not path.is_file():
+                        continue
+                    out.append(
+                        {
+                            "path": str(path.relative_to(root)),
+                            # Absolute path for "Copy path" — the relative one is useless
+                            # outside the app (tester catch 2026-07-12: it copied just the
+                            # filename).
+                            "abs_path": str(path),
+                            "name": path.name,
+                            "kind": _artifact_kind(path),
+                            "size": st.st_size,
+                            "modified_at": st.st_mtime,
+                        }
+                    )
+                except OSError:
+                    continue
         out.sort(key=lambda a: a["modified_at"], reverse=True)
         return out[:80]
 
@@ -1397,17 +1433,10 @@ class SessionManager(QumgeManagerMixin):
         """Descriptor + per-provider status for the Settings UI. Never returns secret values;
         non-secret field values (e.g. the Ollama base URL) ARE returned so the form can prefill.
         """
-        import os
-
         out: list[dict[str, Any]] = []
         for d in provider_descriptors():
             profile = self.secrets.get(f"provider:{d.name}") or {}
-            if d.needs_key:
-                configured = bool(profile.get("api_key")) or bool(
-                    d.env_key and os.environ.get(d.env_key)
-                )
-            else:
-                configured = True  # keyless (Ollama) — usable out of the box
+            configured = descriptor_configured(d, profile)
             values = {
                 f.key: profile.get(f.key)
                 for f in d.fields
@@ -1579,8 +1608,8 @@ class SessionManager(QumgeManagerMixin):
         self, name: str, fields: Optional[dict[str, Any]]
     ) -> dict[str, Any]:
         """Test a provider's credentials with a live read-only call, WITHOUT persisting them, so
-        onboarding can offer a "Test" button. Falls back to the stored/env key when the form left
-        the key blank (e.g. testing an already-configured provider)."""
+        onboarding can offer a "Test" button. Falls back to stored/env values when the form left
+        a field blank (e.g. testing an already-configured provider)."""
         import os
 
         d = get_descriptor(name)
@@ -1588,13 +1617,28 @@ class SessionManager(QumgeManagerMixin):
             return {"ok": False, "error": f"unknown provider: {name}"}
         fields = fields or {}
         profile = self.secrets.get(f"provider:{name}") or {}
-        api_key = (fields.get("api_key") or profile.get("api_key") or "").strip()
+        merged = {}
+        for f in d.fields:
+            val = fields.get(f.key) or profile.get(f.key) or ""
+            if isinstance(val, str):
+                val = val.strip()
+            if val:
+                merged[f.key] = val
+        api_key = merged.get("api_key", "")
         if not api_key and d.env_key:
             api_key = os.environ.get(d.env_key, "").strip()
-        base_url = (fields.get("base_url") or profile.get("base_url") or "").strip()
-        if d.needs_key and not api_key:
+        has_key_field = any(f.key == "api_key" for f in d.fields)
+        if d.needs_key and has_key_field and not api_key:
             return {"ok": False, "error": "Enter an API key to test."}
-        return verify_provider_key(name, api_key=api_key, base_url=base_url)
+        if d.needs_key and not has_key_field:
+            # Multi-field cloud providers (Bedrock): required fields must be present;
+            # actual credentials may be ambient (~/.aws, env) and are checked by the call.
+            missing = [f.label for f in d.fields if f.required and not merged.get(f.key)]
+            if missing:
+                return {"ok": False, "error": "missing: " + ", ".join(missing)}
+        return verify_provider_key(
+            name, api_key=api_key, base_url=merged.get("base_url", ""), fields=merged
+        )
 
     def _model_provider(self, model: str) -> str:
         """The provider a model string routes to (known `prefix:` or the OpenAI default)."""
@@ -1608,12 +1652,7 @@ class SessionManager(QumgeManagerMixin):
         d = get_descriptor(name)
         if d is None:
             return False
-        if not d.needs_key:
-            return True  # keyless (Ollama)
-        profile = self.secrets.get(f"provider:{name}") or {}
-        return bool(profile.get("api_key")) or bool(
-            d.env_key and os.environ.get(d.env_key)
-        )
+        return descriptor_configured(d, self.secrets.get(f"provider:{name}") or {})
 
     # -- settings / prefs (model API key, default model, onboarding) -------------
     def _prefs_path(self) -> Path:
@@ -1764,7 +1803,7 @@ class SessionManager(QumgeManagerMixin):
         selectable = [m for m in self._curated_models() if _selectable(m)]
         if self.model not in selectable:
             selectable.insert(0, self.model)
-        from ..providers.matrix import model_labels
+        from ..providers.matrix import model_context_windows, model_labels
 
         return {
             "provider": "openai",
@@ -1773,6 +1812,9 @@ class SessionManager(QumgeManagerMixin):
             # Curated-matrix display names ({full id → "GLM-5.2 · via Together"}) so every
             # picker shows human labels; custom models absent here render their raw id.
             "model_labels": model_labels(),
+            # {full id → context window in tokens}, verified matrix entries only —
+            # drives the composer's context-fill meter (absent id → meter hides).
+            "model_context_windows": model_context_windows(),
             "has_key": env_key or stored,
             # Provider-agnostic "can this default model actually run?" — true when the default
             # model's provider is configured (any provider, not just OpenAI). Drives the GUI's
@@ -1784,12 +1826,14 @@ class SessionManager(QumgeManagerMixin):
             "surfaces": self._surfaces(),
             "nav_layout": self._nav_layout(),
             "sessions_peek": self.sessions_peek(),
+            "context_bar": self.context_bar(),
             "scratch_base": self._prefs.get("scratch_base")
             or self.DEFAULT_SCRATCH_BASE,
             # Real on-disk secrets location, so the UI shows the OS-native path instead of a
             # hardcoded POSIX one (Windows -> %APPDATA%\coworker, macOS/Linux -> ~/.config).
             "secrets_path": str(self.secrets.path),
             **self.pdf_settings(),
+            **self.compaction_settings_payload(),
         }
 
     def _surfaces(self) -> dict[str, bool]:
@@ -1842,6 +1886,16 @@ class SessionManager(QumgeManagerMixin):
         self._save_prefs()
         return {"ok": True, "sessions_peek": self.sessions_peek()}
 
+    def context_bar(self) -> bool:
+        """Whether the composer shows the context-window fill bar. OFF by default (owner
+        ask): the chip then states the session total, and the popover keeps both numbers."""
+        return bool(self._prefs.get("context_bar", False))
+
+    def set_context_bar(self, shown: Any) -> dict[str, Any]:
+        self._prefs["context_bar"] = bool(shown)
+        self._save_prefs()
+        return {"ok": True, "context_bar": self.context_bar()}
+
     # -- PDF attachments / token savings (owner ask, 2026-07-17) ----------------
     DEFAULT_PDF_MAX_PAGES = 20
     DEFAULT_PDF_MAX_MB = 10
@@ -1865,6 +1919,65 @@ class SessionManager(QumgeManagerMixin):
             "pdf_max_pages": max(1, min(pages, 100)),
             "pdf_max_mb": max(1, min(mb, 10)),
         }
+
+    def compaction_settings(self) -> dict[str, Any]:
+        """The live auto-compaction knobs (OPE-27) — read by every engine per check, so a
+        Settings change applies without a rebuild. Only the two spec'd overrides plus the
+        summarizer-model pin; absent keys fall back to compaction.py defaults."""
+        from ..compaction import DEFAULT_CAP_TOKENS, DEFAULT_THRESHOLD_PCT
+
+        return {
+            "threshold_pct": float(
+                self._prefs.get("compaction_threshold_pct") or DEFAULT_THRESHOLD_PCT
+            ),
+            "cap_tokens": int(
+                self._prefs.get("compaction_cap_tokens") or DEFAULT_CAP_TOKENS
+            ),
+            # "" → the session's own model (engine falls back to self.model).
+            "model": str(self._prefs.get("compaction_model") or ""),
+        }
+
+    def compaction_settings_payload(self) -> dict[str, Any]:
+        """The same knobs under REST-facing names (prefixed to keep /v1/settings flat)."""
+        settings = self.compaction_settings()
+        return {
+            "compaction_threshold_pct": settings["threshold_pct"],
+            "compaction_cap_tokens": settings["cap_tokens"],
+            "compaction_model": settings["model"],
+        }
+
+    def set_compaction_settings(
+        self,
+        threshold_pct: Any = None,
+        cap_tokens: Any = None,
+        model: Any = None,
+    ) -> dict[str, Any]:
+        """Persist the auto-compaction overrides (OPE-27). Threshold is a percentage of
+        the model's context window (10–95); the cap is an absolute token ceiling; model
+        pins the summarizer ('' → the session's own model). Engines read these live via
+        `compaction_settings()`, so changes apply to running sessions immediately."""
+        if threshold_pct is not None:
+            try:
+                pct = float(threshold_pct)
+            except (TypeError, ValueError):
+                return {"ok": False, "error": "compaction_threshold_pct must be a number"}
+            if not 0.10 <= pct <= 0.95:
+                return {
+                    "ok": False,
+                    "error": "compaction_threshold_pct must be between 0.10 and 0.95",
+                }
+            self._prefs["compaction_threshold_pct"] = pct
+        if cap_tokens is not None:
+            try:
+                self._prefs["compaction_cap_tokens"] = max(
+                    10_000, min(int(cap_tokens), 2_000_000)
+                )
+            except (TypeError, ValueError):
+                return {"ok": False, "error": "compaction_cap_tokens must be a number"}
+        if model is not None:
+            self._prefs["compaction_model"] = str(model)
+        self._save_prefs()
+        return {"ok": True, **self.compaction_settings()}
 
     def set_pdf_settings(
         self,
@@ -3257,6 +3370,11 @@ class SessionManager(QumgeManagerMixin):
                 agent=getattr(engine, "agent_name", "code"),
                 extra_roots=self._extra_roots_of(engine),
                 grants=_grants_of(engine),
+                compaction=(
+                    engine.compaction_state.as_dict()
+                    if getattr(engine, "compaction_state", None)
+                    else {}
+                ),
             )
         )
 

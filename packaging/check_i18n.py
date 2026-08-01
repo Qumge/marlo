@@ -234,12 +234,26 @@ def _is_test(p: Path) -> bool:
     return ".test." in p.name
 
 
+# 【JSX 块注释】。逐行那几条规则会跳过以 // 开头的行，也会切掉行尾的 //，但
+# {/* … */} 一条都挡不住 —— 它既不以 // 开头，里面的散文又长得和界面文案一模一样。
+#
+#   {/* The bar is the context-window fill; pairing it with the session TOTAL read as
+#       "total is N% of the window", which it never was. */}
+#
+# 上游 0.1.7 带进来这一段，守卫就报了一条【永远改不掉】的："total is N% of the window"。
+# 它不在界面上，翻译它没有意义，加进 ALLOWED 是把一条注释写进白名单——两条路都不对。
+#
+# 这是假阳性，方向和前面九个盲区相反，但代价一样：一个会报不存在的问题的守卫，
+# 和一个会漏真问题的守卫，都在教人忽略它。
+_JSX_COMMENT = re.compile(r"\{\s*/\*.*?\*/\s*\}", re.S)
+
+
 def scan() -> list[str]:
     found: list[str] = []
     for path in sorted(SRC.rglob("*.tsx")):
         if _is_test(path):
             continue
-        text = path.read_text(encoding="utf-8")
+        text = _JSX_COMMENT.sub("", path.read_text(encoding="utf-8"))
         # as_posix()：Windows 上分隔符是反斜杠，而基线里存的是正斜杠 —— 不统一
         # 的话整份基线在那个平台上全被当成新增（CI 实测 184 条全报，构建挂掉）。
         rel = path.relative_to(SRC).as_posix()

@@ -113,6 +113,63 @@ export const en = {
   appTryATask: "Try a task",
   appViewRun: "View run ›",
   appWaitingForAgent: "Waiting for agent...",
+  appCompacting: "Compacting context…",
+  appContextCompacted: "Context compacted",
+
+  // -- token usage chip (upstream OPE-42, arrived with 0.1.7) ----------------
+  usageTokenUsage: "Token usage",
+  usageChipTitleBar: (pct: number, total: string) =>
+    `Context window ${pct}% full · ${total} tokens this session`,
+  usageChipTitlePlain: (total: string) => `Token usage this session: ${total}`,
+  usageContextWindow: "Context window",
+  usageOfWindow: (used: string, window: string, pct: number) => `${used} of ${window} · ${pct}%`,
+  usageInContextNow: (n: string) => `In context now: ${n} tokens`,
+  usageSessionTotals: "Session totals",
+  usageUnknownModel: "Unknown model",
+  usageUncachedInput: "Uncached input",
+  usageCacheReads: "Cache reads",
+  usageCacheWrites: "Cache writes",
+  usageTotalInput: "Total input",
+  usageInput: "Input",
+  usageOutput: "Output",
+  usageTotal: "Total",
+  usageNTokens: (n: string) => `${n} tokens`,
+  usageNoMeterCustom: "Context meter unavailable for custom models.",
+
+  // -- context compaction settings (upstream OPE-27) ------------------------
+  setCompaction: "Context compaction",
+  setCompactionHelp:
+    "Long sessions are compacted automatically: older turns are summarized so the coworker " +
+    "keeps working instead of running out of context. Your visible transcript is never " +
+    "changed — a small marker shows where compaction happened.",
+  setCompactAt: "Compact at",
+  setPctOfWindow: "% of the context window",
+  setOrAt: "or at",
+  setTokensWhicheverSmaller: "tokens, whichever is smaller",
+  setCompactionCapHelp:
+    "The cap makes very-large-context models compact early — quality and speed degrade " +
+    "well before their nominal limit.",
+  setSummarizerModel: "Summarizer model",
+  setSessionOwnModel: "Session’s own model (default)",
+  setSummarizerHelp:
+    "The summary is written by this model. The default follows whatever model the session is using.",
+  setComposer: "Composer",
+  setShowContextBar: "Show the context window bar",
+  setShowContextBarHelp:
+    "A small meter showing how full the model’s context window is. Turn it off to show this " +
+    "session’s token total instead; either way the full breakdown is one click away.",
+
+  // -- model family picker (upstream: Bedrock/Vertex per-family dispatch) ----
+  // -- provider auth redesign (upstream 0.1.7) ------------------------------
+  psCopyCommand: "Copy command",
+  psTestedAndSaved: "Tested & saved",
+  psRunsOneCheck: "Runs one read-only check, then saves.",
+
+  mcModelFamily: "Model family",
+  mcClaudeFamily: "Claude family",
+  mcGeminiFamily: "Gemini family",
+  mcOpenWeight: "Open-weight",
+  mcOtherModels: "Other models",
   uiBrowse: "Browse",
   uiClear: "Clear",
   uiPinned: "Pinned",

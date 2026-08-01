@@ -20,7 +20,17 @@ jobs:
           # 没有它的时候，pyproject 里那些没上界的依赖会让 CI 每天装到不同的东西 ——
           # 2026-07-28 mcp 2.0.0 发布当天，CI 就换成了一个删掉我们用的符号的版本，
           # 之后三次运行一条测试都没真正跑过。见 requirements-ci.txt 头部。
-          pip install -e ".[messaging,dev]" -c requirements-ci.txt
+          #
+          # bedrock 这个 extra 是上游 0.1.7 带来的。boto3 在 bedrock_provider.py 里
+          # 是函数体内 import，所以【模块】不带它也能 import —— 但 test_bedrock_provider
+          # 有 4 条测试真的要 boto3/botocore，不装就是 ModuleNotFoundError。
+          #
+          # 加 extra 的同时锁也重新生成过（--extra bedrock，并且拿旧锁当约束），
+          # 所以这次只多了 boto3/botocore/jmespath/s3transfer 四行，没有顺带升级
+          # 任何不相关的包。不这么做的话 uv 会整份重新求解，把 cryptography、
+          # fastapi、openai 一起抬上去 —— 那种升级要单独一个提交，不该混在
+          # 「合上游」里。
+          pip install -e ".[messaging,dev,bedrock]" -c requirements-ci.txt
       - name: Test
         run: pytest tests -q
 
