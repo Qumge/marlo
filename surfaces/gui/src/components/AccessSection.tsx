@@ -45,7 +45,13 @@ const platformOf = (channel: string) => (channel.includes(":") ? channel.split("
 const SEC_H = "text-[11px] uppercase tracking-[0.05em] text-faint font-semibold";
 const TAG_CORE =
   "text-[10px] px-1.5 py-0.5 rounded-full bg-warnSoft/70 text-warnInk border border-warnInk/15";
-const BTN_ACCENT = "text-[12px] px-2.5 py-1.5 rounded-lg bg-accent text-white shrink-0";
+// self-stretch：这个按钮永远贴着一个 .chan-input 站（「添加频道」那一行）。按钮是
+// py-1.5 + 12px 文字 = 30px，输入框是 6px 内边距 + 13px 文字 + 1px 边框 = 33.5px ——
+// 两边的 padding 各自手调过，于是差 3.5px。让它拉伸到这一行的高度，而不是再猜一个
+// 和字体绑死的数字。同一个毛病在 Inbox ▸ Configure 和频道气泡里各有一份。
+const BTN_ACCENT =
+  "self-stretch inline-flex items-center justify-center text-[12px] px-2.5 py-1.5 rounded-lg " +
+  "bg-accent text-white shrink-0";
 const BTN_BORDERED =
   "text-[12px] px-2.5 py-1.5 rounded-lg border border-line bg-paper hover:border-lineStrong shrink-0";
 

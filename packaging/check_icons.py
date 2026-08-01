@@ -60,6 +60,51 @@ def main() -> int:
         return 1
 
     print(f"icons: {checked} PNGs, all 8-bit")
+    return check_tray_fill()
+
+
+# 菜单栏图标的大小 = 【字形在画布里的占比】，不是画布大小。
+#
+# tray-icon 在 macOS 上把整张画布缩到 18pt 高（platform_impl/macos/mod.rs 里
+# icon_height: f64 = 18.0），缩的是画布不是字形。0.4.5 的 tray.png 是手工导出的，
+# 字形只占 44×44 的 63.6%，那 36% 的透明边距原样进了菜单栏 —— 可见标记 11.5pt，
+# 而旁边 1Password 是 16pt 出头。owner 的原话是"要大一点，类似 1password"。
+#
+# 这条量的是 tray.rgba：Rust 用 include_bytes! 嵌的就是它，PNG 只是给人看的副本。
+# 生成脚本是 packaging/make_tray_icon.py。
+TRAY_SIDE = 44
+TRAY_MIN_FILL = 0.85
+
+
+def check_tray_fill() -> int:
+    raw = ICONS / "tray.rgba"
+    if not raw.is_file():
+        print(f"{raw.name} 不见了 —— Rust 侧 include_bytes! 会编译不过", file=sys.stderr)
+        return 1
+
+    data = raw.read_bytes()
+    want = TRAY_SIDE * TRAY_SIDE * 4
+    if len(data) != want:
+        print(f"{raw.name}: {len(data)} 字节，应为 {want}（{TRAY_SIDE}×{TRAY_SIDE} RGBA）"
+              f"\nlib.rs 里的 Image::new(..., {TRAY_SIDE}, {TRAY_SIDE}) 要跟着改。", file=sys.stderr)
+        return 1
+
+    rows = [y for y in range(TRAY_SIDE)
+            if any(data[(y * TRAY_SIDE + x) * 4 + 3] for x in range(TRAY_SIDE))]
+    cols = [x for x in range(TRAY_SIDE)
+            if any(data[(y * TRAY_SIDE + x) * 4 + 3] for y in range(TRAY_SIDE))]
+    if not rows or not cols:
+        print(f"{raw.name}: 整张全透明", file=sys.stderr)
+        return 1
+
+    fill = max(rows[-1] - rows[0] + 1, cols[-1] - cols[0] + 1) / TRAY_SIDE
+    if fill < TRAY_MIN_FILL:
+        print(f"tray 字形只占画布 {fill:.1%}（下限 {TRAY_MIN_FILL:.0%}）——"
+              f" 菜单栏里会显示成 {18 * fill:.1f}pt，比同类应用小一号。"
+              f"\n重新生成：python3 packaging/make_tray_icon.py", file=sys.stderr)
+        return 1
+
+    print(f"tray: 字形占 {fill:.1%}，菜单栏约 {18 * fill:.1f}pt")
     return 0
 
 

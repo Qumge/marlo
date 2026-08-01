@@ -27,8 +27,17 @@ import { Icon } from "./Icon";
 // also deleted a duplication: the mirror channel used to be editable BOTH on this page and
 // via an inline configurator on the Inbox list.
 const CARD = "rounded-xl2 border border-line bg-panel";
-const SELECT = "px-2.5 py-1.5 rounded-lg border border-line bg-paper text-[13px] text-ink";
-const BTN_ACCENT_SM = "text-[12px] px-2.5 py-1 rounded-md bg-accent text-white disabled:opacity-50";
+// min-w-0 + truncate：<select> 的固有宽度是【最长那个 option】的宽度，而 flex 项默认
+// min-width:auto 不允许缩到固有宽度以下。会话标题是自动生成的（"帮我看一下上周的
+// 发布记录…"），于是这个下拉把两栏卡片撑破，溢出到卡片外面。上游同样如此。
+const SELECT =
+  "min-w-0 truncate px-2.5 py-1.5 rounded-lg border border-line bg-paper text-[13px] text-ink";
+// self-stretch：按钮的 py-1 + 12px 文字约 26px，旁边 .chan-input 是 13px 文字 + 6px
+// 内边距 + 1px 边框约 30px —— 并排时矮一截。让按钮拉伸到这一行的高度，而不是把
+// padding 手调成某个和字体绑死的数字。
+const BTN_ACCENT_SM =
+  "self-stretch inline-flex items-center justify-center text-[12px] px-2.5 py-1 rounded-md " +
+  "bg-accent text-white disabled:opacity-50";
 
 export function InboxConfigure() {
   const t = useT();
