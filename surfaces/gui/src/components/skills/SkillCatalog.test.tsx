@@ -48,7 +48,7 @@ describe("技能目录", () => {
       { name: "autowhisper", summary: "社交媒体内容创作与发布", slug: "x/y/autowhisper",
         meta: "vetted by qumge · first-party", needs: "autowhisper" },
     ]);
-    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} />);
+    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} onError={() => {}} />);
     fireEvent.change(screen.getByTestId("skills-search"), { target: { value: "视频" } });
     await waitFor(() => expect(screen.getByTestId("catalog-autowhisper")).toBeTruthy(), { timeout: 2000 });
     expect(screen.getByText(/vetted by qumge/)).toBeTruthy();
@@ -60,7 +60,7 @@ describe("技能目录", () => {
     serve(
       [{ name: "autowhisper", summary: "s", slug: "x/y/autowhisper", meta: "m", needs: "" }],
     );
-    render(<SkillCatalog installedNames={new Set(["autowhisper"])} onInstalled={() => {}} />);
+    render(<SkillCatalog installedNames={new Set(["autowhisper"])} onInstalled={() => {}} onError={() => {}} />);
     fireEvent.change(screen.getByTestId("skills-search"), { target: { value: "auto" } });
     await waitFor(() => expect(screen.getByTestId("catalog-autowhisper")).toBeTruthy(), { timeout: 2000 });
     expect(screen.queryByTestId("install-autowhisper")).toBeNull();
@@ -69,16 +69,32 @@ describe("技能目录", () => {
   it("点添加会把 slug 发过去", async () => {
     const installed: string[] = [];
     serve([{ name: "a", summary: "s", slug: "o/r/a", meta: "m", needs: "" }], { installed });
-    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} />);
+    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} onError={() => {}} />);
     fireEvent.change(screen.getByTestId("skills-search"), { target: { value: "a" } });
     await waitFor(() => expect(screen.getByTestId("install-a")).toBeTruthy(), { timeout: 2000 });
     fireEvent.click(screen.getByTestId("install-a"));
     await waitFor(() => expect(installed).toEqual(["o/r/a"]));
   });
 
+  it("安装失败走页面级错误条，不挂在「连不上目录：」下面", async () => {
+    // 装失败和搜失败是两件事。塞进 searchErr 的话，渲染时会被套上
+    // t("skSearchFailed") =「连不上目录：」—— 后端拒绝一次安装，界面上读起来
+    // 像是目录连不上，而用户对着这句话什么也做不了。
+    const onError = vi.fn();
+    serve([{ name: "a", summary: "s", slug: "o/r/a", meta: "m", needs: "", group: "g" }],
+          { installFails: true, installError: "已经装过一个叫 a 的技能了。" });
+    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} onError={onError} />);
+    await waitFor(() => expect(screen.getByTestId("install-a")).toBeTruthy(), { timeout: 2000 });
+    fireEvent.click(screen.getByTestId("install-a"));
+
+    await waitFor(() => expect(onError).toHaveBeenCalledWith("已经装过一个叫 a 的技能了。"));
+    // 搜索那条错误条不能被这次失败点亮 —— 那正是这次要修的串台。
+    expect(screen.queryByTestId("skills-error")).toBeNull();
+  });
+
   it("目录连不上要说原因 —— 空列表会被读成「什么都没搜到」", async () => {
     serve([], { searchError: "connection refused" });
-    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} />);
+    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} onError={() => {}} />);
     fireEvent.change(screen.getByTestId("skills-search"), { target: { value: "视频" } });
     await waitFor(() => expect(screen.getByTestId("skills-error")).toBeTruthy(), { timeout: 2000 });
     expect(screen.getByText(/connection refused/)).toBeTruthy();
@@ -87,7 +103,7 @@ describe("技能目录", () => {
   it("还有下一页时才显示「加载更多」", async () => {
     // has_more 由目录给，界面不自己猜 —— 猜的结果是一个可能点空的按钮。
     serve([{ name: "a", summary: "s", slug: "o/r/a", meta: "m", needs: "", group: "g" }]);
-    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} />);
+    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} onError={() => {}} />);
     await waitFor(() => expect(screen.getByTestId("catalog-a")).toBeTruthy(), { timeout: 2000 });
     expect(screen.queryByTestId("skills-more")).toBeNull();
   });
@@ -99,7 +115,7 @@ describe("技能目录", () => {
       { name: "a", summary: "s", slug: "o/r/a", meta: "m", needs: "", group: "g" },
       { name: "b", summary: "s", slug: "o/r/b", meta: "m", needs: "", group: "g" },
     ], { hasMore: true, offsets, page2: [{ name: "c", summary: "s", slug: "o/r/c", meta: "m", needs: "", group: "g" }] });
-    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} />);
+    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} onError={() => {}} />);
     await waitFor(() => expect(screen.getByTestId("skills-more")).toBeTruthy(), { timeout: 2000 });
     fireEvent.click(screen.getByTestId("skills-more"));
     await waitFor(() => expect(screen.getByTestId("catalog-c")).toBeTruthy());
@@ -111,7 +127,7 @@ describe("技能目录", () => {
   it("能在装之前看正文，并说明我们怎么对待它", async () => {
     serve([{ name: "a", summary: "s", slug: "o/r/a", meta: "m", needs: "", group: "g" }],
           { detailBody: "# 它会做什么" });
-    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} />);
+    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} onError={() => {}} />);
     await waitFor(() => expect(screen.getByTestId("view-a")).toBeTruthy(), { timeout: 2000 });
     fireEvent.click(screen.getByTestId("view-a"));
     await waitFor(() => expect(screen.getByText("# 它会做什么")).toBeTruthy());
@@ -124,7 +140,7 @@ describe("技能目录", () => {
     // 翻错了，而换个说法重搜是用户唯一的补救手段。
     serve([{ name: "autowhisper", summary: "s", slug: "o/r/a", meta: "m", needs: "", group: "g" }],
           { searchedAs: "product promotional video" });
-    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} />);
+    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} onError={() => {}} />);
     await waitFor(() => expect(screen.getByTestId("skills-translated")).toBeTruthy(),
                   { timeout: 2000 });
     expect(screen.getByTestId("skills-translated").textContent)
@@ -135,7 +151,7 @@ describe("技能目录", () => {
     // 【否定对照】。英文查询冒出一句"已按英文搜索"是句假话，而用户没法分辨界面上
     // 哪些说明是真的。
     serve([{ name: "a", summary: "s", slug: "o/r/a", meta: "m", needs: "", group: "g" }]);
-    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} />);
+    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} onError={() => {}} />);
     await waitFor(() => expect(screen.getByTestId("view-a")).toBeTruthy(), { timeout: 2000 });
     expect(screen.queryByTestId("skills-translated")).toBeNull();
   });

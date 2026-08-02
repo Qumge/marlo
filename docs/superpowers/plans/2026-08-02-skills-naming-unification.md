@@ -1267,3 +1267,74 @@ EOF
 - [ ] 设置里剩四栏：通用 / 模型 / 技能人格 / 语音输入
 - [ ] `npm test`、`npx tsc --noEmit`、`npm run e2e` 三绿
 - [ ] `pytest` 不多于 5 failed（本机预存基准）
+
+---
+
+## 实际交付与计划的出入
+
+这份计划在执行途中被改过两次（`47f5a55` 修 Task 4 骨架里的提示条归属，`ba184d6`
+修 Task 6 键表里四条重译的中文），那两处现在是准确的。下面这五处从没改过 ——
+计划里写的是一回事，仓库里交付的是另一回事。这份文档是提交进仓库的，会被当文档
+读，所以在这里逐条对齐。
+
+**1. `rows` 的类型是 `SkillRow[] | null`，不是 `SkillRow[]`（plan:750）**
+
+计划的骨架写 `useState<SkillRow[]>([])`。交付的是：
+
+```tsx
+// null = 还没问到后端。空数组才是「真的一个都没有」—— 两者渲染不同的东西，
+// 一开始就用 [] 会让每次进页面都先闪一下空状态。
+const [rows, setRows] = useState<SkillRow[] | null>(null);
+```
+
+「还没问到」和「问过了，一条都没有」必须能分开：用 `[]` 当初值的话，页面每次挂载
+都会先渲染一次「还没装任何技能」，等 500ms 后的响应到了再换成列表 —— 一个有技能的
+用户每次进这一页都会先被告知他没有技能。所有 `rows` 的读取点因此都带了
+`rows !== null` 前置或 `(rows || [])` 兜底。
+
+**2. `<InstalledSkills>` 是条件渲染，空状态在 `SkillsView`（plan:809、plan:472）**
+
+计划两处都假设 `InstalledSkills` 自己管空状态：plan:809 的骨架无条件渲染它，
+plan:472 明写它搬过来的那段「含空状态」。交付的是反过来的：
+
+```tsx
+{rows !== null && rows.length > 0 && (
+  <> <div className={GRP_H}>…</div> <InstalledSkills … /> </>
+)}
+{rows !== null && rows.length === 0 && !editor && !upload && (
+  <div data-testid="skills-empty"> … </div>
+)}
+```
+
+理由是这一页的空状态要说的话和 `SkillsTab` 那句不一样（要【解释机制】——「你不用
+从列表里挑」，而不是「列表是空的」），两句同屏会打架。于是列表为空时整个
+`InstalledSkills` 不渲染，由 `SkillsView` 回答；`InstalledSkills` 里原来那段空状态
+分支就此不可达，Task 6 删掉了它，现在那里留的是一条说明 `rows` 为何永远非空的注释。
+
+**这次最终评审的 Important #1 就是这个未记录的重构留下的洞。** 上游 `SkillsTab` 的
+条件是 `rows.length === 0 && !editor`；空状态上移时 `!editor` 掉了 —— Task 4 当时把
+它记成 minor 并延后，理由是「`InstalledSkills` 的 props 里没有 editor 这个信号」，
+而那个理由在 Task 5 把空状态搬进 `SkillsView`（那里两个信号都在手边）之后就失效了，
+没人复查。收尾时补回，条件现在是 `!editor && !upload`，并有一条先红后绿的测试盯着。
+
+**3. `skills-list` 这个 testid 不存在（plan:1124）**
+
+Task 7 的 testid 对照表列了 `abilities-list → skills-list`。左边那个是真的
+（`f9762fc:AbilitiesView.tsx:162` 有 `data-testid="abilities-list"`），但它是随
+Task 5 删 `AbilitiesView.tsx` 一起没的，不是被改名。合页后的列表容器没有 testid ——
+定位走的是每一行自己的 `skill-{name}`，没有任何测试需要整块列表的句柄。这一行是
+一次没有落地的改名，不是漏做。
+
+**4. Task 7 的文件清单漏了两个 spec（plan:1104-1108）**
+
+清单里只有 `skills.spec.ts`（新建）、`skills-catalog-door.spec.ts`（删）、
+`skills-settings.spec.ts`（改）。实际还必须改 `skills-session.spec.ts` 和
+`skills-upload.spec.ts` —— 这两个也走「设置 ▸ 技能」那个已经删掉的 tab 进页面，不改
+入口就会全红。两者都只换了入口的那几行，断言一条没动。
+
+**5. 目录的搜索框在页面中部，不在页头**
+
+计划和早期注释都拿它跟「连接」页对齐（`IntegrationsView.tsx:24-25` 的搜索框在页面
+顶部）。合页之后这一页有两批东西——上半页已装的、下半页目录——而搜索只作用于后者，
+所以它跟着目录留在中部，紧贴它过滤的那批结果。外形（右对齐的短圆框）仍和「连接」
+页一致。这是有意的，不是没搬完。

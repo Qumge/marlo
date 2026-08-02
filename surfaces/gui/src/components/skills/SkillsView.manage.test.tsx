@@ -243,7 +243,10 @@ describe("SkillsView", () => {
     expect(status.textContent).toContain("can now use it in every conversation");
   });
 
-  it("the list is the page: no standing add-surfaces, no drafting remnants", async () => {
+  // 名字改过（最终评审 Minor #7）：原名 "the list is the page: no standing
+  // add-surfaces…" 现在不成立 —— 目录【就是】这一页上一块常驻的 surface，设计如此。
+  // 断言一条没动：它守的从来是"添加只走菜单"，以及草稿时代的残留 UI 别回来。
+  it("adding is menu-only: no always-open describe box, no drafting-era remnants", async () => {
     stubFetch([{ match: "/v1/skills", method: "GET", json: { skills: [] } }]);
     render(<SkillsView onCreateSkill={vi.fn()} />);
     await screen.findByRole("button", { name: /Add skill/ });

@@ -907,6 +907,35 @@ export async function mockApi(page: import("@playwright/test").Page) {
           .map((s) => ({ name: s.name, description: s.description, scope: s.scope, enabled: true })),
       });
     }
+    if (p.endsWith("/v1/skills/search")) {
+      // 目录那一半（SKILLS-SPEC §5）。没有这个分支的话搜索会落到最后的 json({})，
+      // 目录渲染成「没搜到」—— 于是"目录常驻在这一页"那条 e2e 只能证明输入框挂上
+      // 了，证不到规格真正主张的东西。
+      // 空 q = 浏览，不是"不搜"：用户还没输入时就该有列表。
+      // 两条【只在目录里】的技能，和上面种的已装技能不重名 —— 重名的话它们会渲染
+      // 成「已装」而不是「添加」，断言就测不到目录条目本身了。
+      return json({
+        results: [
+          {
+            name: "invoice-chaser",
+            summary: "Draft a polite follow-up for every unpaid invoice.",
+            slug: "qumge/vetted/invoice-chaser",
+            meta: "vetted by qumge · first-party",
+            needs: "",
+            group: "__vetted__",
+          },
+          {
+            name: "meeting-notes",
+            summary: "Turn a raw transcript into decisions and owners.",
+            slug: "acme/skills/meeting-notes",
+            meta: "category: productivity · 312 stars on GitHub",
+            needs: "Google Calendar",
+            group: "productivity",
+          },
+        ],
+        has_more: false,
+      });
+    }
     if (p.endsWith("/v1/skills/upload/confirm") && m === "POST") {
       const b = req.postDataJSON() || {};
       if (!stagedSkill || b.token !== stagedSkill.token)

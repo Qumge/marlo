@@ -631,11 +631,11 @@ def create_app(manager: SessionManager) -> FastAPI:
     #
     # 【没有 uninstall】上游的 DELETE /v1/skills/{name} 就是卸载，前端改调那个 ——
     # 同一件事留两条路，迟早会在其中一条上漏掉作用域或启用状态。
-    # 「能力」页里的搜索 / 安装 / 卸载。对话里 Marlo 自己找技能走的是 MCP；
+    # 「技能」页里的搜索 / 安装 / 卸载。对话里 Marlo 自己找技能走的是 MCP；
     # 这是同一个目录的另一个入口，给想自己看看的用户。
     @app.get("/v1/skills/search")
     def search_skills(q: str = "", offset: int = 0) -> dict[str, Any]:
-        # q 为空 = 浏览（目录排名靠前的一批），不是"不搜"。「能力」页在用户还没
+        # q 为空 = 浏览（目录排名靠前的一批），不是"不搜"。「技能」页在用户还没
         # 输入时要有列表，空白会让人以为目录里没东西。
         from ..skills import qumge_catalog
 

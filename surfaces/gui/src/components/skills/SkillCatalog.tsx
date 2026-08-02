@@ -34,9 +34,13 @@ function groupsOf(rows: CatalogSkill[]): [string, CatalogSkill[]][] {
 export function SkillCatalog({
   installedNames,
   onInstalled,
+  onError,
 }: {
   installedNames: Set<string>;
   onInstalled: () => void;
+  // 安装失败往【页面级】错误条走（和另外三个子组件一样）。不塞进 searchErr ——
+  // 那条渲染时前缀是「连不上目录：」，后端拒绝一次安装会被读成目录连不上。
+  onError: (msg: string) => void;
 }) {
   const t = useT();
   const [q, setQ] = useState("");
@@ -89,14 +93,22 @@ export function SkillCatalog({
     setBusy(s.slug);
     const r = await installSkill(s.slug).catch((e) => ({ ok: false, error: String(e) }));
     setBusy(null);
-    if (r.ok) onInstalled();          // 【唯一的行为改动】原来是 reload()，现在通知外层
-    else setSearchErr(r.error || "install failed");
+    if (r.ok) {
+      onError("");
+      onInstalled();                  // 【唯一的行为改动】原来是 reload()，现在通知外层
+    } else {
+      // 安装失败【不是】搜索失败：searchErr 只归搜索，它的前缀是「连不上目录：」。
+      onError(r.error || t("skWentWrong"));
+    }
   };
 
   return (
     <>
-      {/* 和「连接」页一模一样的搜索框：右对齐的短框。两页并列在同一个菜单
-          里，长得不一样会让人以为是两种东西。 */}
+      {/* 搜索框在【页面中部】，紧贴它过滤的那批结果，而不是像「连接」页那样蹲在
+          页头。合页之后这一页有两批东西：上半页是已装的，下半页才是目录 —— 搜索
+          只作用于后者。搬到页顶会让它看起来像在搜整页（包括已装列表）。
+          外形仍和「连接」页一致（右对齐的短圆框）：两页并列在同一个菜单里，长得
+          不一样会让人以为是两种东西。 */}
       <div className="flex items-center justify-end mb-4">
         <input
           className="w-44 px-3.5 py-1.5 rounded-full border border-line bg-panel text-[13px] outline-none focus:border-accent"

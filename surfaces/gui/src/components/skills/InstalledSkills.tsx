@@ -9,7 +9,7 @@ const BTN_BORDERED =
 const BADGE =
   "text-[11px] px-2 py-0.5 rounded-full border border-line bg-paper text-muted shrink-0";
 
-// Settings ▸ Skills — the installed-list half of SKILLS-SPEC §5/§6: enable/disable, edit,
+// 账号菜单 ▸ 技能 — the installed-list half of SKILLS-SPEC §5/§6: enable/disable, edit,
 // two-step delete, folder reveal for rich (multi-file) skills, source badge for anything
 // that didn't come from the write-it-yourself door.
 export function InstalledSkills({ rows, onEdit, onChanged, onNotice, onError }: {
@@ -70,7 +70,10 @@ export function InstalledSkills({ rows, onEdit, onChanged, onNotice, onError }: 
                   title={t("skShowFolder")}
                   onClick={() => revealSkill(row.name)}
                 >
-                  <Icon name="folder" size={11} /> {row.files} file{row.files === 1 ? "" : "s"}
+                  {/* 计数走带参数的键，不要把 "file"/"s" 当 JSX 文本拼 —— 拼出来的
+                      串被切碎，check_i18n_text.mjs 提取不到，中文界面上就一直是
+                      "2 files"。 */}
+                  <Icon name="folder" size={11} /> {t("skFileCount")(row.files)}
                 </button>
               ) : null}
             </div>
@@ -78,7 +81,11 @@ export function InstalledSkills({ rows, onEdit, onChanged, onNotice, onError }: 
                 it mid-word hid what the skill does (live drive). */}
             <div className="text-[12px] text-muted leading-relaxed">{row.description}</div>
           </div>
-          <button className={BTN_BORDERED} title="Edit" onClick={() => onEdit(row)}>
+          {/* title 是【可见】文案（鼠标停上去就会看到），必须翻译。同一行上的兄弟
+              按钮全都走 t() 了，铅笔不能是例外。e2e 跑在 en 下，t("skEdit") 解析成
+              "Edit"，skills-manage.spec.ts 的 getByTitle("Edit", { exact: true })
+              照旧命中。 */}
+          <button className={BTN_BORDERED} title={t("skEdit")} onClick={() => onEdit(row)}>
             <Icon name="pencil" size={13} />
           </button>
           <button

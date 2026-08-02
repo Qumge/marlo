@@ -19,8 +19,24 @@ test("skills: 已装列表和目录在同一页上，不用先点菜单", async 
   await expect(page.getByTestId("skill-weekly-report")).toBeVisible();
   await expect(page.getByTestId("skill-html-to-markdown")).toBeVisible();
 
-  // 下半页：目录搜索框常驻 —— 0e1b2a0 定过，没搜索时也要有列表。
+  // 下半页：目录常驻 —— 0e1b2a0 定过，没搜索时也要有列表。
   await expect(page.getByTestId("skills-search")).toBeVisible();
+  // 【要断言到条目，不能只断言输入框】只看输入框的话，一个搜索坏掉、目录永远渲染
+  // 「没搜到」的界面照样能让这条绿 —— 而规格的招牌主张是"目录就在这一页上"，讲的
+  // 是里面有东西，不是有个框。（这一段以前是虚的：fixtures 缺 /v1/skills/search
+  // 分支，目录一直落到兜底的 json({})。最终评审 Minor #8。）
+  await expect(page.getByTestId("skills-results")).toBeVisible();
+  await expect(page.getByTestId("catalog-invoice-chaser")).toBeVisible();
+  await expect(page.getByTestId("catalog-meeting-notes")).toBeVisible();
+  await expect(page.getByText("Draft a polite follow-up for every unpaid invoice.")).toBeVisible();
+  // 我们审过的单独一组排最前 —— 那是它们相对于四千条第三方技能的唯一区别。
+  // exact: true 是必须的：getByText 默认是【大小写不敏感的子串】匹配，而条目自己的
+  // meta 里写着 "vetted by qumge · first-party"，不加就是两个命中直接 strict 报错。
+  await expect(page.getByText("Vetted by Qumge", { exact: true })).toBeVisible();
+  // 没输入任何东西就有结果：空 q 是【浏览】，不是"不搜"。
+  await expect(page.getByTestId("skills-search")).toHaveValue("");
+  // 目录里的没装过，所以给的是「添加」；已装的那两条不在目录结果里。
+  await expect(page.getByTestId("install-invoice-chaser")).toBeVisible();
 
   // 「添加」菜单剩三个门，第四个（浏览目录）没了 —— 目录就在下面。
   await page.getByRole("button", { name: /Add skill/ }).click();

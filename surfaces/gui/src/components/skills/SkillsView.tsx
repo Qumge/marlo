@@ -145,8 +145,12 @@ export function SkillsView({ onCreateSkill }: { onCreateSkill?: (description: st
           {/* 空状态要【解释机制】，不是给一个"去逛逛"的按钮：一个刚装好的用户看到
               "还没装任何技能"，第一反应是"那我去哪儿装"，而正确答案是"你不用装"。
               InstalledSkills 自己那句空状态在这一页会和它打架，所以列表为空时整块
-              不渲染，由这里回答。 */}
-          {rows !== null && rows.length === 0 && (
+              不渲染，由这里回答。
+
+              【!editor && !upload】上游 SkillsTab 就带这个排除，合页时空状态从
+              InstalledSkills 上移到这里，漏了它。用户正在表单里敲字的时候，下面
+              还挂着"这些不用你从列表里挑"——一句在这一刻正好说反了的话。 */}
+          {rows !== null && rows.length === 0 && !editor && !upload && (
             <div
               className="rounded-xl border border-line bg-panel/50 p-5 text-[13px] mb-2"
               data-testid="skills-empty"
@@ -159,6 +163,7 @@ export function SkillsView({ onCreateSkill }: { onCreateSkill?: (description: st
           <SkillCatalog
             installedNames={new Set((rows || []).map((r) => r.name))}
             onInstalled={refresh}
+            onError={setError}
           />
         </div>
       </div>

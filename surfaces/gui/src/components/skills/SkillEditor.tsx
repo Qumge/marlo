@@ -50,7 +50,7 @@ export async function fileToB64(file: File): Promise<string> {
   return btoa(bin);
 }
 
-// Settings ▸ Skills — the editor half of SKILLS-SPEC §5/§6: the write-it-yourself form
+// 账号菜单 ▸ 技能 — the editor half of SKILLS-SPEC §5/§6: the write-it-yourself form
 // and the import-preview card share this component because they're the same commitment
 // (save something the worker will follow) shown two different ways.
 export function SkillEditor({ draft, upload, onSaved, onCancel, onNotice, onError }: {

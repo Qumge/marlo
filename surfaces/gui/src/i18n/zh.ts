@@ -154,7 +154,11 @@ export const zh: Strings = {
   skFieldInstructions: "做法",
   skDescPlaceholder: "一句话，让它据此判断什么时候该用这个技能",
   skSave: "保存技能",
+  skEdit: "编辑",
   skShowFolder: "打开所在文件夹",
+  // 中文不分单复数，所以这个键存在的理由是【别把 "file"/"s" 拼进 JSX】—— 拼出来
+  // 的串会被切碎，i18n 守卫扫不到，中文界面上就一直是 "2 files"。
+  skFileCount: (n) => `${n} 个文件`,
   skOn: "开",
   skNoDescription: "没有说明",
   skBundledFiles: "随附文件：",

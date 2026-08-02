@@ -31,7 +31,10 @@ describe("已装技能列表", () => {
     // 断言改动（Task 6）：title 从写死的英文 "Show folder" 改成 t("skShowFolder")，
     // 这条测试跑在 zh 下（beforeEach setLocale("zh")），所以现在要按中文找。中文取
     // zh-text.ts 里线上一直在用的译文「打开所在文件夹」（评审 fix-up，见 task-6 报告）。
-    expect(screen.getByTitle("打开所在文件夹").textContent).toContain("2 file");
+    //
+    // 文件数同理（最终评审 Minor #6）：原来是 JSX 里拼 `{n} file{s}`，在中文界面上
+    // 渲染成 "2 files"。拼出来的串被切碎，i18n 守卫提取不到，所以只能靠这条测试盯。
+    expect(screen.getByTitle("打开所在文件夹").textContent).toContain("2 个文件");
   });
 
   it("删除要两步 —— 第一下只是上膛", async () => {

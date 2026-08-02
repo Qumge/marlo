@@ -62,6 +62,23 @@ describe("技能页", () => {
     expect(screen.queryByText(/浏览/)).toBeNull();
   });
 
+  it("表单一打开，空状态就得让位 —— 不能一边说「别自己挑」一边让人在表单里打字", async () => {
+    // 【相对上游 SkillsTab 的真回归】那边的条件是 rows.length === 0 && !editor，
+    // 合页时空状态从 InstalledSkills 上移到这里，漏了 !editor。全新安装（rows 是
+    // 空数组）点「添加技能 ▸ 我自己写」，写入表单渲染出来了，下面还顶着一句
+    // 「这些不用你从列表里挑 —— 跟 Marlo 说你要做什么」。导入预览同理。
+    serve([]);
+    render(<SkillsView />);
+    await waitFor(() => expect(screen.getByTestId("skills-empty")).toBeTruthy());
+
+    fireEvent.click(screen.getByRole("button", { name: /添加技能/ }));
+    fireEvent.click(screen.getByText("我自己写"));
+
+    // 表单【真的】开了 —— 少这一句的话，一个"菜单点不开"的假实现也能让下面那条绿。
+    expect(screen.getByLabelText("名字")).toBeTruthy();
+    expect(screen.queryByTestId("skills-empty")).toBeNull();
+  });
+
   it("后端挂了也不卡在加载中", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => {
       throw new Error("sidecar down");
