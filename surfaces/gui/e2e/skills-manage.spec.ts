@@ -1,17 +1,20 @@
 import { test, expect } from "./fixtures";
 
-// SKILLS-SPEC §9 journey 1 — Settings ▸ Skills as the management home: create through the
+// SKILLS-SPEC §9 journey 1 — 账号菜单 ▸ Skills as the management home: create through the
 // Add-skill menu, edit in place, disable with the amber clean-slate banner, and the
 // rich-skill folder chip. Hermetic: every /v1 call lands in fixtures.ts.
+//
+// 2026-08-02 这一份叫 skills-settings.spec.ts，入口走的是设置里的技能 tab。那个 tab
+// 没了（合成账号菜单 ▸ 技能这一页），所以【只有入口换了】—— 下面的断言一条没动，
+// 它们量的行为一件没变。
 
 const openSkills = async (page: import("@playwright/test").Page) => {
   await page.goto("/");
   await page.getByTestId("account-row").click();
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: "Skills", exact: true }).click();
 };
 
-test("skills-settings: create via the menu → name-first banner; edit persists", async ({ page }) => {
+test("skills-manage: create via the menu → name-first banner; edit persists", async ({ page }) => {
   await openSkills(page);
 
   // The seeded rows render; the rich one wears its folder chip; the list is the page
@@ -52,7 +55,7 @@ test("skills-settings: create via the menu → name-first banner; edit persists"
   await expect(page.getByText("Monday status report, sharper")).toBeVisible();
 });
 
-test("skills-settings: disable → amber everywhere/clean-slate banner; delete is two-step", async ({ page }) => {
+test("skills-manage: disable → amber everywhere/clean-slate banner; delete is two-step", async ({ page }) => {
   await openSkills(page);
 
   await page.getByLabel("weekly-report enabled").click();

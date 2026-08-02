@@ -622,19 +622,6 @@ const COMMON_NOUN_TITLES: Record<string, "connectorTitleBrowser" | "connectorTit
   email: "connectorTitleEmail",
 };
 
-/** 装在这台机器上的技能（能力）。后端 /v1/skills 早就有，只是前端一直没用过。 */
-export interface InstalledSkill {
-  name: string;
-  description: string;
-}
-
-export async function getSkills(): Promise<{ skills: InstalledSkill[]; dir: string }> {
-  const res = await fetch(`${httpBase()}/v1/skills`);
-  const b = await res.json();
-  // 目录由后端给【真实解析到的那个】。前端写死路径的话，迁移失败时会撒谎。
-  return { skills: b.skills ?? [], dir: b.dir ?? "" };
-}
-
 /** Qumge 目录里的一条技能（搜索结果）。 */
 export interface CatalogSkill {
   name: string;
@@ -686,15 +673,6 @@ export async function installSkill(slug: string): Promise<{ ok: boolean; error?:
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ slug }),
-  });
-  return res.json();
-}
-
-export async function uninstallSkill(name: string): Promise<{ ok: boolean; error?: string }> {
-  const res = await fetch(`${httpBase()}/v1/skills/uninstall`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name }),
   });
   return res.json();
 }

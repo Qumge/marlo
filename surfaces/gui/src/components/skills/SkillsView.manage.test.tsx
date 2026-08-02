@@ -1,9 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { SkillsTab } from "./SkillsTab";
+import { SkillsView } from "./SkillsView";
 
-// SKILLS-SPEC §5/§6 GUI — Settings ▸ Skills: list + badges + rich-skill file counts, form
-// validation, the doors (write form / upload-with-preview / doorway-to-conversation).
+// SKILLS-SPEC §5/§6 GUI — 账号菜单 ▸ 技能，管理那一半：list + badges + rich-skill file
+// counts, form validation, the doors (write form / upload-with-preview /
+// doorway-to-conversation)。
+//
+// 这一份原来是 SkillsTab.test.tsx（设置里的技能 tab）。2026-08-02 两页合成一页之后
+// 断言一条没动，只是渲染的对象换成了 SkillsView —— 管理行为归并之后必须一样。
+// 页面级的另一半（已装列表 / 空状态 / 中文界面）在 SkillsView.test.tsx。
 
 type Call = { url: string; method: string; body: any };
 
@@ -54,10 +59,10 @@ const openWriteForm = async () => {
   fireEvent.click(screen.getByText("Write it myself"));
 };
 
-describe("SkillsTab", () => {
+describe("SkillsView", () => {
   it("renders rows with provenance badges and dims disabled skills", async () => {
     stubFetch([{ match: "/v1/skills", method: "GET", json: LIST }]);
-    render(<SkillsTab />);
+    render(<SkillsView />);
     expect(await screen.findByText("weekly-report")).toBeTruthy();
     expect(screen.getByText("Monday status report")).toBeTruthy();
     expect(screen.queryByText("global")).toBeNull(); // no scope badges — global-only (§4.7)
@@ -69,7 +74,7 @@ describe("SkillsTab", () => {
 
   it("blocks Save until name and instructions are filled", async () => {
     stubFetch([{ match: "/v1/skills", method: "GET", json: { skills: [] } }]);
-    render(<SkillsTab />);
+    render(<SkillsView />);
     await openWriteForm();
     const save = screen.getByText("Save skill") as HTMLButtonElement;
     expect(save.disabled).toBe(true);
@@ -86,7 +91,7 @@ describe("SkillsTab", () => {
       { match: "/v1/skills", method: "GET", json: { skills: [] } },
       { match: "/v1/skills", method: "POST", json: { ok: true } },
     ]);
-    render(<SkillsTab />);
+    render(<SkillsView />);
     await openWriteForm();
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "greet" } });
     fireEvent.change(screen.getByLabelText("Instructions"), {
@@ -98,8 +103,9 @@ describe("SkillsTab", () => {
       expect(post?.body).toMatchObject({ name: "greet", instructions: "Say hello." });
       expect(post?.body.workspace).toBeUndefined(); // global-only: no scope/workspace sent
     });
-    // list re-fetched after save
-    expect(calls.filter((c) => c.method === "GET" && c.url.includes("/v1/skills")).length).toBeGreaterThan(1);
+    // list re-fetched after save — 只数【列表】那个 GET：合页之后目录也在打
+    // /v1/skills/search，用 includes 的话这一条不管保存有没有刷新都会绿。
+    expect(calls.filter((c) => c.method === "GET" && c.url.endsWith("/v1/skills")).length).toBeGreaterThan(1);
   });
 
   it("edit prefills the form (name locked, body loaded) and PATCHes on save", async () => {
@@ -107,7 +113,7 @@ describe("SkillsTab", () => {
       { match: "/v1/skills", method: "GET", json: LIST },
       { match: "/v1/skills/weekly-report", method: "PATCH", json: { ok: true } },
     ]);
-    render(<SkillsTab />);
+    render(<SkillsView />);
     await screen.findByText("weekly-report");
     fireEvent.click(screen.getAllByTitle("Edit")[0]);
     const name = screen.getByLabelText("Name") as HTMLInputElement;
@@ -129,7 +135,7 @@ describe("SkillsTab", () => {
       { match: "/v1/skills", method: "GET", json: LIST },
       { match: "/v1/skills/weekly-report", method: "DELETE", json: { ok: true } },
     ]);
-    render(<SkillsTab />);
+    render(<SkillsView />);
     await screen.findByText("weekly-report");
     // arm via the trash button (renders "Confirm delete" once armed)
     fireEvent.click(screen.getByLabelText("Delete weekly-report"));
@@ -146,7 +152,7 @@ describe("SkillsTab", () => {
       { match: "/v1/skills", method: "GET", json: LIST },
       { match: "/v1/skills/weekly-report", method: "PATCH", json: { ok: true } },
     ]);
-    render(<SkillsTab />);
+    render(<SkillsView />);
     await screen.findByText("weekly-report");
     fireEvent.click(screen.getByLabelText("weekly-report enabled"));
     await waitFor(() => {
@@ -176,7 +182,7 @@ describe("SkillsTab", () => {
       },
       { match: "/v1/skills", method: "GET", json: { skills: [] } },
     ]);
-    render(<SkillsTab />);
+    render(<SkillsView />);
     const input = (await screen.findByLabelText("Upload a skill archive")) as HTMLInputElement;
     const file = new File([new Uint8Array([80, 75, 3, 4])], "greet.zip", { type: "application/zip" });
     fireEvent.change(input, { target: { files: [file] } });
@@ -194,13 +200,17 @@ describe("SkillsTab", () => {
   it("Add skill menu: three doors; Create with Marlo hands off to a conversation", async () => {
     const calls = stubFetch([{ match: "/v1/skills", method: "GET", json: { skills: [] } }]);
     const onCreateSkill = vi.fn();
-    render(<SkillsTab onCreateSkill={onCreateSkill} />);
+    render(<SkillsView onCreateSkill={onCreateSkill} />);
     fireEvent.click(await screen.findByRole("button", { name: /Add skill/ }));
     // The three doors (§5), each with its teaching subtitle.
     expect(screen.getByText("Write it myself")).toBeTruthy();
     expect(screen.getByText("Import a file")).toBeTruthy();
     expect(screen.getByText(/you review before it installs/)).toBeTruthy();
     expect(screen.getByText(/asks before adding it to\s+your skills/)).toBeTruthy();
+    // 【三个门，不是四个】目录就在这一页的下半部分，「浏览 Qumge 目录」那个门是
+    // 一个跳转 —— 跳到自己身上。它连同 onBrowseCatalog 一起删了，这条盯着它别回来。
+    expect(screen.queryByText("Browse the Qumge catalog")).toBeNull();
+    expect(screen.getAllByRole("menuitem")).toHaveLength(3);
     fireEvent.click(screen.getByText("Create with Marlo"));
     // Straight to the conversation — the composer is where you describe it (§5.2).
     expect(onCreateSkill).toHaveBeenCalledWith("");
@@ -210,7 +220,7 @@ describe("SkillsTab", () => {
 
   it("offers no scope UI at all — skills are global (§4.7)", async () => {
     stubFetch([{ match: "/v1/skills", method: "GET", json: { skills: [] } }]);
-    render(<SkillsTab />);
+    render(<SkillsView />);
     await openWriteForm();
     expect(screen.queryByText("Available in")).toBeNull();
     expect(screen.queryByLabelText("Everywhere")).toBeNull();
@@ -223,7 +233,7 @@ describe("SkillsTab", () => {
       { match: "/v1/skills", method: "GET", json: { skills: [] } },
       { match: "/v1/skills", method: "POST", json: { ok: true } },
     ]);
-    render(<SkillsTab />);
+    render(<SkillsView />);
     await openWriteForm();
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "greet" } });
     fireEvent.change(screen.getByLabelText("Instructions"), { target: { value: "x" } });
@@ -233,9 +243,12 @@ describe("SkillsTab", () => {
     expect(status.textContent).toContain("can now use it in every conversation");
   });
 
-  it("the list is the page: no standing add-surfaces, no drafting remnants", async () => {
+  // 名字改过（最终评审 Minor #7）：原名 "the list is the page: no standing
+  // add-surfaces…" 现在不成立 —— 目录【就是】这一页上一块常驻的 surface，设计如此。
+  // 断言一条没动：它守的从来是"添加只走菜单"，以及草稿时代的残留 UI 别回来。
+  it("adding is menu-only: no always-open describe box, no drafting-era remnants", async () => {
     stubFetch([{ match: "/v1/skills", method: "GET", json: { skills: [] } }]);
-    render(<SkillsTab onCreateSkill={vi.fn()} />);
+    render(<SkillsView onCreateSkill={vi.fn()} />);
     await screen.findByRole("button", { name: /Add skill/ });
     // No permanently-open description box or draft-era UI (§5.2/§9) — adding is menu-only.
     expect(screen.queryByLabelText("Describe the skill")).toBeNull();
@@ -253,7 +266,7 @@ describe("SkillsTab", () => {
       { match: "/v1/skills", method: "GET", json: { skills: [] } },
       { match: "/v1/skills", method: "POST", json: { ok: false, error: "A skill named 'x' already exists in that scope." } },
     ]);
-    render(<SkillsTab />);
+    render(<SkillsView />);
     await openWriteForm();
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "x" } });
     fireEvent.change(screen.getByLabelText("Instructions"), { target: { value: "y" } });
@@ -263,7 +276,7 @@ describe("SkillsTab", () => {
   });
 });
 
-describe("SkillsTab — rich-skill disclosure (§6)", () => {
+describe("SkillsView — rich-skill disclosure (§6)", () => {
   it("shows a file count only when a skill bundles resources", async () => {
     stubFetch([
       {
@@ -277,7 +290,7 @@ describe("SkillsTab — rich-skill disclosure (§6)", () => {
         },
       },
     ]);
-    render(<SkillsTab />);
+    render(<SkillsView />);
     const note = await screen.findByTitle("Show folder");
     expect(note.textContent).toContain("3 files");
     // The one-file skill carries no count at all — only rich skills are marked.

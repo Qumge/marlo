@@ -1,8 +1,11 @@
 import { test, expect } from "./fixtures";
 
 // SKILLS-SPEC §9 journey 2 — liveness from the session's seat: the composer's "/" popup is
-// the live "what can my worker use right now" view. A skill created in Settings is offered;
-// a disabled one vanishes. Hermetic: the popup reads /v1/sessions/{id}/skills from fixtures.
+// the live "what can my worker use right now" view. A skill created on the Skills page is
+// offered; a disabled one vanishes. Hermetic: the popup reads /v1/sessions/{id}/skills from
+// fixtures.
+//
+// 入口 2026-08-02 从「设置 ▸ 技能」换成「账号菜单 ▸ 技能」—— 那个 tab 没了。断言没动。
 
 test("skills-session: new skill offered in '/', disabled one absent", async ({ page }) => {
   await page.goto("/");
@@ -16,9 +19,8 @@ test("skills-session: new skill offered in '/', disabled one absent", async ({ p
   await expect(page.getByText("/html-to-markdown")).toBeVisible();
   await box.fill(""); // close the popup
 
-  // Settings round-trip: create one skill, disable another.
+  // Skills-page round-trip: create one skill, disable another.
   await page.getByTestId("account-row").click();
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: "Skills", exact: true }).click();
   await page.getByRole("button", { name: /Add skill/ }).click();
   await page.getByText("Write it myself").click();

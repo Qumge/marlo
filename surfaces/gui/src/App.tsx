@@ -54,7 +54,7 @@ import { SessionIntro } from "./components/SessionIntro";
 import { FolderGate } from "./components/FolderGate";
 import { Onboarding } from "./components/Onboarding";
 import { UpdateBanner } from "./components/UpdateBanner";
-import { AbilitiesView } from "./components/AbilitiesView";
+import { SkillsView } from "./components/skills/SkillsView";
 import { ScheduledView } from "./components/ScheduledView";
 import { RightRail } from "./components/RightRail";
 import { IntegrationsView } from "./components/IntegrationsView";
@@ -216,10 +216,10 @@ export function App() {
   const [gateCreate, setGateCreate] = useState(false);
   // Which Settings section the full-page Settings surface opens on (§ Settings-as-page).
   const [settingsTab, setSettingsTab] = useState<
-    "appearance" | "models" | "skills" | "voice" | "personas"
+    "appearance" | "models" | "voice" | "personas"
   >("appearance");
   const openSettings = (
-    tab: "appearance" | "models" | "skills" | "voice" | "personas" = "appearance",
+    tab: "appearance" | "models" | "voice" | "personas" = "appearance",
   ) => {
     setSettingsTab(tab);
     setSurface("settings");
@@ -229,7 +229,7 @@ export function App() {
   // load; corrected by loadSettings.
   const [modelReady, setModelReady] = useState(true);
   const [surface, setSurface] = useState<
-    "session" | "scheduled" | "integrations" | "abilities" | "audit" | "inbox" | "persona" | "settings"
+    "session" | "scheduled" | "integrations" | "skills" | "audit" | "inbox" | "persona" | "settings"
   >("session");
   // A remembered Scheduled-detail target must not outlive the surface (see the
   // scheduledOpenId comment above): nav re-entry lands on the list, never a
@@ -1367,12 +1367,12 @@ export function App() {
           setSurface("scheduled");
         }}
         onOpenIntegrations={() => setSurface("integrations")}
-        onOpenAbilities={() => setSurface("abilities")}
+        onOpenSkills={() => setSurface("skills")}
         onOpenAudit={() => setSurface("audit")}
         onOpenInbox={() => setSurface("inbox")}
         scheduledActive={surface === "scheduled"}
         integrationsActive={surface === "integrations"}
-        abilitiesActive={surface === "abilities"}
+        skillsActive={surface === "skills"}
         auditActive={surface === "audit"}
         inboxActive={surface === "inbox"}
         collapsed={navCollapsed}
@@ -1385,18 +1385,8 @@ export function App() {
           onRunNow={runTaskNow}
           initialOpenId={scheduledOpenId}
         />
-      ) : surface === "abilities" ? (
-        <AbilitiesView />
-      ) : surface === "integrations" ? (
-        <IntegrationsView />
-      ) : surface === "settings" ? (
-        <SettingsView
-          key={settingsTab}
-          initialTab={settingsTab}
-          onOpenPersona={(id) => openPersona(id, "settings")}
-          // 设置 ▸ 技能 ▸「添加技能」里的第四个门。落到「能力」页 —— 那里是
-          // qumge 目录的搜索/安装界面，而不是再造一个。
-          onBrowseCatalog={() => setSurface("abilities")}
+      ) : surface === "skills" ? (
+        <SkillsView
           onCreateSkill={(description) => {
             // The Skills doorway (SKILLS-SPEC §5.2): creation is a conversation. Fresh
             // session, description in the composer — the user reads and hits send. With
@@ -1408,6 +1398,14 @@ export function App() {
                 : tr("skBuildPrompt"),
             );
           }}
+        />
+      ) : surface === "integrations" ? (
+        <IntegrationsView />
+      ) : surface === "settings" ? (
+        <SettingsView
+          key={settingsTab}
+          initialTab={settingsTab}
+          onOpenPersona={(id) => openPersona(id, "settings")}
         />
       ) : surface === "audit" ? (
         <AuditView />

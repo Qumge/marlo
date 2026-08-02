@@ -439,7 +439,7 @@ export function InstalledSkills({
   rows: SkillRow[];
   onEdit: (row: SkillRow) => void;
   onChanged: () => void;
-  onNotice: (n: { name: string; text: string; tone: "ok" | "warn" }) => void;
+  onNotice: (n: { name: string; text: string; tone: "ok" | "warn" } | null) => void;   // null = 清掉上一条
   onError: (msg: string) => void;
 }): JSX.Element
 
@@ -460,9 +460,9 @@ export function SkillEditor({
 }: {
   draft: SkillDraft | null;
   upload: SkillUploadPreview | null;
-  onSaved: (name: string) => void;
+  onSaved: () => void;   // 只收尾（收起编辑器 + 刷新）；提示条由 SkillEditor 自己按 mode 决定
   onCancel: () => void;
-  onNotice: (n: { name: string; text: string; tone: "ok" | "warn" }) => void;
+  onNotice: (n: { name: string; text: string; tone: "ok" | "warn" } | null) => void;   // null = 清掉上一条
   onError: (msg: string) => void;
 }): JSX.Element | null
 ```
@@ -491,13 +491,17 @@ export function InstalledSkills({ rows, onEdit, onChanged, onNotice, onError }: 
   rows: SkillRow[];
   onEdit: (row: SkillRow) => void;
   onChanged: () => void;
-  onNotice: (n: { name: string; text: string; tone: "ok" | "warn" }) => void;
+  onNotice: (n: { name: string; text: string; tone: "ok" | "warn" } | null) => void;   // null = 清掉上一条
   onError: (msg: string) => void;
 }) {
   const t = useT();
   const [armedDelete, setArmedDelete] = useState<string | null>(null);
 
   const fail = (res: { ok?: boolean; error?: string }) => {
+    // 【第一行必须是它】原版 fail() 每次调用都先清掉上一条横幅，不管成败。掉了这行
+    // 会出现：关掉技能 A 弹出绿条，接着删技能 B 失败弹出红条 —— 两条不相干的提示
+    // 并排挂着。这也是 onNotice 的签名要接受 null 的原因。
+    onNotice(null);
     if (res.ok === false) {
       onError(res.error || t("skWentWrong"));
       return true;
@@ -549,9 +553,9 @@ export const emptySkillDraft = (): SkillDraft => ({
 export function SkillEditor({ draft, upload, onSaved, onCancel, onNotice, onError }: {
   draft: SkillDraft | null;
   upload: SkillUploadPreview | null;
-  onSaved: (name: string) => void;
+  onSaved: () => void;   // 只收尾（收起编辑器 + 刷新）；提示条由 SkillEditor 自己按 mode 决定
   onCancel: () => void;
-  onNotice: (n: { name: string; text: string; tone: "ok" | "warn" }) => void;
+  onNotice: (n: { name: string; text: string; tone: "ok" | "warn" } | null) => void;   // null = 清掉上一条
   onError: (msg: string) => void;
 }) {
   // 本地草稿：外层给初值，敲字不往上冒泡（每敲一个字都重渲染整页是没必要的）。
@@ -574,10 +578,13 @@ export function SkillEditor({ draft, upload, onSaved, onCancel, onNotice, onErro
       <SkillEditor
         draft={editor}
         upload={upload}
-        onSaved={(name) => {
+        {/* 只收尾，【不要】在这里弹提示条 —— 原版 save() 是 `if (editor.mode === "new")`
+            才弹的，编辑保存是静默的。在父层无条件弹，会让「改一句说明」也冒出
+            「—— 之后每次对话它都能用了。」这句只属于新建的话。提示由 SkillEditor
+            自己按 mode 决定（新建弹、上传确认弹、编辑不弹）。 */}
+        onSaved={() => {
           setEditor(null);
           setUpload(null);
-          setNotice({ name, text: CONFIRMATION, tone: "ok" });
           refresh();
         }}
         onCancel={() => {
@@ -786,10 +793,12 @@ export function SkillsView({ onCreateSkill }: { onCreateSkill?: (description: st
           <SkillEditor
             draft={editor}
             upload={upload}
-            onSaved={(name) => {
+            {/* 只收尾，【不要】在这里弹提示条 —— 提示由 SkillEditor 自己按 mode 决定
+                （新建弹、上传确认弹、编辑保存静默）。父层无条件弹会让「改一句说明」
+                也冒出「—— 之后每次对话它都能用了。」这句只属于新建的话。 */}
+            onSaved={() => {
               setEditor(null);
               setUpload(null);
-              setNotice({ name, text: t("skConfirmation"), tone: "ok" });
               refresh();
             }}
             onCancel={() => { setEditor(null); setUpload(null); }}
@@ -1006,11 +1015,11 @@ Task 3-5 从 `SkillsTab` 搬过来的裸英文全部换成 `t("键")`。键加�
 | 新键 | zh（取自 `zh-text.ts`） | en（源码原文） |
 |---|---|---|
 | `skAdd` | `添加技能` | `Add skill` |
-| `skDoorWrite` | `自己写` | `Write it myself` |
+| `skDoorWrite` | `我自己写` | `Write it myself` |
 | `skDoorWriteSub` | `一个名字、一句说明，和具体做法` | `A name, a description, and the instructions` |
 | `skDoorImport` | `导入文件` | `Import a file` |
 | `skDoorImportSub` | `别人分享的 .zip 或 SKILL.md —— 安装前你先过目` | `A .zip or SKILL.md someone shared — you review before it installs` |
-| `skDoorMarlo` | `让 Marlo 做` | `Create with Marlo` |
+| `skDoorMarlo` | `让 Marlo 帮我写` | `Create with Marlo` |
 | `skDoorMarloSub` | `会开一个对话 —— 它来写，写完问过你再加进技能库` | `Starts a conversation — the worker builds it and asks before adding it to your skills` |
 | `skUploadLabel` | `上传技能压缩包` | `Upload a skill archive` |
 | `skReviewFirst` | `安装前先过目` | `Review before installing` |
@@ -1022,12 +1031,10 @@ Task 3-5 从 `SkillsTab` 搬过来的裸英文全部换成 `t("键")`。键加�
 | `skFieldInstructions` | `做法` | `Instructions` |
 | `skDescPlaceholder` | `一句话，让它据此判断什么时候该用这个技能` | `One line the worker uses to decide when this applies` |
 | `skSave` | `保存技能` | `Save skill` |
-| `skNoneYet` | `还没有技能 ——` | `No skills yet —` |
-| `skNoneYetHow` | `教它第一个技能，比如「帮我准备周一的进度汇报」。` | `teaches your worker its first one, like "prepare my Monday status report".` |
-| `skShowFolder` | `显示文件夹` | `Show folder` |
+| `skShowFolder` | `打开所在文件夹` | `Show folder` |
 | `skOn` | `开` | `On` |
 | `skNoDescription` | `没有说明` | `no description` |
-| `skBundledFiles` | `附带文件：` | `Bundled files:` |
+| `skBundledFiles` | `随附文件：` | `Bundled files:` |
 
 `Skills` 那个 `<h2>` 和它下面那句 lede 不进这张表 —— Step 1 的 `skills` / `skillsSub` 已经覆盖了，`PanelHead` 用的就是它俩。
 
@@ -1260,3 +1267,74 @@ EOF
 - [ ] 设置里剩四栏：通用 / 模型 / 技能人格 / 语音输入
 - [ ] `npm test`、`npx tsc --noEmit`、`npm run e2e` 三绿
 - [ ] `pytest` 不多于 5 failed（本机预存基准）
+
+---
+
+## 实际交付与计划的出入
+
+这份计划在执行途中被改过两次（`47f5a55` 修 Task 4 骨架里的提示条归属，`ba184d6`
+修 Task 6 键表里四条重译的中文），那两处现在是准确的。下面这五处从没改过 ——
+计划里写的是一回事，仓库里交付的是另一回事。这份文档是提交进仓库的，会被当文档
+读，所以在这里逐条对齐。
+
+**1. `rows` 的类型是 `SkillRow[] | null`，不是 `SkillRow[]`（plan:750）**
+
+计划的骨架写 `useState<SkillRow[]>([])`。交付的是：
+
+```tsx
+// null = 还没问到后端。空数组才是「真的一个都没有」—— 两者渲染不同的东西，
+// 一开始就用 [] 会让每次进页面都先闪一下空状态。
+const [rows, setRows] = useState<SkillRow[] | null>(null);
+```
+
+「还没问到」和「问过了，一条都没有」必须能分开：用 `[]` 当初值的话，页面每次挂载
+都会先渲染一次「还没装任何技能」，等 500ms 后的响应到了再换成列表 —— 一个有技能的
+用户每次进这一页都会先被告知他没有技能。所有 `rows` 的读取点因此都带了
+`rows !== null` 前置或 `(rows || [])` 兜底。
+
+**2. `<InstalledSkills>` 是条件渲染，空状态在 `SkillsView`（plan:809、plan:472）**
+
+计划两处都假设 `InstalledSkills` 自己管空状态：plan:809 的骨架无条件渲染它，
+plan:472 明写它搬过来的那段「含空状态」。交付的是反过来的：
+
+```tsx
+{rows !== null && rows.length > 0 && (
+  <> <div className={GRP_H}>…</div> <InstalledSkills … /> </>
+)}
+{rows !== null && rows.length === 0 && !editor && !upload && (
+  <div data-testid="skills-empty"> … </div>
+)}
+```
+
+理由是这一页的空状态要说的话和 `SkillsTab` 那句不一样（要【解释机制】——「你不用
+从列表里挑」，而不是「列表是空的」），两句同屏会打架。于是列表为空时整个
+`InstalledSkills` 不渲染，由 `SkillsView` 回答；`InstalledSkills` 里原来那段空状态
+分支就此不可达，Task 6 删掉了它，现在那里留的是一条说明 `rows` 为何永远非空的注释。
+
+**这次最终评审的 Important #1 就是这个未记录的重构留下的洞。** 上游 `SkillsTab` 的
+条件是 `rows.length === 0 && !editor`；空状态上移时 `!editor` 掉了 —— Task 4 当时把
+它记成 minor 并延后，理由是「`InstalledSkills` 的 props 里没有 editor 这个信号」，
+而那个理由在 Task 5 把空状态搬进 `SkillsView`（那里两个信号都在手边）之后就失效了，
+没人复查。收尾时补回，条件现在是 `!editor && !upload`，并有一条先红后绿的测试盯着。
+
+**3. `skills-list` 这个 testid 不存在（plan:1124）**
+
+Task 7 的 testid 对照表列了 `abilities-list → skills-list`。左边那个是真的
+（`f9762fc:AbilitiesView.tsx:162` 有 `data-testid="abilities-list"`），但它是随
+Task 5 删 `AbilitiesView.tsx` 一起没的，不是被改名。合页后的列表容器没有 testid ——
+定位走的是每一行自己的 `skill-{name}`，没有任何测试需要整块列表的句柄。这一行是
+一次没有落地的改名，不是漏做。
+
+**4. Task 7 的文件清单漏了两个 spec（plan:1104-1108）**
+
+清单里只有 `skills.spec.ts`（新建）、`skills-catalog-door.spec.ts`（删）、
+`skills-settings.spec.ts`（改）。实际还必须改 `skills-session.spec.ts` 和
+`skills-upload.spec.ts` —— 这两个也走「设置 ▸ 技能」那个已经删掉的 tab 进页面，不改
+入口就会全红。两者都只换了入口的那几行，断言一条没动。
+
+**5. 目录的搜索框在页面中部，不在页头**
+
+计划和早期注释都拿它跟「连接」页对齐（`IntegrationsView.tsx:24-25` 的搜索框在页面
+顶部）。合页之后这一页有两批东西——上半页已装的、下半页目录——而搜索只作用于后者，
+所以它跟着目录留在中部，紧贴它过滤的那批结果。外形（右对齐的短圆框）仍和「连接」
+页一致。这是有意的，不是没搬完。
