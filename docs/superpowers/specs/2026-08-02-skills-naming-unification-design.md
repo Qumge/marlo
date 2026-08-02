@@ -13,7 +13,9 @@
 
 这不是叫法不一致，是同一份数据渲染了两遍。已经因此坏了三处：
 
-1. **「移除」按钮是死的。** `AbilitiesView.tsx:118` 调 `uninstallSkill()` → `POST /v1/skills/uninstall`，**这个路由后端不存在**（`coworker/server/app.py:632` 的注释早就写明「没有 uninstall，上游的 DELETE /v1/skills/{name} 就是卸载，前端改调那个」，前端没改）。错误被 `.catch(() => {})` 吞掉，列表一刷新技能又回来。`AbilitiesView.test.tsx:36` mock 了这个不存在的 URL，所以测试一直是绿的。
+1. **「移除」按钮是死的。** `AbilitiesView.tsx:118` 调 `uninstallSkill()` → `POST /v1/skills/uninstall`，**这个路由后端不存在**（`coworker/server/app.py:632` 的注释早就写明「没有 uninstall，上游的 DELETE /v1/skills/{name} 就是卸载，前端改调那个」，前端没改）。错误被 `.catch(() => {})` 吞掉，列表一刷新技能又回来。
+
+它能活下来是因为**移除这条路从来没被测过**：`AbilitiesView.test.tsx` 的 `serve()` 助手里有个 `/v1/skills/uninstall` 分支（36-39 行），但 `opts.removed` 全文件只出现在那一次 push 里 —— 13 条测试没有一条传过它。那个分支是死代码，它让人以为移除被覆盖了。
 2. **禁用状态在「能力」页看不见。** `InstalledSkill` 只取 `name` / `description`，丢掉了 `enabled`。在设置里关掉的技能，「能力」页照样显示成「已装」。
 3. **设置 ▸ 技能 ▸ 添加 ▸ 浏览目录会把人甩出设置**（`App.tsx:1399` → `setSurface("abilities")`），正在用的那个抽屉没了。
 
@@ -126,7 +128,7 @@ surfaces/gui/src/components/skills/
 
 ## 测试
 
-- **删** `AbilitiesView.test.tsx` —— 它 mock 了 `/v1/skills/uninstall` 这个不存在的路由，正是它让死按钮一直是绿的
+- **拆分保留** `AbilitiesView.test.tsx` —— 那 13 条测试是有价值的（offset 分页、翻译提示、正文预览、目录错误态、no-english 守卫），按新的文件划分拆成 `SkillCatalog.test.tsx`（目录相关 9 条）和 `InstalledSkills.test.tsx`（已装列表 3 条），空状态那条跟着 `SkillsView.test.tsx`。`serve()` 助手里的 `/v1/skills/uninstall` 死分支删掉，换成 `DELETE /v1/skills/{name}`
 - **重写** `e2e/skills-catalog-door.spec.ts` —— 现在验的是「设置▸技能▸添加▸第四个门 → 跳到能力页」，那条路整个没了；改成验「技能页上目录段直接可见」
 - **改** `e2e/skills-settings.spec.ts` —— 入口从设置改成账号菜单
 - **改** `Sidebar.test.tsx` / `Sidebar.account.test.tsx` —— prop 改名
