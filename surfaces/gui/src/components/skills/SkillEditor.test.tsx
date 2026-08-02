@@ -30,7 +30,9 @@ describe("技能编辑表单", () => {
         onError={noop}
       />,
     );
-    fireEvent.click(screen.getByText("Save skill"));
+    // 断言改动（Task 6）：按钮文案从写死的英文 "Save skill" 改成 t("skSave")，
+    // 这条测试跑在 zh 下（beforeEach setLocale("zh")），所以现在要按中文找。
+    fireEvent.click(screen.getByText("保存技能"));
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
     expect(onNotice).not.toHaveBeenCalledWith(expect.objectContaining({ tone: "ok" }));
   });
@@ -49,7 +51,9 @@ describe("技能编辑表单", () => {
         onError={noop}
       />,
     );
-    fireEvent.click(screen.getByText("Save skill"));
+    // 断言改动（Task 6）：按钮文案从写死的英文 "Save skill" 改成 t("skSave")，
+    // 这条测试跑在 zh 下（beforeEach setLocale("zh")），所以现在要按中文找。
+    fireEvent.click(screen.getByText("保存技能"));
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
     expect(onNotice).toHaveBeenCalledWith(
       expect.objectContaining({ name: "greet", tone: "ok" }),

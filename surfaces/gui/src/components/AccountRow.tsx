@@ -157,7 +157,7 @@ export function AccountRow({
               {/* book 而不是 sparkle：sparkle 太泛（人格也在用），而 book 是原
                   设置 ▸ 技能 tab 用的图标 —— 一本菜谱。那个 tab 没了，图标跟到
                   这里，用户认的还是同一个东西。 */}
-              {appMenuItem("book", t("abilities"), onOpenSkills, skillsActive)}
+              {appMenuItem("book", t("skills"), onOpenSkills, skillsActive)}
               {appMenuItem("plug", t("connectors"), onOpenIntegrations, integrationsActive)}
               <div className="h-px bg-line my-1 mx-2" />
               {appMenuItem(

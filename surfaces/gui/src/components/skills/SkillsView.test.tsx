@@ -46,20 +46,13 @@ describe("技能页", () => {
     const { setLocale } = await import("../../i18n");
     act(() => setLocale("zh"));
     await act(async () => {});
-    // 【为什么要过一道 tx()】这一页上还有从设置搬过来的裸英文（「Add skill」那些）。
-    // 它们在真实构建里由 i18n-transform 包进 tx()、按 zh-text.ts 查表出中文，而
-    // vitest.config.ts 不挂那个插件 —— 于是测试里看到的是英文，用户看到的是中文。
-    // 这里替 vitest 补上那一步：tx(s) !== s 说明查得到译文，用户不会看见它。
-    // 留下的才是【两条路都没管】的英文，也就是这条守卫真正要抓的。
-    // Task 6 把这些裸英文改走 t() 之后，这个 filter 会自动变成空操作。
-    const { tx } = await import("../../i18n/tx");
-    const runs = englishRunsIn(document.body).filter((s) => tx(s) === s);
+    const runs = englishRunsIn(document.body);
     act(() => setLocale("en"));
     expect(runs).toEqual([]);
   });
 
   it("空状态要【解释机制】，不是给一个去逛逛的按钮", async () => {
-    // 一个刚装好的用户看到"还没装任何能力"，第一反应是"那我去哪儿装"，
+    // 一个刚装好的用户看到"还没装任何技能"，第一反应是"那我去哪儿装"，
     // 而正确答案是"你不用装"。这一条盯着那句解释真的在。
     serve([]);
     render(<SkillsView />);

@@ -62,7 +62,7 @@ export function SkillsView({ onCreateSkill }: { onCreateSkill?: (description: st
       <div className="flex-1 min-w-0 overflow-y-auto hairline-scroll">
         <div className="max-w-4xl mx-auto px-7 py-6">
           <div className="flex items-start justify-between gap-3">
-            <PanelHead title={t("abilities")} sub={t("abilitiesSub")} />
+            <PanelHead title={t("skills")} sub={t("skillsSub")} />
             {/* 一个添加动作，后面三个门。第四个（浏览目录）不需要了 —— 目录就在下面。 */}
             <AddMenu
               open={addOpen}
@@ -79,7 +79,7 @@ export function SkillsView({ onCreateSkill }: { onCreateSkill?: (description: st
             type="file"
             accept=".zip,.md"
             className="hidden"
-            aria-label="Upload a skill archive"
+            aria-label={t("skUploadLabel")}
             onChange={(e) => {
               onPickFile(e.target.files?.[0]);
               e.target.value = "";
@@ -116,7 +116,7 @@ export function SkillsView({ onCreateSkill }: { onCreateSkill?: (description: st
           {rows !== null && rows.length > 0 && (
             <>
               <div className={GRP_H + " !mt-0"}>
-                {t("abilitiesInstalled")} · {rows.length}
+                {t("skInstalled")} · {rows.length}
               </div>
               <InstalledSkills
                 rows={rows}
@@ -136,7 +136,7 @@ export function SkillsView({ onCreateSkill }: { onCreateSkill?: (description: st
           )}
 
           {/* 空状态要【解释机制】，不是给一个"去逛逛"的按钮：一个刚装好的用户看到
-              "还没装任何能力"，第一反应是"那我去哪儿装"，而正确答案是"你不用装"。
+              "还没装任何技能"，第一反应是"那我去哪儿装"，而正确答案是"你不用装"。
               InstalledSkills 自己那句空状态在这一页会和它打架，所以列表为空时整块
               不渲染，由这里回答。 */}
           {rows !== null && rows.length === 0 && (
@@ -144,8 +144,8 @@ export function SkillsView({ onCreateSkill }: { onCreateSkill?: (description: st
               className="rounded-xl border border-line bg-panel/50 p-5 text-[13px] mb-2"
               data-testid="abilities-empty"
             >
-              <div className="font-medium">{t("abilitiesEmpty")}</div>
-              <div className="text-muted mt-1.5 leading-relaxed">{t("abilitiesEmptyHow")}</div>
+              <div className="font-medium">{t("skEmpty")}</div>
+              <div className="text-muted mt-1.5 leading-relaxed">{t("skEmptyHow")}</div>
             </div>
           )}
 
@@ -178,11 +178,12 @@ function AddMenu({
   // 写，写完通过 save_skill 问过你再加。
   onAskMarlo?: (description: string) => void;
 }) {
+  const t = useT();
   return (
     <div className="relative shrink-0">
       <button className={BTN_ACCENT} aria-haspopup="menu" aria-expanded={open} onClick={onToggle}>
         <span className="inline-flex items-center gap-1.5">
-          <Icon name="plus" size={13} /> Add skill
+          <Icon name="plus" size={13} /> {t("skAdd")}
         </span>
       </button>
       {open ? (
@@ -201,10 +202,8 @@ function AddMenu({
                 onWrite();
               }}
             >
-              <div className="text-[13px] font-medium">Write it myself</div>
-              <div className="text-[11.5px] text-muted">
-                A name, a description, and the instructions
-              </div>
+              <div className="text-[13px] font-medium">{t("skDoorWrite")}</div>
+              <div className="text-[11.5px] text-muted">{t("skDoorWriteSub")}</div>
             </button>
             <button
               role="menuitem"
@@ -214,10 +213,8 @@ function AddMenu({
                 onImport();
               }}
             >
-              <div className="text-[13px] font-medium">Import a file</div>
-              <div className="text-[11.5px] text-muted">
-                A .zip or SKILL.md someone shared — you review before it installs
-              </div>
+              <div className="text-[13px] font-medium">{t("skDoorImport")}</div>
+              <div className="text-[11.5px] text-muted">{t("skDoorImportSub")}</div>
             </button>
             <button
               role="menuitem"
@@ -228,11 +225,8 @@ function AddMenu({
                 onAskMarlo?.("");
               }}
             >
-              <div className="text-[13px] font-medium">Create with Marlo</div>
-              <div className="text-[11.5px] text-muted">
-                Starts a conversation — the worker builds it and asks before adding it to
-                your skills
-              </div>
+              <div className="text-[13px] font-medium">{t("skDoorMarlo")}</div>
+              <div className="text-[11.5px] text-muted">{t("skDoorMarloSub")}</div>
             </button>
           </div>
         </>

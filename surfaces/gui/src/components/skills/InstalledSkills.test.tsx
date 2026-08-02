@@ -28,7 +28,9 @@ describe("已装技能列表", () => {
   it("带附件的技能要看得出来 —— 和单文件的长一样就等于藏了", () => {
     // §6：live drive 里纯文字藏掉了这个可点击的入口，所以做成带文件夹图标的 chip。
     render(<InstalledSkills rows={ROWS} onEdit={noop} onChanged={noop} onNotice={noop} onError={noop} />);
-    expect(screen.getByTitle("Show folder").textContent).toContain("2 file");
+    // 断言改动（Task 6）：title 从写死的英文 "Show folder" 改成 t("skShowFolder")，
+    // 这条测试跑在 zh 下（beforeEach setLocale("zh")），所以现在要按中文找。
+    expect(screen.getByTitle("显示文件夹").textContent).toContain("2 file");
   });
 
   it("删除要两步 —— 第一下只是上膛", async () => {

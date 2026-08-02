@@ -100,7 +100,7 @@ export function SkillCatalog({
       <div className="flex items-center justify-end mb-4">
         <input
           className="w-44 px-3.5 py-1.5 rounded-full border border-line bg-panel text-[13px] outline-none focus:border-accent"
-          placeholder={t("abilitiesSearch")}
+          placeholder={t("skSearch")}
           value={q}
           onChange={(e) => setQ(e.target.value)}
           data-testid="abilities-search"
@@ -111,13 +111,13 @@ export function SkillCatalog({
           这些结果从哪来，也无从发现翻错了——而翻错时改用词是他唯一的补救。 */}
       {searchedAs && !searchErr && (
         <div className="text-[12px] text-dim mb-4" data-testid="abilities-translated">
-          {t("abilitiesTranslated")} “{searchedAs}”
+          {t("skTranslated")} “{searchedAs}”
         </div>
       )}
 
       {searchErr && (
         <div className="text-[12px] text-warnInk mb-4" data-testid="abilities-error">
-          {t("abilitiesSearchFailed")} {searchErr}
+          {t("skSearchFailed")} {searchErr}
         </div>
       )}
 
@@ -126,12 +126,12 @@ export function SkillCatalog({
           唯一区别，也是用户最该先看到的。 */}
       {results !== null &&
         (results.length === 0 && !searchErr ? (
-          <div className="text-[12.5px] text-muted">{t("abilitiesNoResults")}</div>
+          <div className="text-[12.5px] text-muted">{t("skNoResults")}</div>
         ) : (
           <div data-testid="abilities-results">
             {groupsOf(results).map(([g, rows]) => (
               <div key={g}>
-                <div className={GRP_H}>{g === "__vetted__" ? t("abilitiesVetted") : g}</div>
+                <div className={GRP_H}>{g === "__vetted__" ? t("skVetted") : g}</div>
                 <div className={GRP}>
                   {rows.map((s) => (
                     <div key={s.slug} className={ROW} data-testid={`catalog-${s.name}`}>
@@ -142,7 +142,7 @@ export function SkillCatalog({
                         {s.needs && (
                           // 装之前就说清楚它要账号 —— 装完才发现连不上是最差的顺序。
                           <span className="block text-[11.5px] text-warnInk mt-0.5">
-                            {t("abilitiesNeeds")} {s.needs}
+                            {t("skNeeds")} {s.needs}
                           </span>
                         )}
                       </span>
@@ -151,11 +151,11 @@ export function SkillCatalog({
                         onClick={() => openDetail(s)}
                         data-testid={`view-${s.name}`}
                       >
-                        {t("abilitiesView")}
+                        {t("skViewBody")}
                       </button>
                       {installedNames.has(s.name) ? (
                         <span className="text-[11.5px] text-faint shrink-0">
-                          {t("abilitiesInstalled")}
+                          {t("skInstalled")}
                         </span>
                       ) : (
                         <button
@@ -164,7 +164,7 @@ export function SkillCatalog({
                           onClick={() => add(s)}
                           data-testid={`install-${s.name}`}
                         >
-                          {busy === s.slug ? t("abilitiesInstalling") : t("abilitiesInstall")}
+                          {busy === s.slug ? t("skInstalling") : t("skInstall")}
                         </button>
                       )}
                     </div>
@@ -179,7 +179,7 @@ export function SkillCatalog({
                 onClick={loadMore}
                 data-testid="abilities-more"
               >
-                {loadingMore ? t("abilitiesLoading") : t("abilitiesMore")}
+                {loadingMore ? t("skLoading") : t("skMore")}
               </button>
             )}
           </div>
@@ -205,12 +205,12 @@ export function SkillCatalog({
                 className="text-[12.5px] text-faint hover:text-ink"
                 onClick={() => setDetail(null)}
               >
-                {t("abilitiesClose")}
+                {t("skClose")}
               </button>
             </div>
-            <div className="text-[11.5px] text-faint mb-3">{t("abilitiesUntrusted")}</div>
+            <div className="text-[11.5px] text-faint mb-3">{t("skUntrusted")}</div>
             <pre className="text-[12px] leading-relaxed whitespace-pre-wrap break-words">
-              {detail.body || t("abilitiesLoading")}
+              {detail.body || t("skLoading")}
             </pre>
           </div>
         </div>

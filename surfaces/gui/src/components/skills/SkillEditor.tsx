@@ -115,28 +115,26 @@ export function SkillEditor({ draft, upload, onSaved, onCancel, onNotice, onErro
     <>
       {upload ? (
         <div className={`${CARD} p-4 mb-4`}>
-          <div className="text-[13px] font-medium mb-1">Review before installing</div>
-          <p className="text-[12.5px] text-muted mb-3">
-            Read the instructions — installing a skill means the worker will follow them.
-          </p>
+          <div className="text-[13px] font-medium mb-1">{t("skReviewFirst")}</div>
+          <p className="text-[12.5px] text-muted mb-3">{t("skReviewLede")}</p>
           <div className="text-[13px] mb-1">
             <span className="font-medium">{upload.name}</span>
-            <span className="text-muted"> — {upload.description || "no description"}</span>
+            <span className="text-muted"> — {upload.description || t("skNoDescription")}</span>
           </div>
           <pre className="text-[12px] bg-paper border border-line rounded-lg p-3 whitespace-pre-wrap max-h-64 overflow-y-auto mb-2">
             {upload.instructions}
           </pre>
           {upload.files?.length ? (
             <div className="text-[12px] text-muted mb-2">
-              Bundled files: {upload.files.join(", ")}
+              {t("skBundledFiles")} {upload.files.join(", ")}
             </div>
           ) : null}
           <div className="flex gap-2 mt-3">
             <button className={BTN_ACCENT} onClick={confirmUpload}>
-              Install skill
+              {t("skInstallBtn")}
             </button>
             <button className={BTN_BORDERED} onClick={onCancel}>
-              Cancel
+              {t("skCancel")}
             </button>
           </div>
         </div>
@@ -148,7 +146,7 @@ export function SkillEditor({ draft, upload, onSaved, onCancel, onNotice, onErro
             {local.mode === "new" ? t("skNewSkill") : t("skEditNamed")(local.name)}
           </div>
           <label className={FIELD_LABEL} htmlFor="skill-name">
-            Name
+            {t("skFieldName")}
           </label>
           <input
             id="skill-name"
@@ -159,17 +157,17 @@ export function SkillEditor({ draft, upload, onSaved, onCancel, onNotice, onErro
             onChange={(e) => setLocal({ ...local, name: e.target.value })}
           />
           <label className={FIELD_LABEL} htmlFor="skill-desc">
-            Description
+            {t("skFieldDesc")}
           </label>
           <input
             id="skill-desc"
             className={`${INPUT} mt-1 mb-3`}
             value={local.description}
-            placeholder="One line the worker uses to decide when this applies"
+            placeholder={t("skDescPlaceholder")}
             onChange={(e) => setLocal({ ...local, description: e.target.value })}
           />
           <label className={FIELD_LABEL} htmlFor="skill-instructions">
-            Instructions
+            {t("skFieldInstructions")}
           </label>
           <textarea
             id="skill-instructions"
@@ -184,10 +182,10 @@ export function SkillEditor({ draft, upload, onSaved, onCancel, onNotice, onErro
               disabled={!local.name.trim() || !local.instructions.trim()}
               onClick={save}
             >
-              Save skill
+              {t("skSave")}
             </button>
             <button className={BTN_BORDERED} onClick={onCancel}>
-              Cancel
+              {t("skCancel")}
             </button>
           </div>
         </div>

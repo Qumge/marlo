@@ -45,14 +45,10 @@ export function InstalledSkills({ rows, onEdit, onChanged, onNotice, onError }: 
     onChanged();
   };
 
+  // 空状态不在这里画：SkillsView 只在 rows.length > 0 时才渲染这个组件（它自己的
+  // 空状态块负责那一半），所以 rows 在这里永远非空。
   return (
     <div className={`${CARD} divide-y divide-line`}>
-      {rows.length === 0 ? (
-        <div className="p-5 text-[13px] text-muted">
-          No skills yet — <b>Add skill</b> teaches your worker its first one, like
-          “prepare my Monday status report”.
-        </div>
-      ) : null}
       {rows.map((row) => (
         <div
           key={row.name}
@@ -71,7 +67,7 @@ export function InstalledSkills({ rows, onEdit, onChanged, onNotice, onError }: 
               {row.files ? (
                 <button
                   className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-md border border-line bg-paper text-muted hover:text-ink hover:border-lineStrong shrink-0"
-                  title="Show folder"
+                  title={t("skShowFolder")}
                   onClick={() => revealSkill(row.name)}
                 >
                   <Icon name="folder" size={11} /> {row.files} file{row.files === 1 ? "" : "s"}
@@ -87,6 +83,7 @@ export function InstalledSkills({ rows, onEdit, onChanged, onNotice, onError }: 
           </button>
           <button
             className={BTN_BORDERED}
+            // aria-label 保持英文：它是给读屏和测试用的稳定句柄，不是可见文案。
             aria-label={`Delete ${row.name}`}
             data-testid={`remove-${row.name}`}
             onClick={() => remove(row)}
@@ -98,6 +95,7 @@ export function InstalledSkills({ rows, onEdit, onChanged, onNotice, onError }: 
             <input
               type="checkbox"
               role="switch"
+              // aria-label 保持英文：它是给读屏和测试用的稳定句柄，不是可见文案。
               aria-label={`${row.name} enabled`}
               checked={row.enabled}
               onChange={(e) => {
@@ -113,7 +111,7 @@ export function InstalledSkills({ rows, onEdit, onChanged, onNotice, onError }: 
                 });
               }}
             />
-            On
+            {t("skOn")}
           </label>
         </div>
       ))}
