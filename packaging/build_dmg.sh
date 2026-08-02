@@ -12,7 +12,9 @@
 #   - A Python venv at .venv (repo root) with this package installed editable, plus the
 #     build-only deps:
 #       python3 -m venv .venv
-#       .venv/bin/pip install -e '.[bedrock]' pyinstaller tzdata typer
+#       .venv/bin/pip install -e '.[bedrock]' pyinstaller tzdata typer -c requirements-ci.txt
+#     -c requirements-ci.txt：本地手动建的 venv 也要和 CI 测过的是同一套版本。
+#     没有它的话，本地复现一个「只在发版包里出现」的问题时，你装到的又是第三套。
 #     `typer` is needed only at BUILD time: PyInstaller walks the `mcp` package and
 #     `mcp.cli` calls sys.exit() at import if typer is absent, which aborts the freeze.
 #     (aisuite installs like any other dependency — git-pinned in pyproject.toml.)

@@ -81,6 +81,31 @@ jobs:
           python -m venv .venv
           if [ "$RUNNER_OS" = "Windows" ]; then VPY=.venv/Scripts/python; else VPY=.venv/bin/python; fi
           "$VPY" -m pip install --upgrade pip
+
+          # 【重试，因为 aisuite 是 git 依赖】pyproject 里写的是
+          #   aisuite @ git+https://github.com/andrewyng/aisuite.git@<sha>
+          # 所以每次构建、每个平台都要从 GitHub 克隆一次，而 pip 对 git clone
+          # 【不重试】—— 一次网络抖动就是整个发版挂掉。
+          #
+          # v0.5.0 实测：第一轮 Windows 就挂在这里，
+          #   git clone ... did not run successfully. exit code: 128 / No available output
+          # 图标、代码、测试全没问题，纯粹是那一下没连上。
+          #
+          # 换 PyPI 那条路走不通：PyPI 上最新的 aisuite 是 0.1.14（2025-11-25），
+          # 而我们钉的 commit 是 2026-07-21 —— 钉的比发布的新 8 个月，换过去等于
+          # 退版本。（那个仓库是个 monorepo，platform/ 里装的就是 OpenWorker 自己。）
+          #
+          # 所以只能在这一层兜：整条 install 重试三次，间隔递增。后面几次会命中
+          # pip 的缓存，真出问题时也就多花十几秒。
+          retry_pip() {
+            for attempt in 1 2 3; do
+              if "$@"; then return 0; fi
+              echo "::warning::pip 第 $attempt 次失败（多半是 aisuite 的 git clone），${attempt}0s 后重试"
+              sleep "${attempt}0"
+            done
+            echo "::error::pip 三次都失败了 —— 这次不像是网络抖动"
+            return 1
+          }
           # pillow: build_dmg.sh redraws the installer background from
           # make_dmg_background.py rather than trusting a committed PNG — the
           # product name is inside that picture, and it was wrong for eleven
@@ -90,7 +115,24 @@ jobs:
           # [bedrock]：发版的 sidecar 要真能连 Bedrock，boto3 得打进冻结的二进制
           # 里（那里没有解释器可以运行时 pip install），所以这个 extra 和 CI 那边
           # 不同——发版必须带，CI 不必带。
-          "$VPY" -m pip install -e ".[bedrock]" pyinstaller typer tzdata pillow
+          #
+          # 【-c requirements-ci.txt：发版装的必须和 CI 测过的是同一套】
+          # 在这之前这条线【没有约束】，装到的是当天的最新版（v0.5.0 的日志里是
+          # fastapi-0.141.1、uvicorn-0.52.0，而锁里是 0.140.13）。也就是说 CI 绿了
+          # 只证明"锁里那套是好的"，而用户拿到的是另一套 —— 2026-07-28 mcp 2.0.0
+          # 那次事故就是这个形状，只是当时发生在 CI 那条路上。
+          #
+          # 锁是按 linux 解出来的，这里跑的是 macOS 和 Windows。可行，因为 -c 是
+          # 【约束】不是【要求】：它只规定"如果要装 X，用这个版本"，不会让 X 被
+          # 装上。所以锁里那些 linux 专属的（uvloop 之类）在 Windows 上是惰性的 ——
+          # uvicorn[standard] 自己的 marker 根本不会选中它们。macOS 上实测过
+          # --dry-run 解析通过。
+          #
+          # pyinstaller / typer / tzdata / pillow 不在锁里（它们不是 pyproject 的
+          # 依赖），仍然装最新版。要连它们一起钉，得单独出一份构建工具的锁 ——
+          # 那是另一件事，先把【运行时】这一半对齐。
+          retry_pip "$VPY" -m pip install -e ".[bedrock]" pyinstaller typer tzdata pillow \
+            -c requirements-ci.txt
           "$VPY" -c "import aisuite, coworker"  # fail fast if either import breaks
 
       - name: npm ci
