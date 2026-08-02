@@ -125,7 +125,6 @@ export const zh: Strings = {
   skInstalled: "已装",
   skInstall: "添加",
   skInstalling: "添加中…",
-  skRemove: "移除",
   skNeeds: "需要先连：",
   skNoResults: "没搜到。试试直接说你要做的事，而不是工具的名字。",
   skVetted: "Qumge 精选",
@@ -139,11 +138,11 @@ export const zh: Strings = {
 
   // 添加菜单的三个门（SKILLS-SPEC §5）和它们的表单/预览文案。
   skAdd: "添加技能",
-  skDoorWrite: "自己写",
+  skDoorWrite: "我自己写",
   skDoorWriteSub: "一个名字、一句说明，和具体做法",
   skDoorImport: "导入文件",
   skDoorImportSub: "别人分享的 .zip 或 SKILL.md —— 安装前你先过目",
-  skDoorMarlo: "让 Marlo 做",
+  skDoorMarlo: "让 Marlo 帮我写",
   skDoorMarloSub: "会开一个对话 —— 它来写，写完问过你再加进技能库",
   skUploadLabel: "上传技能压缩包",
   skReviewFirst: "安装前先过目",
@@ -155,10 +154,10 @@ export const zh: Strings = {
   skFieldInstructions: "做法",
   skDescPlaceholder: "一句话，让它据此判断什么时候该用这个技能",
   skSave: "保存技能",
-  skShowFolder: "显示文件夹",
+  skShowFolder: "打开所在文件夹",
   skOn: "开",
   skNoDescription: "没有说明",
-  skBundledFiles: "附带文件：",
+  skBundledFiles: "随附文件：",
 
   // -- 用量小条（上游 OPE-42，随 0.1.7 到来）--------------------------------
   usageTokenUsage: "Token 用量",

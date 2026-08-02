@@ -39,7 +39,6 @@ export const en = {
   skInstalled: "Installed",
   skInstall: "Add",
   skInstalling: "Adding…",
-  skRemove: "Remove",
   skNeeds: "needs a connection:",
   skNoResults: "Nothing found. Try describing the job instead of naming a tool.",
   skVetted: "Vetted by Qumge",
