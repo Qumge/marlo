@@ -187,41 +187,95 @@ def detail(slug: str, *, client: Optional[httpx.Client] = None) -> str:
     return body
 
 
+def _split_front_matter(body: str) -> tuple[str, str, str]:
+    """目录返回的是一整份 SKILL.md（自带 frontmatter）。SkillStore.create 要的是
+    拆开的 name / description / instructions —— 它自己负责写 frontmatter。
+
+    拆不出来就回退：name 用 slug 的末段，description 留空，全文当正文。一条
+    frontmatter 写坏了的技能仍然应该能装上，只是列表里没有那句说明。"""
+    name = description = ""
+    instructions = body
+    if body.startswith("---"):
+        end = body.find("\n---", 3)
+        if end != -1:
+            for line in body[3:end].splitlines():
+                if ":" not in line:
+                    continue
+                k, v = line.split(":", 1)
+                k, v = k.strip().lower(), v.strip()
+                if k == "name" and v:
+                    name = v
+                elif k == "description":
+                    description = v
+            instructions = body[end + 4 :].lstrip("\n")
+    return name, description, instructions
+
+
 def install(slug: str, *, client: Optional[httpx.Client] = None) -> dict[str, Any]:
-    """把一条技能装到 ~/.config/coworker/skills/<name>/SKILL.md。"""
+    """把目录里的一条技能装成一个【普通的全局技能】。
+
+    【为什么走 SkillStore 而不是自己写文件】原来这里是 mkdir + write_text，和上游
+    的技能仓库各写各的。它们恰好写同一个目录（folder-is-truth），所以能看见彼此 ——
+    但只是"能看见"：名字校验、作用域、重名处理、frontmatter 的形状，全是两套。
+    两套迟早会分叉，而分叉的症状是"从目录装的技能在设置里表现得和别的不一样"。
+
+    走 store 之后白拿：validate_name（64 字符上限 + 字符集）、重名报错而不是静默
+    覆盖、source 字段（设置页的技能列表据此显示来源）、以及上游以后加的任何东西。
+    """
     slug = (slug or "").strip()
     if not slug or slug.count("/") != 2:
         raise ValueError("slug 必须是 owner/repo/name 三段式")
-    name = slug.rsplit("/", 1)[-1]
-    # slug 来自目录（不可信来源），而它要变成一个【路径】。一个叫 ../../x 的技能
-    # 会把文件写到 skills 目录外面去。只放行明确安全的字符集。
-    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", name):
-        raise ValueError(f"技能名不能作为目录名: {name!r}")
+    tail = slug.rsplit("/", 1)[-1]
 
     text = _call("get_skill", {"slug": slug}, client=client)
     body = _between_markers(text)
     if not body.strip():
         raise RuntimeError("目录返回的正文是空的")
 
-    d = state_dir() / "skills" / name
-    d.mkdir(parents=True, exist_ok=True)
-    (d / "SKILL.md").write_text(body + "\n", encoding="utf-8")
-    return {"ok": True, "name": name, "slug": slug, "path": str(d / "SKILL.md")}
+    name, description, instructions = _split_front_matter(body)
+    # frontmatter 里的 name 也来自目录（不可信）。validate_name 会拦掉不能做目录名
+    # 的东西（含 ../ 的、超长的），但这里先用 slug 末段兜底：拆不出 name 时不能
+    # 拿空字符串去建目录。
+    name = name or tail
+
+    from .store import SkillStore
+
+    store = SkillStore()
+    res = store.create(
+        name=name,
+        description=description,
+        instructions=instructions,
+        source=f"qumge:{slug}",
+    )
+    # create 返回的是【文件夹】，我们的契约一直是 SKILL.md 本身（调用方拿它去读
+    # 刚装的内容）。补上文件名，别让接口跟着内部实现走。
+    return {
+        "ok": True,
+        "name": res["name"],
+        "slug": slug,
+        "path": str(Path(res["path"]) / "SKILL.md"),
+    }
 
 
 def uninstall(name: str) -> dict[str, Any]:
-    name = (name or "").strip()
-    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", name):
-        raise ValueError(f"不是一个合法的技能名: {name!r}")
-    d = state_dir() / "skills" / name
-    # resolve 之后再确认它【真的】在 skills 底下 —— 符号链接能把一个合法名字
-    # 指到别处去。
-    root = (state_dir() / "skills").resolve()
-    if not str(d.resolve()).startswith(str(root)):
-        raise ValueError("路径越界")
-    if d.is_dir():
-        import shutil
+    """同样走 SkillStore。
 
-        shutil.rmtree(d)
-        return {"ok": True, "name": name}
-    return {"ok": False, "name": name, "error": "not installed"}
+    原来这里自己 rmtree，带一段手写的越界检查（resolve 之后比对前缀）。store 的
+    _folder_of 做同一件事而且更严：符号链接指到作用域外的，它当"不存在"处理而不是
+    跟过去。两份等价的安全检查里，早晚有一份会漏掉后来加的情况。
+
+    【两类失败必须分开】名字非法（../evil、带斜杠、超长）要【抛】—— 那是调用方
+    传错了东西，静默当成"没装"会把一次越界尝试伪装成一次平常的未命中。而"确实
+    没装"只是没装，返回 ok:False 就够。
+
+    store.delete 对两者都抛，所以这里靠 validate_name 先把名字这一关单独走一遍：
+    过不了的原样抛出，过了的再去删，删不到才算"没装"。
+    """
+    from .store import SkillStore, validate_name
+
+    validate_name(name or "")  # 名字非法 -> ValueError，交给调用方
+    try:
+        SkillStore().delete(name.strip())
+    except (FileNotFoundError, KeyError, ValueError):
+        return {"ok": False, "name": name, "error": "not installed"}
+    return {"ok": True, "name": name}

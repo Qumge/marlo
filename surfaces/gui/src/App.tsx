@@ -1394,6 +1394,9 @@ export function App() {
           key={settingsTab}
           initialTab={settingsTab}
           onOpenPersona={(id) => openPersona(id, "settings")}
+          // 设置 ▸ 技能 ▸「添加技能」里的第四个门。落到「能力」页 —— 那里是
+          // qumge 目录的搜索/安装界面，而不是再造一个。
+          onBrowseCatalog={() => setSurface("abilities")}
           onCreateSkill={(description) => {
             // The Skills doorway (SKILLS-SPEC §5.2): creation is a conversation. Fresh
             // session, description in the composer — the user reads and hits send. With

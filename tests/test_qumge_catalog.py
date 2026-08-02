@@ -130,9 +130,16 @@ def test_detail_shows_exactly_what_install_would_write(state):
     两处分开实现的话，迟早出现"看的是一份、装的是另一份"——而这一屏存在的全部
     意义就是让用户在装之前读到真东西。
     """
+    from coworker.skills.base import _parse_skill
+
     shown = q.detail("xnjiang/autowhisper-skill/autowhisper", client=_Fake(FENCED_SKILL))
     r = q.install("xnjiang/autowhisper-skill/autowhisper", client=_Fake(FENCED_SKILL))
-    written = Path(r["path"]).read_text(encoding="utf-8")
+
+    # 比的是【模型会读到的那部分】，不是整个文件。install 现在走 SkillStore.create，
+    # 它会自己写一层 frontmatter（name / description / source: qumge:<slug>）——
+    # 那是我们加的元数据，不是技能内容。用 loader 的解析器把正文取出来比，
+    # 恰好也就是模型将来看到的那段。
+    written = _parse_skill(Path(r["path"])).instructions
     assert written.strip() == shown.strip()
 
 
@@ -171,10 +178,18 @@ def test_search_reports_whether_more_pages_exist():
 
 
 def test_install_writes_only_what_is_inside_the_fence(state):
+    from coworker.skills.base import _parse_skill
+
     r = q.install("xnjiang/autowhisper-skill/autowhisper", client=_Fake(FENCED_SKILL))
-    body = Path(r["path"]).read_text(encoding="utf-8")
+    skill = _parse_skill(Path(r["path"]))
+    body = skill.instructions
 
     assert body.startswith("# AutoWhisper Skill")
+    # SkillStore 写的那层 frontmatter：技能因此在设置页里有名字、有来源可查。
+    assert skill.name == "autowhisper"
+    assert "qumge:xnjiang/autowhisper-skill/autowhisper" in Path(r["path"]).read_text(
+        encoding="utf-8"
+    )
     # 框的说明是【我们】说的话。写进文件，等于让技能正文里出现一句
     # "以下内容不可信"，而它自己就是那段内容 —— 自相矛盾。
     assert "BEGIN SKILL REFERENCE" not in body
@@ -224,3 +239,41 @@ def test_an_empty_body_is_an_error_not_an_empty_file(state):
     empty = "=== BEGIN SKILL REFERENCE (x) ===\n--- skill: x ---\n\n=== END SKILL REFERENCE ==="
     with pytest.raises(RuntimeError):
         q.install("a/b/c", client=_Fake(empty))
+
+
+def test_installed_skill_is_a_first_class_citizen_of_the_store(state):
+    """从目录装进来的，和用户自己写的、上传的，在设置页里必须是同一种东西。
+
+    这是 2026-08-02 合上游 Skills 子系统时定下的分层：上游管【仓库】，我们管
+    【货源】。install 因此走 SkillStore.create 而不是自己 mkdir + write_text ——
+    两边恰好写同一个目录，所以"看得见"从来不是问题；问题是名字校验、重名处理、
+    frontmatter 形状会变成两套，而两套迟早分叉。分叉的症状是"从目录装的技能在
+    设置里表现得和别的不一样"，而那时已经不好改了。
+    """
+    from coworker.skills.store import SkillStore
+
+    q.install("xnjiang/autowhisper-skill/autowhisper", client=_Fake(FENCED_SKILL))
+    rows = {r["name"]: r for r in SkillStore().rows()}
+
+    assert "autowhisper" in rows, "store 的列表里要有它 —— 否则设置页看不见"
+    row = rows["autowhisper"]
+    assert row["scope"] == "global"
+    assert row["source"] == "qumge:xnjiang/autowhisper-skill/autowhisper", "来源要可查"
+    assert row["enabled"] is True
+
+    # 启用/禁用、删除都走同一套 —— 不是"目录装的要另外处理"。
+    SkillStore().set_enabled("autowhisper", False)
+    assert {r["name"]: r for r in SkillStore().rows()}["autowhisper"]["enabled"] is False
+    assert q.uninstall("autowhisper")["ok"] is True
+    assert "autowhisper" not in {r["name"] for r in SkillStore().rows()}
+
+
+def test_reinstalling_reports_the_clash_instead_of_silently_overwriting(state):
+    """原来是 mkdir(exist_ok=True) + write_text —— 重装会【静默覆盖】。
+
+    用户可能已经改过那份技能（上游支持编辑）。悄悄盖掉是丢数据；报出来才能让人
+    决定是删了重装还是保留。走 store 之后这条是白拿的。
+    """
+    q.install("xnjiang/autowhisper-skill/autowhisper", client=_Fake(FENCED_SKILL))
+    with pytest.raises(ValueError, match="already exists"):
+        q.install("xnjiang/autowhisper-skill/autowhisper", client=_Fake(FENCED_SKILL))

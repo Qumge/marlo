@@ -69,10 +69,18 @@ async function fileToB64(file: File): Promise<string> {
 
 export function SkillsTab({
   onCreateSkill,
+  onBrowseCatalog,
 }: {
   // The doorway (SKILLS-SPEC §5.2): starts a new conversation with the description
   // prefilled in the composer — the worker builds the skill and proposes it via save_skill.
   onCreateSkill?: (description: string) => void;
+  // 【第四个门，我们加的】qumge.com 的公开目录（4500+ 条）。上游的三个门都是
+  // "从无到有做一个"或"把已有的一份搬进来"；这个是【货源】—— 别人已经写好的。
+  //
+  // 放进这个菜单而不是另开一个入口：用户不该看见两个"技能"的地方。装进来之后
+  // 它就是这张列表里一个普通的全局技能（install 走 SkillStore.create），能编辑、
+  // 能启用禁用、能删 —— 所以它属于这里。
+  onBrowseCatalog?: () => void;
 }) {
   const [rows, setRows] = useState<SkillRow[]>([]);
   const [editor, setEditor] = useState<Editor | null>(null);
@@ -230,6 +238,21 @@ export function SkillsTab({
                   <div className="text-[11.5px] text-muted">
                     Starts a conversation — the worker builds it and asks before adding it to
                     your skills
+                  </div>
+                </button>
+                <button
+                  role="menuitem"
+                  className="w-full text-left px-3 py-2 rounded-lg hover:bg-paper disabled:opacity-40"
+                  disabled={!onBrowseCatalog}
+                  data-testid="skills-browse-catalog"
+                  onClick={() => {
+                    setAddOpen(false);
+                    onBrowseCatalog?.();
+                  }}
+                >
+                  <div className="text-[13px] font-medium">Browse the Qumge catalog</div>
+                  <div className="text-[11.5px] text-muted">
+                    Thousands of ready-made skills — you read one before it installs
                   </div>
                 </button>
               </div>

@@ -78,12 +78,14 @@ export function SettingsView({
   initialTab,
   onOpenPersona,
   onCreateSkill,
+  onBrowseCatalog,
 }: {
   initialTab?: SetTab;
   onOpenPersona?: (id: string) => void;
   // Skills doorway (SKILLS-SPEC §5.2): start a new conversation with the description
   // prefilled — the worker builds the skill and proposes it via save_skill.
   onCreateSkill?: (description: string) => void;
+  onBrowseCatalog?: () => void;
 }) {
   const t = useT();
   const tr = useT();
@@ -137,7 +139,7 @@ export function SettingsView({
               </div>
             </section>
           ) : tab === "skills" ? (
-            <SkillsTab onCreateSkill={onCreateSkill} />
+            <SkillsTab onCreateSkill={onCreateSkill} onBrowseCatalog={onBrowseCatalog} />
           ) : tab === "voice" ? (
             <VoiceInputSection />
           ) : (
