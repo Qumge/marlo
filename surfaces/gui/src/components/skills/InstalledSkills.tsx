@@ -16,13 +16,14 @@ export function InstalledSkills({ rows, onEdit, onChanged, onNotice, onError }: 
   rows: SkillRow[];
   onEdit: (row: SkillRow) => void;
   onChanged: () => void;
-  onNotice: (n: { name: string; text: string; tone: "ok" | "warn" }) => void;
+  onNotice: (n: { name: string; text: string; tone: "ok" | "warn" } | null) => void;
   onError: (msg: string) => void;
 }) {
   const t = useT();
   const [armedDelete, setArmedDelete] = useState<string | null>(null);
 
   const fail = (res: { ok?: boolean; error?: string }) => {
+    onNotice(null);
     if (res.ok === false) {
       onError(res.error || t("skWentWrong"));
       return true;

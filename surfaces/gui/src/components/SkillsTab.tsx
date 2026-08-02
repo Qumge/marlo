@@ -44,13 +44,6 @@ export function SkillsTab({
   );
   const fileInput = useRef<HTMLInputElement>(null);
 
-  // Confirmation copy (SKILLS-SPEC §4.1 #2): name-first, outcome + remedy only, in words a
-  // person already owns — now / everywhere / off / start a new one. Never mechanism ("the
-  // model will be told…") or engineering timing ("from the next message") — owner-driver
-  // review rounds, 2026-07-27. The engine countermands disabled-but-loaded skills silently;
-  // the copy promises only the guaranteed part.
-  const CONFIRMATION = t("skConfirmation");
-
   const refresh = () => listSkills().then(setRows);
   useEffect(() => {
     refresh();
@@ -58,6 +51,7 @@ export function SkillsTab({
 
   const onPickFile = async (file: File | undefined) => {
     if (!file) return;
+    setNotice(null);
     const res = await stageSkillUpload(await fileToB64(file), file.name);
     if (res.ok === false) {
       setError(res.error || t("skWentWrong"));
@@ -201,10 +195,9 @@ export function SkillsTab({
       <SkillEditor
         draft={editor}
         upload={upload}
-        onSaved={(name) => {
+        onSaved={() => {
           setEditor(null);
           setUpload(null);
-          setNotice({ name, text: CONFIRMATION, tone: "ok" });
           refresh();
         }}
         onCancel={() => {

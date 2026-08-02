@@ -56,9 +56,9 @@ export async function fileToB64(file: File): Promise<string> {
 export function SkillEditor({ draft, upload, onSaved, onCancel, onNotice, onError }: {
   draft: SkillDraft | null;
   upload: SkillUploadPreview | null;
-  onSaved: (name: string) => void;
+  onSaved: () => void;
   onCancel: () => void;
-  onNotice: (n: { name: string; text: string; tone: "ok" | "warn" }) => void;
+  onNotice: (n: { name: string; text: string; tone: "ok" | "warn" } | null) => void;
   onError: (msg: string) => void;
 }) {
   const t = useT();
@@ -67,6 +67,7 @@ export function SkillEditor({ draft, upload, onSaved, onCancel, onNotice, onErro
   useEffect(() => setLocal(draft), [draft]);
 
   const fail = (res: { ok?: boolean; error?: string }) => {
+    onNotice(null);
     if (res.ok === false) {
       onError(res.error || t("skWentWrong"));
       return true;
@@ -89,9 +90,15 @@ export function SkillEditor({ draft, upload, onSaved, onCancel, onNotice, onErro
             instructions: local.instructions,
           });
     if (fail(res)) return;
+    // Confirmation copy (SKILLS-SPEC §4.1 #2): name-first, outcome + remedy only, in words a
+    // person already owns — now / everywhere / off / start a new one. Never mechanism ("the
+    // model will be told…") or engineering timing ("from the next message") — owner-driver
+    // review rounds, 2026-07-27. The engine countermands disabled-but-loaded skills silently;
+    // the copy promises only the guaranteed part. Only on create — editing an existing skill
+    // is silent, same as the original SkillsTab.tsx save().
     if (local.mode === "new")
       onNotice({ name: local.name.trim(), text: t("skConfirmation"), tone: "ok" });
-    onSaved(local.name.trim());
+    onSaved();
   };
 
   const confirmUpload = async () => {
@@ -99,7 +106,7 @@ export function SkillEditor({ draft, upload, onSaved, onCancel, onNotice, onErro
     const res = await confirmSkillUpload(upload.token);
     if (fail(res)) return;
     onNotice({ name: upload.name || "Skill", text: t("skConfirmation"), tone: "ok" });
-    onSaved(upload.name || "Skill");
+    onSaved();
   };
 
   if (!local && !upload) return null;

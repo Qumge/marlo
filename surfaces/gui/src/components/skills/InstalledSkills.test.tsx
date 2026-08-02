@@ -65,4 +65,16 @@ describe("已装技能列表", () => {
       ),
     );
   });
+
+  it("操作失败时先清掉旧提示 —— 不然上一条成功的横幅会跟这条错误并排挂着", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({ json: async () => ({ ok: false, error: "boom" }) })));
+    const onNotice = vi.fn();
+    const onError = vi.fn();
+    render(<InstalledSkills rows={ROWS} onEdit={noop} onChanged={noop} onNotice={onNotice} onError={onError} />);
+
+    fireEvent.click(screen.getByTestId("remove-weekly-report")); // 上膛
+    fireEvent.click(screen.getByTestId("remove-weekly-report")); // 发 DELETE，失败
+    await waitFor(() => expect(onError).toHaveBeenCalledWith("boom"));
+    expect(onNotice).toHaveBeenCalledWith(null);
+  });
 });
