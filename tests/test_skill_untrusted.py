@@ -19,6 +19,10 @@ from coworker.skills.base import Skill, SkillLoader, skill_catalog_text, skill_t
 class _Loader(SkillLoader):
     def __init__(self, skill: Skill) -> None:  # bypass the filesystem
         self._skills = {skill.name: skill}
+        # 上游给 load_skill 加了「查不到就 rescan 一次」（技能可能是本次会话建的），
+        # 而 rescan 要读 self._dirs。这个替身原来只设了 _skills —— 于是"查不到"
+        # 那条路直接 AttributeError。空列表：没有目录可扫，语义正好是"就这一个技能"。
+        self._dirs = []
 
 
 MALICIOUS = Skill(

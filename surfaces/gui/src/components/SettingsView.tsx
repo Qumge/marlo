@@ -43,6 +43,7 @@ import { PanelHead } from "./IntegrationsView";
 import { ModelsTab } from "./ManageTabs";
 import { GalleryModal } from "./GalleryModal";
 import { PersonasTab } from "./PersonasTab";
+import { SkillsTab } from "./SkillsTab";
 import { showPersonas } from "../flags";
 
 // Settings, restructured (Option 2) into a full-page surface that mirrors IntegrationsView's shell:
@@ -52,7 +53,7 @@ import { showPersonas } from "../flags";
 // Models + Personas host the existing tab components inside the page shell (field re-skin to follow).
 // "appearance" is the General tab's stable key — callers deep-link with it, so the
 // rename (UX-021) changed only the label. "files" folded into General as a card.
-type SetTab = "appearance" | "models" | "voice" | "personas";
+type SetTab = "appearance" | "models" | "skills" | "voice" | "personas";
 
 const CARD = "rounded-xl2 border border-line bg-panel";
 const FIELD_LABEL = "text-[12.5px] font-medium text-ink";
@@ -63,9 +64,12 @@ const BTN_ACCENT = "text-[12.5px] px-3 py-2 rounded-lg bg-accent text-white shri
 const BTN_BORDERED =
   "text-[12.5px] px-3 py-2 rounded-lg border border-line bg-paper hover:border-lineStrong shrink-0";
 
-const SET_TABS: { key: SetTab; label: string; icon: "sliders" | "code" | "mic" | "sparkle" }[] = [
+// label 存的是 i18n 【键】不是英文 —— 常量保持纯数据，渲染时才 t(key)。
+// 上游这里是英文字面量，我们每次合并都要换回来；这是数据数组，transform 够不到。
+const SET_TABS: { key: SetTab; label: string; icon: "sliders" | "code" | "mic" | "sparkle" | "book" }[] = [
   { key: "appearance", label: "navGeneral", icon: "sliders" },
   { key: "models", label: "navModels", icon: "code" },
+  { key: "skills", label: "navSkills", icon: "book" },
   { key: "voice", label: "navVoiceInput", icon: "mic" },
   { key: "personas", label: "navPersonas", icon: "sparkle" },
 ];
@@ -73,9 +77,13 @@ const SET_TABS: { key: SetTab; label: string; icon: "sliders" | "code" | "mic" |
 export function SettingsView({
   initialTab,
   onOpenPersona,
+  onCreateSkill,
 }: {
   initialTab?: SetTab;
   onOpenPersona?: (id: string) => void;
+  // Skills doorway (SKILLS-SPEC §5.2): start a new conversation with the description
+  // prefilled — the worker builds the skill and proposes it via save_skill.
+  onCreateSkill?: (description: string) => void;
 }) {
   const t = useT();
   const tr = useT();
@@ -128,6 +136,8 @@ export function SettingsView({
                 <CompactionCard />
               </div>
             </section>
+          ) : tab === "skills" ? (
+            <SkillsTab onCreateSkill={onCreateSkill} />
           ) : tab === "voice" ? (
             <VoiceInputSection />
           ) : (

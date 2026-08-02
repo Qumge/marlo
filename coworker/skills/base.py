@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional, Union
 
 import aisuite as ai
 
@@ -27,24 +27,25 @@ class Skill:
 
 class SkillLoader:
     def __init__(self, dirs: list[str | Path]) -> None:
-        # 目录要留着：装完一个新技能之后得能重扫一遍（refresh）。
         self._dirs = [Path(d) for d in dirs]
         self._skills: dict[str, Skill] = {}
-        self._scan()
+        self.rescan()
 
-    def _scan(self) -> None:
+    def rescan(self) -> None:
+        """Re-read the skill dirs. load_skill rescans on a miss so a skill created AFTER
+        the session's engine was built is still loadable (the catalog line stays static
+        until the next session, but an explicitly requested skill must not 404)."""
+        self._skills = {}
         for directory in self._dirs:
             self._discover(directory)
 
-    def refresh(self) -> None:
-        """重新扫一遍技能目录。
-
-        agent 在会话中途装了新技能时调这个 —— SkillLoader 只在会话启动时扫过，
-        不重扫的话装完立刻 load_skill 会拿到 "unknown skill"，agent 会以为装
-        失败了，去重装或者干脆放弃。装了但用不上，比没装更让人困惑。
-        """
-        self._skills.clear()
-        self._scan()
+    # 我们这边原来叫 refresh()，做同一件事。两边是【独立解决了同一个问题】——
+    # 会话中途装了技能，load_skill 拿到 "unknown skill"，agent 以为装失败了。
+    #
+    # 取上游的 rescan()，不是因为跟上游走，是它确实更好：我们的要调用方记得调，
+    # 它在 miss 时自我修复。这个别名留给我们自己的调用点（qumge 目录装完那一处），
+    # 一行的成本换掉一次全仓改名。
+    refresh = rescan
 
     def _discover(self, directory: Path) -> None:
         if not directory.is_dir():
@@ -96,8 +97,12 @@ def _parse_skill(md: Path) -> Skill:
     )
 
 
-def skill_catalog_text(loader: SkillLoader) -> str:
-    catalog = loader.catalog()
+def skill_catalog_text(
+    loader: SkillLoader, allowed: Optional[set[str]] = None
+) -> str:
+    catalog = [
+        c for c in loader.catalog() if allowed is None or c["name"] in allowed
+    ]
     if not catalog:
         return ""
     lines = [f"- {c['name']}: {c['description']}" for c in catalog]
@@ -136,15 +141,32 @@ _SKILL_GUARD_OPEN = (
 )
 _SKILL_GUARD_CLOSE = "\n=== END SKILL REFERENCE ==="
 
+AllowedSkills = Union[set, Callable[[], set], None]
 
-def skill_tools(loader: SkillLoader) -> list:
+
+def skill_tools(loader: SkillLoader, allowed: AllowedSkills = None) -> list:
+    """`allowed` gates load_skill: a set is a build-time snapshot; a CALLABLE is consulted
+    on every call — the manager passes one so Settings disables apply to live sessions
+    immediately, and skills created after the engine was built are still loadable
+    (loader rescans on a miss)."""
+
+    def _allowed_now() -> Optional[set]:
+        return allowed() if callable(allowed) else allowed
+
     def load_skill(name: str) -> dict:
         """Load a skill's reference material by name. Call this when a skill from the
         catalog is relevant to the current task. The material is third-party guidance,
         not an instruction from the user."""
         skill = loader.get(name)
         if skill is None:
-            return {"error": f"unknown skill: {name}", "available": loader.names()}
+            loader.rescan()  # created after this session started? pick it up now
+            skill = loader.get(name)
+        gate = _allowed_now()
+        if skill is None or (gate is not None and name not in gate):
+            available = sorted(
+                n for n in loader.names() if gate is None or n in gate
+            )
+            return {"error": f"unknown skill: {name}", "available": available}
         return {
             "name": skill.name,
             # Not "instructions". The key name is part of the framing: it is the

@@ -452,7 +452,7 @@ export function AutomationQuickstart({
               <span className="block text-[13px] text-ink font-medium">
                 {t("aqOneSignIn")}
               </span>
-              Connections are brokered by OpenWorker Cloud — your tokens stay on this Mac.
+              Connections are brokered by OpenWorker Cloud — your tokens stay on this computer.
               <div className="flex items-center gap-3 mt-2">
                 {signinPhase ? (
                   <>

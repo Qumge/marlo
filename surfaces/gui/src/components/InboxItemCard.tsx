@@ -2,7 +2,13 @@ import { useState, type ReactNode } from "react";
 import { useT } from "../i18n";
 import type { InboxItem } from "../api";
 import { humanizeApprovalTitle } from "../humanize";
-import { PreviewBlock, scopeNote, TitleText } from "./ApprovalCard";
+import {
+  approvalActionLabels,
+  PreviewBlock,
+  SaveSkillPreview,
+  scopeNote,
+  TitleText,
+} from "./ApprovalCard";
 
 // One Inbox item, rendered identically in the Inbox list and inline in its own session view
 // (answer-in-context). Resolving either place hits the same item id — first responder wins.
@@ -90,7 +96,10 @@ export function InboxItemCard({
           <div className="text-[15px] font-semibold mt-0.5 leading-snug">{item.title}</div>
         </>
       )}
-      {item.kind === "approval" && item.data?.tool && typeof item.data.arguments?.content === "string" ? (
+      {item.kind === "approval" && item.data?.tool === "save_skill" ? (
+        // Parked skill proposals wear the same review surface as the live card (§5.2).
+        <SaveSkillPreview args={item.data.arguments} />
+      ) : item.kind === "approval" && item.data?.tool && typeof item.data.arguments?.content === "string" ? (
         <PreviewBlock text={item.data.arguments.content} />
       ) : item.kind === "approval" && item.data?.tool && typeof item.data.arguments?.command === "string" ? (
         <PreviewBlock text={item.data.arguments.command} />
@@ -104,7 +113,7 @@ export function InboxItemCard({
             className={item.data?.tool ? BTN_ACCENT : BTN_PRIMARY}
             onClick={() => onResolve(item.id, "allow")}
           >
-            {item.data?.tool ? t("apAllowOnce") : t("uiApprove")}
+            {item.data?.tool ? approvalActionLabels(item.data.tool).allow : t("uiApprove")}
           </button>
           {/* Task-persistent standing grant (§25) — present only when the approval was
               raised inside an automation run AND the call can carry a tool+target rule.
@@ -122,7 +131,7 @@ export function InboxItemCard({
             className={item.data?.tool ? BTN_QUIET : BTN_BORDERED}
             onClick={() => onResolve(item.id, "deny")}
           >
-            {t("apDeny")}
+            {item.data?.tool ? approvalActionLabels(item.data.tool).deny : t("apDeny")}
           </button>
         </div>
       ) : item.kind === "question" ? (

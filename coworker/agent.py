@@ -7,7 +7,7 @@ the skill catalog (progressive disclosure) + load_skill into a TurnEngine.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from .agents import Agent, AgentContext, code_agent
 from .automation import scheduling_tools
@@ -30,7 +30,7 @@ from .roots import RootDir, normalize_roots, render_context
 from .providers import ProviderClient, ProviderRouter
 from .overrides import RiskOverrideStore
 from .secrets import SecretStore, state_dir
-from .skills import SkillLoader, skill_catalog_text, skill_tools
+from .skills import SkillLoader, save_skill_tool, skill_catalog_text, skill_tools
 from .tools import ToolRegistry
 from .tools.ask import ask_user_tool
 from .tools.directories import request_directory_tool
@@ -99,6 +99,47 @@ def _enabled_connector_tools(secrets: SecretStore) -> tuple[set[str], set[str]]:
     return enabled_connectors, enabled_tools
 
 
+def _loaded_skill_names(messages: list[dict[str, Any]]) -> set[str]:
+    """Skills whose instructions successfully entered THIS conversation (a load_skill call
+    with a non-error result). Drives the disable countermand: a menu quietly shrinking is
+    passive, but instructions already in history keep steering the model unless it is
+    explicitly asked to stop."""
+    import json as _json
+
+    results: dict[str, str] = {}
+    for m in messages:
+        if m.get("role") == "tool" and m.get("tool_call_id"):
+            content = m.get("content")
+            results[m["tool_call_id"]] = (
+                content if isinstance(content, str) else _json.dumps(content)
+            )
+    loaded: set[str] = set()
+    for m in messages:
+        if m.get("role") != "assistant" or not m.get("tool_calls"):
+            continue
+        for tc in m["tool_calls"]:
+            fn = tc.get("function") or {}
+            if fn.get("name") != "load_skill":
+                continue
+            try:
+                name = str(_json.loads(fn.get("arguments") or "{}").get("name", ""))
+            except Exception:
+                continue
+            result = results.get(tc.get("id", ""), "")
+            # 【"reference" 不是 "instructions"】上游这里判的是结果里有没有
+            # "instructions" 键。我们把 load_skill 的返回键改成了 "reference" ——
+            # 那不是改名，是提示词注入的防线的一部分：键名是模型读到的第一个关于
+            # "这段文字是什么"的信号，而技能正文来自 4500 个陌生人写的公开目录
+            # （见 skills/base.py 的 _SKILL_GUARD_OPEN）。
+            #
+            # 合并时这一行会【静默失效】：撤销指令永远不触发，被禁用的技能其正文
+            # 仍然留在历史里继续影响模型，而没有任何报错。上游的
+            # test_live_load_skill_semantics 逼出了这一处。
+            if name and '"reference"' in result:
+                loaded.add(name)
+    return loaded
+
+
 def _skill_dirs(workspace: Optional[Path]) -> list[Path]:
     dirs = [state_dir() / "skills"]
     if workspace is not None:
@@ -134,6 +175,8 @@ def build_engine(
     channel_buffer: Optional[Any] = None,
     routing_targets: Optional[list[str]] = None,
     connector_filter: Optional[set[str]] = None,
+    # A set (static snapshot) or a zero-arg callable (live, re-evaluated per load_skill).
+    skill_filter: Optional[set[str] | Callable[[], set[str]]] = None,
 ) -> TurnEngine:
     ws = Path(workspace).expanduser().resolve() if workspace else None
     if agent.needs_workspace and ws is None:
@@ -265,10 +308,32 @@ def build_engine(
         if block:
             instructions = f"{instructions}\n\n{block}"
 
-    registry.register_all(skill_tools(skill_loader))
-    catalog = skill_catalog_text(skill_loader)
-    if catalog:
-        instructions = f"{instructions}\n\n{catalog}"
+    # 【上游这里原本还有一行 skill_loader = SkillLoader(_skill_dirs(ws))，删掉了】
+    # 我们在第 195 行就建了同一个 loader —— 必须早建，因为 skills_catalog 能力
+    # （search_skills / install_skill）要拿着它，装完技能后 rescan，本轮 load_skill
+    # 才看得见。那行注释写着「必须是同一个实例」，而上游这行正好会建出第二个：
+    # 装的那个刷新了，读的那个还是旧的，症状是"装成功了但用不了"。
+    #
+    # 我们原来在这里的两行（inline 注入 catalog）也删了 —— 上游把 catalog 挪进了
+    # context_provider，改成【每轮】注入，比会话启动时注入一次更好：技能的增删改
+    # 从下一条消息就生效，不用开新会话。
+    #
+    # Per-session effective menu (SKILLS-SPEC §3). The manager passes a CALLABLE so
+    # load_skill consults the LIVE state per call (a Settings disable applies to running
+    # sessions; a skill created after this build is still loadable). The catalog itself
+    # is injected per turn via context_provider (below), NOT here — so the menu the model
+    # sees is also live: skill changes apply from the next message, no new session needed.
+    # Default None preserves CLI / direct callers.
+    registry.register_all(skill_tools(skill_loader, allowed=skill_filter))
+    # The worker-authors door (SKILLS-SPEC §5.2): save_skill proposes installing a finished
+    # skill; requires_approval routes it through the standard approval card, so the review-
+    # before-save rule holds without any bespoke plumbing. Bundled files may only come from
+    # this session's roots.
+    registry.register(
+        save_skill_tool(
+            allowed_dirs=[r.path for r in (root_list or [])] or ([ws] if ws else [])
+        )
+    )
 
     # User-local risk overrides (mainly to relax MCP's conservative default). Empty store →
     # no-op; never written by persona loading (the no-self-grant rule).
@@ -299,6 +364,10 @@ def build_engine(
         else None
     )
 
+    # Late-bound engine ref: the closure needs the conversation history (for the disable
+    # countermand) but the engine is constructed after the closure. Filled below.
+    _engine_box: list = []
+
     def context_provider() -> str:
         parts = []
         if permissions.mode is Mode.PLAN:
@@ -309,6 +378,26 @@ def build_engine(
             ctx = roots_context()
             if ctx:
                 parts.append(ctx)
+        # Live skill menu (SKILLS-SPEC §4.1): recomputed every turn like the roots list, so
+        # a skill installed/enabled/disabled mid-session applies from the NEXT MESSAGE —
+        # no new session, no lost context.
+        skill_loader.rescan()
+        allowed = skill_filter() if callable(skill_filter) else skill_filter
+        skills_ctx = skill_catalog_text(skill_loader, allowed=allowed)
+        if skills_ctx:
+            parts.append(skills_ctx)
+        # Disable countermand (§3): instructions already loaded into this conversation keep
+        # steering the model even after the skill is turned off/deleted — history can't be
+        # un-read. So a loaded-but-no-longer-available skill gets an explicit stop note,
+        # recomputed fresh each turn (re-enable → the note disappears; never persisted).
+        eng = _engine_box[0] if _engine_box else None
+        if eng is not None:
+            available = set(skill_loader.names()) if allowed is None else set(allowed)
+            for name in sorted(_loaded_skill_names(eng.messages) - available):
+                parts.append(
+                    f'Note: the skill "{name}" has been disabled by the user — stop '
+                    "following its instructions from here on."
+                )
         return "\n\n".join(parts)
 
     engine = TurnEngine(
@@ -342,6 +431,7 @@ def build_engine(
         "workspace": str(ws) if ws else "",
     }
     engine.skill_loader = skill_loader  # type: ignore[attr-defined]
+    _engine_box.append(engine)  # late-bind for the countermand (see context_provider)
     return engine
 
 

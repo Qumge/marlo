@@ -257,6 +257,40 @@ def _allowed(s: str) -> bool:
     """豁免吗？专名【组成的】字符串豁免；以专名【开头的句子】不豁免。"""
     if s in _BY_TEXT:
         return True
+    # 【第十一类假阳性】JSX 文本被 {expr} 截断时，这把尺子报的是【整段】
+    #   >Bundled files: {upload.files.join(", ")}<
+    # 而 AST 那把尺子（check_i18n_text.mjs）看到的是被表达式切开的真实文本节点
+    #   "Bundled files:"   ← 它已经在 zh-text.ts 里了
+    # 两把尺子对同一处给出不同的字符串，结果是一条【永远改不掉】的记录：按这里报的
+    # 去翻，AST 那边不认；按那边翻了，这里还在报。
+    #
+    # 判据：按【表达式切开】之后的每一段，都要在 zh-text.ts 里。
+    #
+    # 粒度很重要，第一版写错过：把整段拼成一个字符串去查表。AST 那边看到的是
+    #   "Marlo v{u.version} is ready to install."  ->  ["Marlo v", "is ready to install."]
+    # 两个独立的文本节点、两个独立的键。拼起来查等于查一个不存在的键，于是
+    # 「翻过了的」不被豁免，而「只翻了一半的」反而可能蒙混过关。
+    if "{" in s:
+        parts = [p.strip() for p in re.split(r"\{[^{}]*\}", s)]
+        parts = [p for p in parts if re.search(r"[A-Za-z]{2}", p)]
+        if parts and all(p in _BY_TEXT for p in parts):
+            return True
+    # 文件选择器的 accept 值（".zip,.md"）：给浏览器看的，翻了会让上传框失效。
+    if re.fullmatch(r"\.[a-z0-9]+(\s*,\s*\.[a-z0-9]+)*", s.strip()):
+        return True
+    # 【第十二类假阳性】嵌套的模板字符串。_TPL 是非贪婪地找一对反引号，遇到
+    #   `/${skill}${text ? ` ${text}` : ""}`
+    # 会在【内层】那个反引号处截断，报出半截 "`/${skill}${text ?`"。
+    # 那半截既不是文案也不可能被翻译 —— 它是一条永远改不掉的记录。
+    # 判据是【括号不配对】，不是"剩下没有英文单词" —— 后者试过，不成立：截断后
+    # 剩下的 skill、text 是变量名，长得和英文单词一模一样。而 ${ 比 } 多，是
+    # "这段是从中间切开的"的直接证据，一段完整的文案不会这样。
+    # 必须【本身含 ${】才算模板串片段。第一版只比 ${ 和 } 的个数，于是
+    # "Marlo v{u.version} is ready to install." 也被豁免了（它有一个 } 没有 ${）——
+    # 那是 JSX 插值不是模板串，而且是这个守卫最经典的一条命中，守卫自己的测试
+    # 当场变红。判据要同时满足：是模板串，且括号不配对。
+    if "${" in s and s.count("${") != s.count("}"):
+        return True
     if _brands_only(s):
         return True
     return any(a.match(s) for a in ALLOWED[1:])
