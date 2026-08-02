@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import {
+  deleteSkill,
   getSkills,
   installSkill,
   searchSkills,
   skillDetail,
-  uninstallSkill,
   type CatalogSkill,
   type InstalledSkill,
 } from "../api";
@@ -115,8 +115,11 @@ export function AbilitiesView() {
 
   const remove = async (name: string) => {
     setBusy(name);
-    await uninstallSkill(name).catch(() => {});
+    // DELETE /v1/skills/{name} —— 上游唯一的卸载路径。以前这里打的是
+    // POST /v1/skills/uninstall，后端根本没有那个路由（app.py:632）。
+    const r = await deleteSkill(name).catch((e) => ({ ok: false, error: String(e) }));
     setBusy(null);
+    if (!r.ok) setSearchErr(r.error || "remove failed");
     reload();
   };
 

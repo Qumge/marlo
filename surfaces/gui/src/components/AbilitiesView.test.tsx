@@ -33,10 +33,6 @@ const serve = (skills: any[], results: any[] = [], opts: any = {}) =>
         opts.installed?.push(JSON.parse(init.body).slug);
         return { json: async () => ({ ok: !opts.installFails, error: opts.installError }) };
       }
-      if (String(url).includes("/v1/skills/uninstall")) {
-        opts.removed?.push(JSON.parse(init.body).name);
-        return { json: async () => ({ ok: true }) };
-      }
       return { json: async () => ({ skills }) };
     }),
   );
@@ -192,5 +188,36 @@ describe("能力页", () => {
     serve([]);
     render(<AbilitiesView />);
     await waitFor(() => expect(screen.getByText(/tell Marlo what you need done/)).toBeTruthy());
+  });
+
+  it("点移除，技能真的从列表里消失", async () => {
+    // 【这条在修之前是红的】移除打的是 POST /v1/skills/uninstall，后端没有这个
+    // 路由（app.py:632 的注释早写明该走 DELETE /v1/skills/{name}）。错误被
+    // .catch(() => {}) 吞掉，列表一刷新技能又回来 —— 用户点了没反应，也没有提示。
+    //
+    // 断言分两半，缺一不可：列表里真的没了（用户看到的），且打出去的是 DELETE
+    // （打对了路由）。只断言前者的话，一个"乐观地本地删掉"的假实现也能过。
+    const calls: string[] = [];
+    let skills: any[] = [{ name: "autowhisper", description: "已装的那条" }];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: any) => {
+        const path = String(url).replace(/^https?:\/\/[^/]+/, "");
+        calls.push(`${init?.method || "GET"} ${path}`);
+        if (path.includes("/v1/skills/search")) return { json: async () => ({ results: [] }) };
+        if (init?.method === "DELETE") {
+          skills = [];
+          return { json: async () => ({ ok: true }) };
+        }
+        return { json: async () => ({ skills }) };
+      }),
+    );
+
+    render(<AbilitiesView />);
+    await waitFor(() => expect(screen.getByTestId("ability-autowhisper")).toBeTruthy());
+    fireEvent.click(screen.getByTestId("remove-autowhisper"));
+
+    await waitFor(() => expect(screen.queryByTestId("ability-autowhisper")).toBeNull());
+    expect(calls).toContain("DELETE /v1/skills/autowhisper");
   });
 });

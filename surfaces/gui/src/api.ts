@@ -690,15 +690,6 @@ export async function installSkill(slug: string): Promise<{ ok: boolean; error?:
   return res.json();
 }
 
-export async function uninstallSkill(name: string): Promise<{ ok: boolean; error?: string }> {
-  const res = await fetch(`${httpBase()}/v1/skills/uninstall`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name }),
-  });
-  return res.json();
-}
-
 export async function getConnectors(): Promise<Connector[]> {
   const res = await fetch(`${httpBase()}/v1/connectors`);
   const list: Connector[] = (await res.json()).connectors ?? [];
