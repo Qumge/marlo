@@ -53,7 +53,7 @@ export function InstalledSkills({ rows, onEdit, onChanged, onNotice, onError }: 
         <div
           key={row.name}
           className="flex items-center gap-3 px-4 py-3"
-          data-testid={`ability-${row.name}`}
+          data-testid={`skill-${row.name}`}
         >
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">

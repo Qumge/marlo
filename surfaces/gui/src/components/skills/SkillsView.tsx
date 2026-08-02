@@ -86,8 +86,15 @@ export function SkillsView({ onCreateSkill }: { onCreateSkill?: (description: st
             }}
           />
 
+          {/* 页面级错误（上传/删除/启停/保存失败）。testid 是 skills-page-error 而不是
+              skills-error —— 后者归目录的【搜索】失败那条（SkillCatalog.tsx）。合页之前
+              两条分处两页，重名不要紧；现在同一页上同名会让 getByTestId 直接炸。 */}
           {error ? (
-            <div className="text-[12.5px] text-red-500 mb-3" role="alert">
+            <div
+              className="text-[12.5px] text-red-500 mb-3"
+              role="alert"
+              data-testid="skills-page-error"
+            >
               {error}
             </div>
           ) : null}
@@ -142,7 +149,7 @@ export function SkillsView({ onCreateSkill }: { onCreateSkill?: (description: st
           {rows !== null && rows.length === 0 && (
             <div
               className="rounded-xl border border-line bg-panel/50 p-5 text-[13px] mb-2"
-              data-testid="abilities-empty"
+              data-testid="skills-empty"
             >
               <div className="font-medium">{t("skEmpty")}</div>
               <div className="text-muted mt-1.5 leading-relaxed">{t("skEmptyHow")}</div>

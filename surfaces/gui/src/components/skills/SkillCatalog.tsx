@@ -103,20 +103,20 @@ export function SkillCatalog({
           placeholder={t("skSearch")}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          data-testid="abilities-search"
+          data-testid="skills-search"
         />
       </div>
 
       {/* 用中文搜出来一屏英文标题，得说清楚为什么。不说的话，用户既无法理解
           这些结果从哪来，也无从发现翻错了——而翻错时改用词是他唯一的补救。 */}
       {searchedAs && !searchErr && (
-        <div className="text-[12px] text-dim mb-4" data-testid="abilities-translated">
+        <div className="text-[12px] text-dim mb-4" data-testid="skills-translated">
           {t("skTranslated")} “{searchedAs}”
         </div>
       )}
 
       {searchErr && (
-        <div className="text-[12px] text-warnInk mb-4" data-testid="abilities-error">
+        <div className="text-[12px] text-warnInk mb-4" data-testid="skills-error">
           {t("skSearchFailed")} {searchErr}
         </div>
       )}
@@ -128,7 +128,7 @@ export function SkillCatalog({
         (results.length === 0 && !searchErr ? (
           <div className="text-[12.5px] text-muted">{t("skNoResults")}</div>
         ) : (
-          <div data-testid="abilities-results">
+          <div data-testid="skills-results">
             {groupsOf(results).map(([g, rows]) => (
               <div key={g}>
                 <div className={GRP_H}>{g === "__vetted__" ? t("skVetted") : g}</div>
@@ -177,7 +177,7 @@ export function SkillCatalog({
                 className="mt-3 w-full py-2 rounded-xl border border-line text-[12.5px] text-muted hover:text-ink disabled:opacity-50"
                 disabled={loadingMore}
                 onClick={loadMore}
-                data-testid="abilities-more"
+                data-testid="skills-more"
               >
                 {loadingMore ? t("skLoading") : t("skMore")}
               </button>
@@ -193,7 +193,7 @@ export function SkillCatalog({
         <div
           className="fixed inset-0 z-40 grid place-items-center bg-black/30 p-8"
           onClick={() => setDetail(null)}
-          data-testid="ability-detail"
+          data-testid="skill-detail"
         >
           <div
             className="max-w-3xl w-full max-h-[80vh] overflow-y-auto rounded-2xl bg-panel border border-line p-6"

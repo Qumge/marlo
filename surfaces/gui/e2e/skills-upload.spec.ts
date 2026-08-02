@@ -3,11 +3,12 @@ import { test, expect } from "./fixtures";
 // SKILLS-SPEC §9 journey 3 — import with the mandatory review gate: the preview installs
 // NOTHING; confirm installs and the row wears the `uploaded` provenance badge. Hermetic:
 // stage/confirm round-trip through fixtures.ts state.
+//
+// 入口 2026-08-02 从「设置 ▸ 技能」换成「账号菜单 ▸ 技能」—— 那个 tab 没了。断言没动。
 
 test("skills-upload: preview installs nothing → confirm → uploaded badge", async ({ page }) => {
   await page.goto("/");
   await page.getByTestId("account-row").click();
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: "Skills", exact: true }).click();
 
   // Add skill ▾ → Import a file → straight to the (hidden) picker.

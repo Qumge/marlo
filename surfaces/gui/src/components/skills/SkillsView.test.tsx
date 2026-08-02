@@ -3,7 +3,7 @@
 // 用户看到的是两类：技能和连接。「连接」早就有页面，技能曾经有两个（账号菜单的
 // 「能力」和设置里的 tab），打的还是同一个 GET /v1/skills。2026-08-02 合成一页。
 //
-// 这一份原来是 AbilitiesView.test.tsx，盯的是【页面】那一半：现在会什么、一个都没
+// 这一份原来盯的是账号菜单里那个旧页面（合页前的两页之一），管【页面】那一半：现在会什么、一个都没
 // 有时说什么、后端挂了怎么办、中文界面是不是真中文、移除是不是真的移除。管理那一半
 // （添加的三个门 / 表单 / 启停 / 富技能）在 SkillsView.manage.test.tsx。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -34,7 +34,7 @@ describe("技能页", () => {
   it("装了的技能列出来", async () => {
     serve([{ name: "autowhisper", description: "社交媒体内容创作与发布" }]);
     render(<SkillsView />);
-    await waitFor(() => expect(screen.getByTestId("ability-autowhisper")).toBeTruthy());
+    await waitFor(() => expect(screen.getByTestId("skill-autowhisper")).toBeTruthy());
     expect(screen.getByText("社交媒体内容创作与发布")).toBeTruthy();
 
     // 【扫渲染结果，不数守卫的条数】。i18n 守卫 2026-07-28 报了四次"无新增"，而
@@ -56,7 +56,7 @@ describe("技能页", () => {
     // 而正确答案是"你不用装"。这一条盯着那句解释真的在。
     serve([]);
     render(<SkillsView />);
-    await waitFor(() => expect(screen.getByTestId("abilities-empty")).toBeTruthy());
+    await waitFor(() => expect(screen.getByTestId("skills-empty")).toBeTruthy());
     expect(screen.getByText(/跟 Marlo 说你要做什么/)).toBeTruthy();
     // 不该出现"浏览目录"这种入口 —— 那会把产品变回一个应用商店。
     expect(screen.queryByText(/浏览/)).toBeNull();
@@ -67,7 +67,7 @@ describe("技能页", () => {
       throw new Error("sidecar down");
     }));
     render(<SkillsView />);
-    await waitFor(() => expect(screen.getByTestId("abilities-empty")).toBeTruthy());
+    await waitFor(() => expect(screen.getByTestId("skills-empty")).toBeTruthy());
   });
 
   it("英文界面用英文文案", async () => {
@@ -104,11 +104,11 @@ describe("技能页", () => {
     );
 
     render(<SkillsView />);
-    await waitFor(() => expect(screen.getByTestId("ability-autowhisper")).toBeTruthy());
+    await waitFor(() => expect(screen.getByTestId("skill-autowhisper")).toBeTruthy());
     fireEvent.click(screen.getByTestId("remove-autowhisper"));
     fireEvent.click(screen.getByTestId("remove-autowhisper"));
 
-    await waitFor(() => expect(screen.queryByTestId("ability-autowhisper")).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId("skill-autowhisper")).toBeNull());
     expect(calls).toContain("DELETE /v1/skills/autowhisper");
   });
 });

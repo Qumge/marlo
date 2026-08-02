@@ -49,7 +49,7 @@ describe("技能目录", () => {
         meta: "vetted by qumge · first-party", needs: "autowhisper" },
     ]);
     render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} />);
-    fireEvent.change(screen.getByTestId("abilities-search"), { target: { value: "视频" } });
+    fireEvent.change(screen.getByTestId("skills-search"), { target: { value: "视频" } });
     await waitFor(() => expect(screen.getByTestId("catalog-autowhisper")).toBeTruthy(), { timeout: 2000 });
     expect(screen.getByText(/vetted by qumge/)).toBeTruthy();
     // 装之前就说清楚它要账号 —— 装完才发现连不上是最差的顺序。
@@ -61,7 +61,7 @@ describe("技能目录", () => {
       [{ name: "autowhisper", summary: "s", slug: "x/y/autowhisper", meta: "m", needs: "" }],
     );
     render(<SkillCatalog installedNames={new Set(["autowhisper"])} onInstalled={() => {}} />);
-    fireEvent.change(screen.getByTestId("abilities-search"), { target: { value: "auto" } });
+    fireEvent.change(screen.getByTestId("skills-search"), { target: { value: "auto" } });
     await waitFor(() => expect(screen.getByTestId("catalog-autowhisper")).toBeTruthy(), { timeout: 2000 });
     expect(screen.queryByTestId("install-autowhisper")).toBeNull();
   });
@@ -70,7 +70,7 @@ describe("技能目录", () => {
     const installed: string[] = [];
     serve([{ name: "a", summary: "s", slug: "o/r/a", meta: "m", needs: "" }], { installed });
     render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} />);
-    fireEvent.change(screen.getByTestId("abilities-search"), { target: { value: "a" } });
+    fireEvent.change(screen.getByTestId("skills-search"), { target: { value: "a" } });
     await waitFor(() => expect(screen.getByTestId("install-a")).toBeTruthy(), { timeout: 2000 });
     fireEvent.click(screen.getByTestId("install-a"));
     await waitFor(() => expect(installed).toEqual(["o/r/a"]));
@@ -79,8 +79,8 @@ describe("技能目录", () => {
   it("目录连不上要说原因 —— 空列表会被读成「什么都没搜到」", async () => {
     serve([], { searchError: "connection refused" });
     render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} />);
-    fireEvent.change(screen.getByTestId("abilities-search"), { target: { value: "视频" } });
-    await waitFor(() => expect(screen.getByTestId("abilities-error")).toBeTruthy(), { timeout: 2000 });
+    fireEvent.change(screen.getByTestId("skills-search"), { target: { value: "视频" } });
+    await waitFor(() => expect(screen.getByTestId("skills-error")).toBeTruthy(), { timeout: 2000 });
     expect(screen.getByText(/connection refused/)).toBeTruthy();
   });
 
@@ -89,7 +89,7 @@ describe("技能目录", () => {
     serve([{ name: "a", summary: "s", slug: "o/r/a", meta: "m", needs: "", group: "g" }]);
     render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} />);
     await waitFor(() => expect(screen.getByTestId("catalog-a")).toBeTruthy(), { timeout: 2000 });
-    expect(screen.queryByTestId("abilities-more")).toBeNull();
+    expect(screen.queryByTestId("skills-more")).toBeNull();
   });
 
   it("点「加载更多」用【已加载条数】当 offset，不是页码", async () => {
@@ -100,8 +100,8 @@ describe("技能目录", () => {
       { name: "b", summary: "s", slug: "o/r/b", meta: "m", needs: "", group: "g" },
     ], { hasMore: true, offsets, page2: [{ name: "c", summary: "s", slug: "o/r/c", meta: "m", needs: "", group: "g" }] });
     render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} />);
-    await waitFor(() => expect(screen.getByTestId("abilities-more")).toBeTruthy(), { timeout: 2000 });
-    fireEvent.click(screen.getByTestId("abilities-more"));
+    await waitFor(() => expect(screen.getByTestId("skills-more")).toBeTruthy(), { timeout: 2000 });
+    fireEvent.click(screen.getByTestId("skills-more"));
     await waitFor(() => expect(screen.getByTestId("catalog-c")).toBeTruthy());
     expect(offsets).toContain(2);
     // 已加载的不能被替换掉 —— 那是"翻页"不是"加载更多"。
@@ -125,9 +125,9 @@ describe("技能目录", () => {
     serve([{ name: "autowhisper", summary: "s", slug: "o/r/a", meta: "m", needs: "", group: "g" }],
           { searchedAs: "product promotional video" });
     render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} />);
-    await waitFor(() => expect(screen.getByTestId("abilities-translated")).toBeTruthy(),
+    await waitFor(() => expect(screen.getByTestId("skills-translated")).toBeTruthy(),
                   { timeout: 2000 });
-    expect(screen.getByTestId("abilities-translated").textContent)
+    expect(screen.getByTestId("skills-translated").textContent)
       .toContain("product promotional video");
   });
 
@@ -137,6 +137,6 @@ describe("技能目录", () => {
     serve([{ name: "a", summary: "s", slug: "o/r/a", meta: "m", needs: "", group: "g" }]);
     render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} />);
     await waitFor(() => expect(screen.getByTestId("view-a")).toBeTruthy(), { timeout: 2000 });
-    expect(screen.queryByTestId("abilities-translated")).toBeNull();
+    expect(screen.queryByTestId("skills-translated")).toBeNull();
   });
 });
