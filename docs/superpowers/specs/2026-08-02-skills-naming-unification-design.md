@@ -104,6 +104,8 @@ surfaces/gui/src/components/skills/
 
 保留 `searchSkills()` / `skillDetail()` / `installSkill()` —— 这三个是「能力」页独有的、后端也确实有的。
 
+**第四处死代码（写计划时发现的）：** 后端 `GET /v1/skills` 只返回 `{"skills": [...]}`，没有 `dir`（`manager.py:3822` → `skill_store.rows()`）。所以 `getSkills()` 里的 `b.dir ?? ""` 恒为空串，`AbilitiesView.tsx:288` 那行「装在 {dir}」**从来没渲染过**。连同 `abilitiesWhere` 这个键一起删 —— 「它在哪个文件夹」这件事已经由每行的文件夹 chip（`revealSkill`）回答了。
+
 顺带修好：已装行拿到 `enabled` 之后，关掉的技能不会再伪装成「已装」；`source` 徽章让 qumge 装来的和自己写的分得开。
 
 `AbilitiesView.tsx:67` 的 5 秒轮询（让对话里装上的技能自己冒出来，不用重开页面）保留，挪进 `SkillsView`。
