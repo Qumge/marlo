@@ -68,7 +68,7 @@ export function Icon({
 
   switch (name) {
     case "book":
-      // A playbook — Skills are the worker's recipe book (Settings ▸ Skills).
+      // A playbook — Skills are the worker's recipe book (账号菜单 ▸ 技能).
       // Hardcover with a full spine + two text lines: "written instructions inside".
       // (Owner-picked from a 15px-preview comparison, 2026-07-27.)
       return (

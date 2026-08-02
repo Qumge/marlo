@@ -1,38 +1,25 @@
-// 「能力」页 —— 分类里的另一半。
+// 技能页 —— 唯一的一页。
 //
-// 用户看到的是两类：能力（技能）和连接。「连接」早就有页面，能力一个界面都没有。
+// 用户看到的是两类：技能和连接。「连接」早就有页面，技能曾经有两个（账号菜单的
+// 「能力」和设置里的 tab），打的还是同一个 GET /v1/skills。2026-08-02 合成一页。
 //
-// 这一页回答两个问题：它现在会什么，以及还能会什么。规格 D' 说发现发生在对话里
-// （用户说要做什么，Marlo 自己去找），那仍然是主路径；但 owner 的判断是用户也要
-// 能自己搜、自己看——一个东西你完全看不见里面有什么，是很难信任它的。
+// 这一份原来是 AbilitiesView.test.tsx，盯的是【页面】那一半：现在会什么、一个都没
+// 有时说什么、后端挂了怎么办、中文界面是不是真中文、移除是不是真的移除。管理那一半
+// （添加的三个门 / 表单 / 启停 / 富技能）在 SkillsView.manage.test.tsx。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { AbilitiesView } from "./AbilitiesView";
-import { setLocale } from "../i18n";
+import { SkillsView } from "./SkillsView";
+import { setLocale } from "../../i18n";
 
-// 一个按 URL 分发的假后端：装了什么 / 搜到什么 / 装和卸的结果。
-const serve = (skills: any[], results: any[] = [], opts: any = {}) =>
+// 一个按 URL 分发的假后端。只要两个分支：装了什么，和目录搜到什么 —— 这一份里
+// 没有测目录的条目（那是 SkillCatalog.test.tsx 的活），搜索分支只是为了让常驻在
+// 下半页的目录不至于打到"装了什么"那个分支上去。
+const serve = (skills: any[]) =>
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (url: string, init?: any) => {
-      if (String(url).includes("/v1/skills/detail"))
-        return { json: async () => ({ body: opts.detailBody ?? "# 技能正文" }) };
-      if (String(url).includes("/v1/skills/search")) {
-        const off = Number(new URL(String(url), "http://x").searchParams.get("offset") || 0);
-        opts.offsets?.push(off);
-        return {
-          json: async () => ({
-            results: off ? opts.page2 || [] : results,
-            has_more: off ? false : !!opts.hasMore,
-            searched_as: opts.searchedAs,
-            error: opts.searchError,
-          }),
-        };
-      }
-      if (String(url).includes("/v1/skills/install")) {
-        opts.installed?.push(JSON.parse(init.body).slug);
-        return { json: async () => ({ ok: !opts.installFails, error: opts.installError }) };
-      }
+    vi.fn(async (url: string) => {
+      if (String(url).includes("/v1/skills/search"))
+        return { json: async () => ({ results: [] }) };
       return { json: async () => ({ skills }) };
     }),
   );
@@ -43,10 +30,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("能力页", () => {
+describe("技能页", () => {
   it("装了的技能列出来", async () => {
     serve([{ name: "autowhisper", description: "社交媒体内容创作与发布" }]);
-    render(<AbilitiesView />);
+    render(<SkillsView />);
     await waitFor(() => expect(screen.getByTestId("ability-autowhisper")).toBeTruthy());
     expect(screen.getByText("社交媒体内容创作与发布")).toBeTruthy();
 
@@ -55,11 +42,18 @@ describe("能力页", () => {
     // 真正看到的字符，两把独立的尺子都得过。
     // 必须【显式】切到中文再扫：测试默认跑在 en 下，不切的话扫到的英文是对的，
     // 而碰巧切过的话又会因为别的测试的副作用而通过 —— 两种都不是在测东西。
-    const { englishRunsIn } = await import("../i18n/no-english");
-    const { setLocale } = await import("../i18n");
+    const { englishRunsIn } = await import("../../i18n/no-english");
+    const { setLocale } = await import("../../i18n");
     act(() => setLocale("zh"));
     await act(async () => {});
-    const runs = englishRunsIn(document.body);
+    // 【为什么要过一道 tx()】这一页上还有从设置搬过来的裸英文（「Add skill」那些）。
+    // 它们在真实构建里由 i18n-transform 包进 tx()、按 zh-text.ts 查表出中文，而
+    // vitest.config.ts 不挂那个插件 —— 于是测试里看到的是英文，用户看到的是中文。
+    // 这里替 vitest 补上那一步：tx(s) !== s 说明查得到译文，用户不会看见它。
+    // 留下的才是【两条路都没管】的英文，也就是这条守卫真正要抓的。
+    // Task 6 把这些裸英文改走 t() 之后，这个 filter 会自动变成空操作。
+    const { tx } = await import("../../i18n/tx");
+    const runs = englishRunsIn(document.body).filter((s) => tx(s) === s);
     act(() => setLocale("en"));
     expect(runs).toEqual([]);
   });
@@ -68,7 +62,7 @@ describe("能力页", () => {
     // 一个刚装好的用户看到"还没装任何能力"，第一反应是"那我去哪儿装"，
     // 而正确答案是"你不用装"。这一条盯着那句解释真的在。
     serve([]);
-    render(<AbilitiesView />);
+    render(<SkillsView />);
     await waitFor(() => expect(screen.getByTestId("abilities-empty")).toBeTruthy());
     expect(screen.getByText(/跟 Marlo 说你要做什么/)).toBeTruthy();
     // 不该出现"浏览目录"这种入口 —— 那会把产品变回一个应用商店。
@@ -79,14 +73,14 @@ describe("能力页", () => {
     vi.stubGlobal("fetch", vi.fn(async () => {
       throw new Error("sidecar down");
     }));
-    render(<AbilitiesView />);
+    render(<SkillsView />);
     await waitFor(() => expect(screen.getByTestId("abilities-empty")).toBeTruthy());
   });
 
   it("英文界面用英文文案", async () => {
     setLocale("en");
     serve([]);
-    render(<AbilitiesView />);
+    render(<SkillsView />);
     await waitFor(() => expect(screen.getByText(/tell Marlo what you need done/)).toBeTruthy());
   });
 
@@ -97,6 +91,9 @@ describe("能力页", () => {
     //
     // 断言分两半，缺一不可：列表里真的没了（用户看到的），且打出去的是 DELETE
     // （打对了路由）。只断言前者的话，一个"乐观地本地删掉"的假实现也能过。
+    //
+    // 合页之后删除是【两步】的（InstalledSkills：第一下上膛，第二下才发），所以
+    // 这里点两下。两步本身由 manage 那一份盯着，这条只管"点完真的没了"。
     const calls: string[] = [];
     let skills: any[] = [{ name: "autowhisper", description: "已装的那条" }];
     vi.stubGlobal(
@@ -113,8 +110,9 @@ describe("能力页", () => {
       }),
     );
 
-    render(<AbilitiesView />);
+    render(<SkillsView />);
     await waitFor(() => expect(screen.getByTestId("ability-autowhisper")).toBeTruthy());
+    fireEvent.click(screen.getByTestId("remove-autowhisper"));
     fireEvent.click(screen.getByTestId("remove-autowhisper"));
 
     await waitFor(() => expect(screen.queryByTestId("ability-autowhisper")).toBeNull());
