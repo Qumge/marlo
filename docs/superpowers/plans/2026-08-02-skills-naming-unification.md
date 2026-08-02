@@ -1015,11 +1015,11 @@ Task 3-5 从 `SkillsTab` 搬过来的裸英文全部换成 `t("键")`。键加�
 | 新键 | zh（取自 `zh-text.ts`） | en（源码原文） |
 |---|---|---|
 | `skAdd` | `添加技能` | `Add skill` |
-| `skDoorWrite` | `自己写` | `Write it myself` |
+| `skDoorWrite` | `我自己写` | `Write it myself` |
 | `skDoorWriteSub` | `一个名字、一句说明，和具体做法` | `A name, a description, and the instructions` |
 | `skDoorImport` | `导入文件` | `Import a file` |
 | `skDoorImportSub` | `别人分享的 .zip 或 SKILL.md —— 安装前你先过目` | `A .zip or SKILL.md someone shared — you review before it installs` |
-| `skDoorMarlo` | `让 Marlo 做` | `Create with Marlo` |
+| `skDoorMarlo` | `让 Marlo 帮我写` | `Create with Marlo` |
 | `skDoorMarloSub` | `会开一个对话 —— 它来写，写完问过你再加进技能库` | `Starts a conversation — the worker builds it and asks before adding it to your skills` |
 | `skUploadLabel` | `上传技能压缩包` | `Upload a skill archive` |
 | `skReviewFirst` | `安装前先过目` | `Review before installing` |
@@ -1031,12 +1031,10 @@ Task 3-5 从 `SkillsTab` 搬过来的裸英文全部换成 `t("键")`。键加�
 | `skFieldInstructions` | `做法` | `Instructions` |
 | `skDescPlaceholder` | `一句话，让它据此判断什么时候该用这个技能` | `One line the worker uses to decide when this applies` |
 | `skSave` | `保存技能` | `Save skill` |
-| `skNoneYet` | `还没有技能 ——` | `No skills yet —` |
-| `skNoneYetHow` | `教它第一个技能，比如「帮我准备周一的进度汇报」。` | `teaches your worker its first one, like "prepare my Monday status report".` |
-| `skShowFolder` | `显示文件夹` | `Show folder` |
+| `skShowFolder` | `打开所在文件夹` | `Show folder` |
 | `skOn` | `开` | `On` |
 | `skNoDescription` | `没有说明` | `no description` |
-| `skBundledFiles` | `附带文件：` | `Bundled files:` |
+| `skBundledFiles` | `随附文件：` | `Bundled files:` |
 
 `Skills` 那个 `<h2>` 和它下面那句 lede 不进这张表 —— Step 1 的 `skills` / `skillsSub` 已经覆盖了，`PanelHead` 用的就是它俩。
 
