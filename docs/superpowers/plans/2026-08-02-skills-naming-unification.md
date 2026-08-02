@@ -439,7 +439,7 @@ export function InstalledSkills({
   rows: SkillRow[];
   onEdit: (row: SkillRow) => void;
   onChanged: () => void;
-  onNotice: (n: { name: string; text: string; tone: "ok" | "warn" }) => void;
+  onNotice: (n: { name: string; text: string; tone: "ok" | "warn" } | null) => void;   // null = 清掉上一条
   onError: (msg: string) => void;
 }): JSX.Element
 
@@ -460,9 +460,9 @@ export function SkillEditor({
 }: {
   draft: SkillDraft | null;
   upload: SkillUploadPreview | null;
-  onSaved: (name: string) => void;
+  onSaved: () => void;   // 只收尾（收起编辑器 + 刷新）；提示条由 SkillEditor 自己按 mode 决定
   onCancel: () => void;
-  onNotice: (n: { name: string; text: string; tone: "ok" | "warn" }) => void;
+  onNotice: (n: { name: string; text: string; tone: "ok" | "warn" } | null) => void;   // null = 清掉上一条
   onError: (msg: string) => void;
 }): JSX.Element | null
 ```
@@ -491,13 +491,17 @@ export function InstalledSkills({ rows, onEdit, onChanged, onNotice, onError }: 
   rows: SkillRow[];
   onEdit: (row: SkillRow) => void;
   onChanged: () => void;
-  onNotice: (n: { name: string; text: string; tone: "ok" | "warn" }) => void;
+  onNotice: (n: { name: string; text: string; tone: "ok" | "warn" } | null) => void;   // null = 清掉上一条
   onError: (msg: string) => void;
 }) {
   const t = useT();
   const [armedDelete, setArmedDelete] = useState<string | null>(null);
 
   const fail = (res: { ok?: boolean; error?: string }) => {
+    // 【第一行必须是它】原版 fail() 每次调用都先清掉上一条横幅，不管成败。掉了这行
+    // 会出现：关掉技能 A 弹出绿条，接着删技能 B 失败弹出红条 —— 两条不相干的提示
+    // 并排挂着。这也是 onNotice 的签名要接受 null 的原因。
+    onNotice(null);
     if (res.ok === false) {
       onError(res.error || t("skWentWrong"));
       return true;
@@ -549,9 +553,9 @@ export const emptySkillDraft = (): SkillDraft => ({
 export function SkillEditor({ draft, upload, onSaved, onCancel, onNotice, onError }: {
   draft: SkillDraft | null;
   upload: SkillUploadPreview | null;
-  onSaved: (name: string) => void;
+  onSaved: () => void;   // 只收尾（收起编辑器 + 刷新）；提示条由 SkillEditor 自己按 mode 决定
   onCancel: () => void;
-  onNotice: (n: { name: string; text: string; tone: "ok" | "warn" }) => void;
+  onNotice: (n: { name: string; text: string; tone: "ok" | "warn" } | null) => void;   // null = 清掉上一条
   onError: (msg: string) => void;
 }) {
   // 本地草稿：外层给初值，敲字不往上冒泡（每敲一个字都重渲染整页是没必要的）。
@@ -574,10 +578,13 @@ export function SkillEditor({ draft, upload, onSaved, onCancel, onNotice, onErro
       <SkillEditor
         draft={editor}
         upload={upload}
-        onSaved={(name) => {
+        {/* 只收尾，【不要】在这里弹提示条 —— 原版 save() 是 `if (editor.mode === "new")`
+            才弹的，编辑保存是静默的。在父层无条件弹，会让「改一句说明」也冒出
+            「—— 之后每次对话它都能用了。」这句只属于新建的话。提示由 SkillEditor
+            自己按 mode 决定（新建弹、上传确认弹、编辑不弹）。 */}
+        onSaved={() => {
           setEditor(null);
           setUpload(null);
-          setNotice({ name, text: CONFIRMATION, tone: "ok" });
           refresh();
         }}
         onCancel={() => {
@@ -786,10 +793,12 @@ export function SkillsView({ onCreateSkill }: { onCreateSkill?: (description: st
           <SkillEditor
             draft={editor}
             upload={upload}
-            onSaved={(name) => {
+            {/* 只收尾，【不要】在这里弹提示条 —— 提示由 SkillEditor 自己按 mode 决定
+                （新建弹、上传确认弹、编辑保存静默）。父层无条件弹会让「改一句说明」
+                也冒出「—— 之后每次对话它都能用了。」这句只属于新建的话。 */}
+            onSaved={() => {
               setEditor(null);
               setUpload(null);
-              setNotice({ name, text: t("skConfirmation"), tone: "ok" });
               refresh();
             }}
             onCancel={() => { setEditor(null); setUpload(null); }}
