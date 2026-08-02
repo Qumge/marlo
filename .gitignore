@@ -13,3 +13,7 @@ surfaces/gui/src-tauri/gen/.iconset-build/
 
 # Local secrets (live-smoke BYO keys) — never committed
 .env
+
+# Worktrees（EnterWorktree 建在这儿）和 SDD 的临时工作区 —— 都是本地脚手架
+.claude/worktrees/
+.superpowers/
