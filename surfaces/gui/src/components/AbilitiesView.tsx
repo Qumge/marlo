@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import {
   deleteSkill,
-  getSkills,
   installSkill,
+  listSkills,
   searchSkills,
   skillDetail,
   type CatalogSkill,
-  type InstalledSkill,
+  type SkillRow,
 } from "../api";
 import { PanelHead } from "./IntegrationsView";
 import { useT } from "../i18n";
@@ -40,12 +40,11 @@ function groupsOf(rows: CatalogSkill[]): [string, CatalogSkill[]][] {
 // 经常是空的，而空结果不解释原因的话，人会以为目录里没东西。
 export function AbilitiesView() {
   const t = useT();
-  const [installed, setInstalled] = useState<InstalledSkill[] | null>(null);
+  const [installed, setInstalled] = useState<SkillRow[] | null>(null);
   const [q, setQ] = useState("");
   const [results, setResults] = useState<CatalogSkill[] | null>(null);
   const [searchErr, setSearchErr] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
-  const [skillsDir, setSkillsDir] = useState("");
   const [hasMore, setHasMore] = useState(false);
   // 目录把非英文查询翻成英文搜时，实际搜的那串词。
   const [searchedAs, setSearchedAs] = useState("");
@@ -54,11 +53,8 @@ export function AbilitiesView() {
   const [detail, setDetail] = useState<{ name: string; body: string } | null>(null);
 
   const reload = () =>
-    getSkills()
-      .then((r) => {
-        setInstalled(r.skills);
-        setSkillsDir(r.dir || "");
-      })
+    listSkills()
+      .then(setInstalled)
       .catch(() => setInstalled([]));
 
   useEffect(() => {
@@ -287,8 +283,6 @@ export function AbilitiesView() {
               </div>
             </div>
           )}
-
-          {skillsDir && <div className="text-[11.5px] text-faint mt-3">{t("abilitiesWhere")(skillsDir)}</div>}
         </div>
       </div>
     </main>
