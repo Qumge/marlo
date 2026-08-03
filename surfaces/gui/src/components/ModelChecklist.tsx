@@ -153,6 +153,12 @@ export function ModelChecklist({
       return [...prev, ...incoming.filter((m) => !seen.has(m.id))];
     });
 
+  // qumge:mistralai/mistral-medium-3.1 -> mistralai（冒号之后、斜杠之前那一段）。
+  const vendorOf = (id: string) => {
+    const tail = id.includes(":") ? id.slice(id.indexOf(":") + 1) : id;
+    return tail.includes("/") ? tail.slice(0, tail.indexOf("/")) : "";
+  };
+
   const nameOf = (id: string) => gwById.get(id)?.name || labels?.[id] || bare(id);
   const metaOf = (id: string) => {
     const g = gwById.get(id);
@@ -174,6 +180,25 @@ export function ModelChecklist({
         ...gModels.map((m) => m.id).filter((id) => !rows.includes(id)),
       ]
     : [];
+
+  // 【已选里那些不在默认 60 条中的，把它们的厂商和价格补回来】用户搜出一个
+  // mistral 勾上，下次进页面它不在默认那批里，metaOf 查不到 —— 那一行就没有厂商
+  // 也没有价格。这一页返工时骂过的正是这个病：「价格只在还没选的那一半可见，选
+  // 进来之后就看不到自己在花多少钱，恰恰是事后想复查时唯一想看的数字」。
+  //
+  // 【按厂商 slug 去重，不是一个 id 一个请求】通常 0～2 个请求就够。实测这些
+  // slug 服务端全都命中：mistralai→23、meta-llama→6、z-ai→14、qwen→52。
+  useEffect(() => {
+    if (!isGateway || !gModels.length) return;   // 等首批到手再说
+    const slugs = [
+      ...new Set(selected.filter((id) => !gwById.has(id)).map(vendorOf).filter(Boolean)),
+    ].filter((s) => !tried.current.has(s.toLowerCase()));
+    if (!slugs.length) return;
+    slugs.forEach((s) => tried.current.add(s.toLowerCase()));
+    Promise.all(slugs.map((s) => gatewayModels(s).catch(() => null))).then((rs) =>
+      merge(rs.flatMap((r) => r?.models || [])),
+    );
+  }, [isGateway, gModels.length, selected.join(",")]);
 
   // 勾选时【不】立即重排：行留在原地，等下次进入或筛选变化时才归位。点一下就把
   // 脚下的地抽走，是这类列表最容易犯的错。

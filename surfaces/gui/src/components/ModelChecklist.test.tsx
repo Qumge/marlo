@@ -2,7 +2,7 @@
 // into the model id (`bedrock:claude/…`, `vertex:openweight/…`); plain providers keep
 // the bare add-model row.
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ModelChecklist } from "./ModelChecklist";
 
 // 后端把 label 拆好了再给界面（qumge_catalog.models）—— 名字、厂商、价格要排成
@@ -201,6 +201,31 @@ describe("ModelChecklist — qumge 合成一个列表", () => {
 
     // 挂载 1 次 + 搜索 1 次，就这两次。
     expect((gatewayModels as any).mock.calls.length).toBe(2);
+  });
+
+  it("已选里有那 60 条之外的模型时，补上它的厂商和价格", async () => {
+    // 用户搜出一个 mistral 勾上，下次进页面时它不在默认那 60 条里 —— metaOf 查不
+    // 到，那一行就没有厂商也没有价格。正是这一页返工时骂过的病：「价格只在还没选
+    // 的那一半可见，选进来之后就看不到自己在花多少钱」。
+    (gatewayModels as any)
+      .mockResolvedValueOnce({ models: GW, total: 312 })
+      .mockResolvedValueOnce({ models: [MISTRAL] });
+    renderList("qumge", { curated: [MISTRAL.id] });
+
+    const row = await screen.findByTestId(`mrow-${MISTRAL.id}`);
+    await waitFor(() => expect(row.textContent).toContain("$0.40/$2.00 per Mtok"));
+    expect(row.textContent).toContain("Mistral");
+    // 按【厂商 slug】去补，不是按模型 id 一个一个问 —— 一个厂商一次请求。
+    expect(gatewayModels).toHaveBeenCalledWith("mistralai");
+  });
+
+  it("已选全在默认那批里时，不多打一次网", async () => {
+    // 【否定对照】不加"查不到的才补"这个判断的话，每次进页面都会白白多出一轮
+    // 请求。等一会儿再数 —— 立刻数的话，补搜还没来得及发出，这条测试会假绿。
+    renderList("qumge", { curated: [SOL] });
+    await screen.findByTestId(`mrow-${OPUS}`);
+    await new Promise((r) => setTimeout(r, 100));
+    expect((gatewayModels as any).mock.calls.length).toBe(1);
   });
 
   it("列表说自己只是一批，总数由目录给", async () => {
