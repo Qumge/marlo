@@ -76,6 +76,9 @@ export const en = {
   skCategory: (slug: string) => EN_CATEGORY[slug] ?? slug,
   skMore: "Load more",
   skLoading: "Loading…",
+  // 【不复用 skLoading】用户的原话是「以为什么也没有」—— 这句话必须点名在等的是
+  // 【目录】。光说「加载中」仍然没回答「里面到底有没有东西」。
+  skLoadingCatalog: "Loading the skill catalog…",
   skViewBody: "What it does",
   skClose: "Close",
   skUntrusted: "This text comes from a public catalog. Marlo reads it as guidance, never as orders.",
@@ -760,9 +763,20 @@ export const en = {
   // 已选和可选是【同一个列表的两段】，不是两份清单。段标题带上条数，因为"我选了
   // 几个"和"还能选多少"正是这一屏要回答的两个问题。
   gatewaySelected: (n: number) => `In your picker · ${n}`,
-  gatewayOthers: (n: number) => `${n} more on Qumge`,
+  // 段标题只说【渲染了多少】。原来写的是「N more on Qumge」，而那个 N 是"已加载的
+  // 60 条减去已勾的"—— list_models 一次最多给 60，网关上远不止，那句话是假的。
+  gatewayOthers: (n: number) => `Other models on Qumge · ${n}`,
   gatewayVision: "vision",
   gatewayNoMatch: "No model matches that.",
+  // 「这只是一部分」从段标题挪到这里。拿得到总数就报真数字，拿不到就只说是一批
+  // —— 总数只有目录知道，界面自己数不出来。
+  gatewayPartial:
+    "This is the most-used batch. There are more on the gateway — search by name or vendor to find them.",
+  gatewayPartialOf: (total: number) =>
+    `${total} models on the gateway; this is the most-used batch — search by name or vendor to reach the rest.`,
+  // 出网搜的时候要说话。没有它就是技能页那个病的翻版：空白加一句「没有匹配的
+  // 模型」，而其实正在搜。
+  gatewaySearching: "Searching Qumge…",
   // 网关列不出来时，已选那一段仍然在（它来自本地设置）—— 这句话要说清楚哪一半
   // 还能用，否则用户看到半屏空白只会以为整页坏了。
   gatewayOffline: "Can't reach Qumge to list the rest right now. The models you've already picked still work.",

@@ -120,7 +120,7 @@ Use the full id (the `qumge:` line) as the model.
 def test_models_returns_ids_that_can_be_used_verbatim():
     # 这条工具存在的全部理由就是省掉"手打完整 id"。少了 qumge: 前缀，用户抄过去
     # 是不能用的。
-    r = q.models(client=_Fake(MODELS_TEXT))
+    r = q.models(client=_Fake(MODELS_TEXT))["models"]
     assert [m["id"] for m in r][:2] == [
         "qumge:anthropic/claude-opus-5",
         "qumge:openai/gpt-5.6-sol",
@@ -132,7 +132,7 @@ def test_models_returns_ids_that_can_be_used_verbatim():
 
 def test_models_splits_the_label_into_columns():
     """界面要把名字、厂商、价格排成不同的列，不能让每个调用方自己去拆那一串。"""
-    r = {m["id"]: m for m in q.models(client=_Fake(MODELS_TEXT))}
+    r = {m["id"]: m for m in q.models(client=_Fake(MODELS_TEXT))["models"]}
 
     sol = r["qumge:openai/gpt-5.6-sol"]
     # 厂商前缀从名字里摘掉了 —— 它单独成一列。
@@ -163,13 +163,44 @@ def test_models_does_not_mistake_a_colon_in_the_name_for_a_vendor():
     """【否定对照】靠"出现了冒号"来拆的话，这一条会被读成厂商 GPT-5、名字 Turbo。"""
     r = q.models(client=_Fake(
         "1 model\n\n  qumge:openai/gpt-5-turbo\n    GPT-5: Turbo · $1.00/$2.00 per Mtok\n"
-    ))
+    ))["models"]
     assert r[0]["name"] == "GPT-5: Turbo"
     assert r[0]["vendor"] == "openai"   # 学不到好看的写法就退回 slug，但绝不瞎拆
 
 
 def test_models_survives_a_catalog_that_says_nothing():
-    assert q.models(client=_Fake("No models match 'zzz'.")) == []
+    assert q.models(client=_Fake("No models match 'zzz'."))["models"] == []
+
+
+# qumge 表头改造后的形状。M【只数能当 agent 用的】—— 网关上还有视频、图片模型，
+# 把它们算进去，界面就会显示一个用户永远搜不到的总数。
+MODELS_TEXT_WITH_TOTAL = """Showing 4 of 312 model(s) on the Qumge gateway, most used first.
+Use the full id (the `qumge:` line) as the model.
+
+  qumge:anthropic/claude-opus-5
+    Claude Opus 5 · $5.00/$25.00 per Mtok · vision
+"""
+
+
+def test_models_reports_the_gateway_total_not_the_page_size():
+    """界面上那句「Qumge 上还有 56 个」的 56 本来是【这次返回了几条】。
+
+    limit 上限是 60，而网关上远不止 —— 总数只能由目录自己给。
+    """
+    r = q.models(client=_Fake(MODELS_TEXT_WITH_TOTAL))
+    assert r["total"] == 312
+    assert len(r["models"]) == 1
+
+
+def test_models_total_is_none_when_the_catalog_does_not_say():
+    """【回退】qumge 还没上线新表头时，宁可不报总数，也不报一个假的。
+
+    老表头那个数是"这次返回了几条"，措辞却是"网关上有几个"—— 拿它当总数，
+    等于把一个谎换成另一个谎。
+    """
+    r = q.models(client=_Fake(MODELS_TEXT))
+    assert r["total"] is None
+    assert len(r["models"]) == 4
 
 
 def test_detail_shows_exactly_what_install_would_write(state):

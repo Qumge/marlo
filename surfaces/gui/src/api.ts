@@ -669,8 +669,10 @@ export interface GatewayModel {
  *  【已选】那一段的价格跟着筛选闪没（它的信息也从这份清单里来）。 */
 export async function gatewayModels(
   q = "",
-  limit = 200,
-): Promise<{ models: GatewayModel[]; error?: string }> {
+  // 【60 不是随便选的】qumge 的 list_models schema 原话："Default 20, max 60."
+  // 原来这里写 200，靠服务端悄悄夹到 60 —— 哪天它改成报错就断了。
+  limit = 60,
+): Promise<{ models: GatewayModel[]; total?: number | null; error?: string }> {
   const res = await fetch(
     `${httpBase()}/v1/gateway/models?q=${encodeURIComponent(q)}&limit=${limit}`,
   );

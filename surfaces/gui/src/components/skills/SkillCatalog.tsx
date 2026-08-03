@@ -193,6 +193,34 @@ export function SkillCatalog({
         </button>
       </form>
 
+      {/* 【首屏骨架】上面那个 run("") 要出网，实测 4.5 秒（TIMEOUT 是 20 秒）。
+          results 初始是 null，而目录区整个包在 results !== null 里 —— 那四秒半
+          一个像素都不渲染，用户看到的就是"什么也没有"，正是这一页最怕的误会。
+
+          【只管 null】results 只在首次挂载到第一次响应回来之间是 null。之后的
+          搜索和重置都保留旧结果 —— 把用户已经看得见的列表换成灰条是倒退，那时候
+          「在忙」由搜索按钮变灰表示就够了。
+
+          【!searchErr】catch 分支只写 searchErr，results 会永远停在 null。少了
+          这个条件，请求失败时骨架会在错误条底下一直转。
+
+          形状和真结果一致（同一个 GRP / ROW），出结果时不会整块跳版。 */}
+      {results === null && !searchErr && (
+        <div data-testid="skills-catalog-loading" aria-busy="true">
+          <div className="text-[12.5px] text-muted mb-2">{t("skLoadingCatalog")}</div>
+          <div className={GRP}>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div key={i} className={ROW + " animate-pulse"}>
+                <span className="min-w-0 flex-1">
+                  <span className="block h-3.5 w-40 max-w-full rounded bg-line" />
+                  <span className="block h-3 w-64 max-w-full rounded bg-line/60 mt-1.5" />
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* 用中文搜出来一屏英文标题，得说清楚为什么。不说的话，用户既无法理解
           这些结果从哪来，也无从发现翻错了——而翻错时改用词是他唯一的补救。 */}
       {searchedAs && !searchErr && (

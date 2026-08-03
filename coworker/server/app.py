@@ -654,7 +654,7 @@ def create_app(manager: SessionManager) -> FastAPI:
         from ..skills import qumge_catalog
 
         try:
-            return {"models": qumge_catalog.models(q, limit=limit)}
+            return qumge_catalog.models(q, limit=limit)
         except Exception as exc:  # noqa: BLE001
             return {"models": [], "error": str(exc)}
 

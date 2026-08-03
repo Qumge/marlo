@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   addModel,
   gatewayModels,
@@ -64,6 +64,17 @@ export function ModelChecklist({
   const [gq, setGq] = useState("");
   const [gModels, setGModels] = useState<GatewayModel[]>([]);
   const [gErr, setGErr] = useState(false);
+  // 网关上一共有多少个能当 agent 用的模型 —— 【由目录给】，界面数不出来：
+  // list_models 一次最多给 60。目录给不出就是 null，文案退回不报总数的那版。
+  const [gTotal, setGTotal] = useState<number | null>(null);
+  // 正在去网关搜（含防抖那 400ms —— 那段时间也得说话，否则又是一段空白）。
+  const [remote, setRemote] = useState(false);
+  // 【已经问过网关的词】小写。同一个词不重复出网：结果并进了 gModels，第二次筛
+  // 就是纯本地的事了。补价格用的厂商 slug 也记在这里 —— 都是"问过了"。
+  const tried = useRef(new Set<string>());
+  // 【谁最后发的谁说了算】连着改筛选词时，先发的那次晚回来会把后发的盖掉，而
+  // 界面上看不出任何异常，只是列表和输入框对不上。
+  const seq = useRef(0);
 
   // qumge 是唯一一个我们能把模型清单【问出来】的 provider —— 也就只有它能把
   // 「已选」和「可选」合成一个列表。
@@ -77,6 +88,7 @@ export function ModelChecklist({
     gatewayModels("")
       .then((r) => {
         setGModels(r.models || []);
+        setGTotal(r.total ?? null);
         setGErr(!!r.error);
       })
       .catch(() => {
@@ -133,6 +145,20 @@ export function ModelChecklist({
 
   const gwById = useMemo(() => new Map(gModels.map((m) => [m.id, m])), [gModels]);
 
+  // 网关搜回来的并进同一份缓存，不单独存一份：并进去之后本地 matches() 自然就把
+  // 它们显示出来，后续再筛同一个词也不用再出网。
+  const merge = (incoming: GatewayModel[]) =>
+    setGModels((prev) => {
+      const seen = new Set(prev.map((m) => m.id));
+      return [...prev, ...incoming.filter((m) => !seen.has(m.id))];
+    });
+
+  // qumge:mistralai/mistral-medium-3.1 -> mistralai（冒号之后、斜杠之前那一段）。
+  const vendorOf = (id: string) => {
+    const tail = id.includes(":") ? id.slice(id.indexOf(":") + 1) : id;
+    return tail.includes("/") ? tail.slice(0, tail.indexOf("/")) : "";
+  };
+
   const nameOf = (id: string) => gwById.get(id)?.name || labels?.[id] || bare(id);
   const metaOf = (id: string) => {
     const g = gwById.get(id);
@@ -154,6 +180,25 @@ export function ModelChecklist({
         ...gModels.map((m) => m.id).filter((id) => !rows.includes(id)),
       ]
     : [];
+
+  // 【已选里那些不在默认 60 条中的，把它们的厂商和价格补回来】用户搜出一个
+  // mistral 勾上，下次进页面它不在默认那批里，metaOf 查不到 —— 那一行就没有厂商
+  // 也没有价格。这一页返工时骂过的正是这个病：「价格只在还没选的那一半可见，选
+  // 进来之后就看不到自己在花多少钱，恰恰是事后想复查时唯一想看的数字」。
+  //
+  // 【按厂商 slug 去重，不是一个 id 一个请求】通常 0～2 个请求就够。实测这些
+  // slug 服务端全都命中：mistralai→23、meta-llama→6、z-ai→14、qwen→52。
+  useEffect(() => {
+    if (!isGateway || !gModels.length) return;   // 等首批到手再说
+    const slugs = [
+      ...new Set(selected.filter((id) => !gwById.has(id)).map(vendorOf).filter(Boolean)),
+    ].filter((s) => !tried.current.has(s.toLowerCase()));
+    if (!slugs.length) return;
+    slugs.forEach((s) => tried.current.add(s.toLowerCase()));
+    Promise.all(slugs.map((s) => gatewayModels(s).catch(() => null))).then((rs) =>
+      merge(rs.flatMap((r) => r?.models || [])),
+    );
+  }, [isGateway, gModels.length, selected.join(",")]);
 
   // 勾选时【不】立即重排：行留在原地，等下次进入或筛选变化时才归位。点一下就把
   // 脚下的地抽走，是这类列表最容易犯的错。
@@ -230,6 +275,37 @@ export function ModelChecklist({
   const shownSelected = selected.filter(matches);
   const shownOthers = others.filter(matches);
 
+  // 【本地筛不到，就去网关问一次】list_models 一次最多给 60 条，网关上远不止 ——
+  // 搜索是够到其余那些的唯一通道。原来 matches() 只对已加载的 60 条做字符串包含，
+  // 敲 mistral 得到「没有匹配的模型」，而网关上有 23 条。
+  //
+  // 【防抖 400ms】不防的话敲 mistral 会在 mis / mist / mistr… 每一步都 0 结果、
+  // 每一步打一次网。常见情况（找 Claude / GPT）本地就筛到了，根本走不到这里。
+  //
+  // 【能这么做是因为网关的 query 是子串匹配】实测「便宜的能看图的模型」/「cheap
+  // vision model」一律返回 0 条。服务端能命中的词，本地 matches() 那三段拼接里
+  // 必然也有，所以并进来的结果不会被本地筛再滤掉。
+  const q = gq.trim();
+  const localHits = shownSelected.length + shownOthers.length;
+  useEffect(() => {
+    if (!isGateway || !q || localHits > 0 || tried.current.has(q.toLowerCase())) return;
+    const mine = ++seq.current;
+    setRemote(true);
+    const timer = setTimeout(async () => {
+      tried.current.add(q.toLowerCase());
+      const r = await gatewayModels(q).catch(() => null);
+      if (mine !== seq.current) return;   // 更新的那次会自己收尾
+      setRemote(false);
+      if (r) merge(r.models || []);
+    }, 400);
+    // 【cleanup 里也关掉 remote】改词时先归位，新的那次要么重新点亮、要么本地就
+    // 筛到了。不归位的话，本地筛到之后指示灯会一直亮着。
+    return () => {
+      clearTimeout(timer);
+      setRemote(false);
+    };
+  }, [q, localHits, isGateway]);
+
   return (
     <div className="mlist">
       <input
@@ -264,10 +340,27 @@ export function ModelChecklist({
             {t("gatewayOthers")(filtering ? shownOthers.length : others.length)}
           </div>
           <div className="mlist-others">{shownOthers.map(row)}</div>
+          {/* 【「这只是一部分」在这里说，不在标题里说】标题的职责是"渲染了多少就
+              说多少"。原来它写「Qumge 上还有 56 个」，而 56 是已加载的 60 条减去
+              已勾的 —— list_models 一次最多给 60，网关上远不止，那句话是假的。
+
+              【只在没筛选时出现】筛选后用户看到的是搜索结果，再说"这是最常用的
+              一批"就又错了一次。网关连不上时也不说 —— 那时该看的是 gErr 那句。 */}
+          {!filtering && !gErr && (
+            <div className="mlist-note" data-testid="gateway-partial">
+              {gTotal ? t("gatewayPartialOf")(gTotal) : t("gatewayPartial")}
+            </div>
+          )}
         </>
       )}
 
-      {filtering && !shownSelected.length && !shownOthers.length && (
+      {/* 【正在找的时候不说"没有"】那是还没问出结果的话。防抖那 400ms 也算在
+          "正在找"里 —— 否则会先闪一下"没有匹配的模型"再改口。 */}
+      {remote && (
+        <div className="mlist-note" data-testid="gateway-searching">{t("gatewaySearching")}</div>
+      )}
+
+      {filtering && !remote && !shownSelected.length && !shownOthers.length && (
         <div className="mlist-note" data-testid="gateway-nomatch">{t("gatewayNoMatch")}</div>
       )}
     </div>

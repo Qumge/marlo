@@ -2,7 +2,7 @@
 // into the model id (`bedrock:claude/…`, `vertex:openweight/…`); plain providers keep
 // the bare add-model row.
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ModelChecklist } from "./ModelChecklist";
 
 // 后端把 label 拆好了再给界面（qumge_catalog.models）—— 名字、厂商、价格要排成
@@ -143,6 +143,123 @@ describe("ModelChecklist — qumge 合成一个列表", () => {
     expect(addModel).toHaveBeenCalledWith(OPUS);
   });
 
+  const MISTRAL = {
+    id: "qumge:mistralai/mistral-medium-3.1",
+    name: "Mistral Medium 3.1",
+    vendor: "Mistral",
+    price: "$0.40/$2.00 per Mtok",
+    vision: false,
+    label: "Mistral: Mistral Medium 3.1 · $0.40/$2.00 per Mtok",
+  };
+
+  it("本地筛不到就去网关搜 —— 那是够到另外一百多个的唯一通道", async () => {
+    // list_models 一次最多给 60 条，而筛选原来只对这 60 条做字符串包含。敲
+    // mistral 得到「没有匹配的模型」，网关上其实有 23 条 —— 文案说了谎，唯一的
+    // 补救路又恰好是堵死的。
+    (gatewayModels as any)
+      .mockResolvedValueOnce({ models: GW, total: 312 })
+      .mockResolvedValueOnce({ models: [MISTRAL] });
+    renderList("qumge", { curated: [SOL] });
+    await screen.findByTestId(`mrow-${OPUS}`);
+
+    fireEvent.change(screen.getByTestId("gateway-search"), { target: { value: "mistral" } });
+
+    expect(await screen.findByTestId(`mrow-${MISTRAL.id}`)).toBeTruthy();
+    expect(gatewayModels).toHaveBeenCalledWith("mistral");
+  });
+
+  it("出网期间说自己在找，找完了才说没有", async () => {
+    // 不说的话就是技能页那个病的翻版：空白加一句「没有匹配的模型」，而其实正在搜。
+    renderList("qumge", { curated: [SOL] });
+    await screen.findByTestId(`mrow-${OPUS}`);
+
+    fireEvent.change(screen.getByTestId("gateway-search"), { target: { value: "zzzz" } });
+
+    expect(await screen.findByTestId("gateway-searching")).toBeTruthy();
+    // 正在找的时候不能同时说"没有匹配的模型"—— 那是还没问出结果的话。
+    expect(screen.queryByTestId("gateway-nomatch")).toBeNull();
+
+    expect(await screen.findByTestId("gateway-nomatch")).toBeTruthy();
+    expect(screen.queryByTestId("gateway-searching")).toBeNull();
+  });
+
+  it("同一个词不重复出网", async () => {
+    // 结果并进了同一份缓存，第二次筛同一个词是纯本地的事。
+    (gatewayModels as any)
+      .mockResolvedValueOnce({ models: GW })
+      .mockResolvedValueOnce({ models: [MISTRAL] });
+    renderList("qumge", { curated: [SOL] });
+    await screen.findByTestId(`mrow-${OPUS}`);
+
+    const box = screen.getByTestId("gateway-search");
+    fireEvent.change(box, { target: { value: "mistral" } });
+    await screen.findByTestId(`mrow-${MISTRAL.id}`);
+
+    fireEvent.change(box, { target: { value: "" } });
+    fireEvent.change(box, { target: { value: "mistral" } });
+    await screen.findByTestId(`mrow-${MISTRAL.id}`);
+
+    // 挂载 1 次 + 搜索 1 次，就这两次。
+    expect((gatewayModels as any).mock.calls.length).toBe(2);
+  });
+
+  it("已选里有那 60 条之外的模型时，补上它的厂商和价格", async () => {
+    // 用户搜出一个 mistral 勾上，下次进页面时它不在默认那 60 条里 —— metaOf 查不
+    // 到，那一行就没有厂商也没有价格。正是这一页返工时骂过的病：「价格只在还没选
+    // 的那一半可见，选进来之后就看不到自己在花多少钱」。
+    (gatewayModels as any)
+      .mockResolvedValueOnce({ models: GW, total: 312 })
+      .mockResolvedValueOnce({ models: [MISTRAL] });
+    renderList("qumge", { curated: [MISTRAL.id] });
+
+    const row = await screen.findByTestId(`mrow-${MISTRAL.id}`);
+    await waitFor(() => expect(row.textContent).toContain("$0.40/$2.00 per Mtok"));
+    expect(row.textContent).toContain("Mistral");
+    // 按【厂商 slug】去补，不是按模型 id 一个一个问 —— 一个厂商一次请求。
+    expect(gatewayModels).toHaveBeenCalledWith("mistralai");
+  });
+
+  it("已选全在默认那批里时，不多打一次网", async () => {
+    // 【否定对照】不加"查不到的才补"这个判断的话，每次进页面都会白白多出一轮
+    // 请求。等一会儿再数 —— 立刻数的话，补搜还没来得及发出，这条测试会假绿。
+    renderList("qumge", { curated: [SOL] });
+    await screen.findByTestId(`mrow-${OPUS}`);
+    await new Promise((r) => setTimeout(r, 100));
+    expect((gatewayModels as any).mock.calls.length).toBe(1);
+  });
+
+  it("列表说自己只是一批，总数由目录给", async () => {
+    // 原来段标题写「Qumge 上还有 56 个」，那个 56 是"已加载的 60 条减去已勾的"。
+    // list_models 一次最多给 60，网关上远不止 —— 这个数不是我们能算出来的。
+    (gatewayModels as any).mockResolvedValueOnce({ models: GW, total: 312 });
+    renderList("qumge", { curated: [SOL] });
+
+    const note = await screen.findByTestId("gateway-partial");
+    expect(note.textContent).toContain("312");
+    // 段标题只说渲染了多少 —— 一条没勾的。
+    expect(screen.getByTestId("mlist-others").textContent).toContain("1");
+  });
+
+  it("目录给不出总数时，只说是一批，不报数字", async () => {
+    // 【回退】qumge 还没上线新表头。宁可不报，也不报一个假的。
+    (gatewayModels as any).mockResolvedValueOnce({ models: GW });
+    renderList("qumge", { curated: [SOL] });
+
+    const note = await screen.findByTestId("gateway-partial");
+    expect(note.textContent).toContain("most-used batch");
+    // 一个数字都不能有 —— 报不出总数的时候，任何数字都会被读成总数。
+    expect(note.textContent).not.toMatch(/\d/);
+  });
+
+  it("筛选之后不再说「这是最常用的一批」", async () => {
+    // 筛完看到的是搜索结果，不是那一批。这句话在这一刻正好说反了。
+    renderList("qumge", { curated: [SOL] });
+    await screen.findByTestId("gateway-partial");
+
+    fireEvent.change(screen.getByTestId("gateway-search"), { target: { value: "anthropic" } });
+    expect(screen.queryByTestId("gateway-partial")).toBeNull();
+  });
+
   it("价格对【已选】的行也显示", async () => {
     // 原来价格只在"还没选"的那一半可见：选进来之后就看不到自己在花多少钱，而那
     // 恰恰是事后想复查时唯一想看的数字。
@@ -191,8 +308,10 @@ describe("ModelChecklist — qumge 合成一个列表", () => {
     expect(screen.getByTestId("mlist-others").textContent).toContain("1");
 
     // 什么都筛不到时才说"没有匹配的模型"。
+    // 【时机变了】本地筛不到不再等于"没有"—— 网关上还有一百多个够不着的模型。
+    // 现在要等它去问过一轮，才能说没有。
     fireEvent.change(screen.getByTestId("gateway-search"), { target: { value: "zzzz" } });
-    expect(screen.getByTestId("gateway-nomatch")).toBeTruthy();
+    expect(await screen.findByTestId("gateway-nomatch")).toBeTruthy();
 
     // 【否定对照】没筛选时，空的已选段【要】留着 —— 那时的 0 是有用的信息
     // （"你的选择器是空的"），不是一个 bug。
