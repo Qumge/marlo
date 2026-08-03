@@ -86,6 +86,15 @@ _ENTRY = re.compile(
 _TRANSLATED = re.compile(r'\(searched in English as "([^"]+)"\)')
 
 
+# 表头的总数：`Showing 60 of 312 model(s) on the Qumge gateway, most used first.`
+#
+# 【为什么不能用老表头那个数】老表头是 `60 model(s) on the Qumge gateway`，而那个
+# 60 就是【这次返回了几条】—— 问它要 5 条，它就说网关上有 5 个模型。limit 的上限
+# 是 60，网关上远不止，所以总数只能由目录自己给。给不出就是 None，界面退回不报
+# 总数的文案：不报，好过报一个假的。
+_TOTAL = re.compile(r"^\s*Showing\s+\d+\s+of\s+(\d+)\b")
+
+
 def _between_markers(text: str) -> str:
     i = text.find(_OPEN)
     if i == -1:
@@ -182,14 +191,23 @@ def _vendor_slug(model_id: str) -> str:
     return tail.split("/", 1)[0] if "/" in tail else ""
 
 
-def models(query: str = "", *, limit: int = 30, client: Optional[httpx.Client] = None) -> list[dict[str, Any]]:
-    """返回 [{id, name, vendor, price, vision, label}]。
+def models(
+    query: str = "",
+    *,
+    limit: int = 30,
+    client: Optional[httpx.Client] = None,
+) -> dict[str, Any]:
+    """返回 {"models": [...], "total": int | None}。
 
-    id 是可以直接用的完整模型 id；其余几个是把 label 那一整串拆开的结果。
+    每条模型是 {id, name, vendor, price, vision, label}：id 可以直接用，其余几个是
+    把 label 那一整串拆开的结果。
 
     【为什么拆】界面要把它们排成不同的列：名字是主角，厂商和价格是次要信息。
     糊成一个字符串的话，每个调用方都得自己再拆一遍,而拆法散在各处必然会漂。
-    label 原样留着当兜底，也让老调用方不至于一改就断。
+    label 原样留着当兜底。
+
+    【total 是网关上的总数，不是这次返回了几条】limit 上限是 60，而网关上远不止
+    ——「还有多少个」这件事界面自己数不出来，只能由目录给。
     """
     args: dict[str, Any] = {"limit": limit}
     if query.strip():
@@ -228,7 +246,8 @@ def models(query: str = "", *, limit: int = 30, client: Optional[httpx.Client] =
             "vision": "vision" in parts,
             "label": label,
         })
-    return out
+    m = _TOTAL.match(text)
+    return {"models": out, "total": int(m.group(1)) if m else None}
 
 
 def detail(slug: str, *, client: Optional[httpx.Client] = None) -> str:

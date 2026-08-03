@@ -64,7 +64,10 @@ def main() -> int:
 
     try:
         # 用 app 自己那条解析路径，不另写一份：解析要是坏了，这里也该看得见。
-        live = {m["id"] for m in qumge_catalog.models("", limit=500)}
+        # 【60 不是随便选的】list_models 的 schema 原话是 "Default 20, max 60."，
+        # 超出的值被服务端悄悄夹住 —— 这里原来写 500，读起来像是在拿全量，其实
+        # 拿到的一直是【最常用的 60 条】。下面的 missing 因此要逐个再确认一次。
+        live = {m["id"] for m in qumge_catalog.models("", limit=60)["models"]}
     except Exception as exc:  # noqa: BLE001
         print(f"model-matrix: 连不上 qumge，这次没查成（{exc}）")
         return 0
@@ -75,9 +78,25 @@ def main() -> int:
         print("model-matrix: 网关没返回任何模型，这次没查成")
         return 0
 
+    # 【报之前逐个再确认一次】上面那份清单最多 60 条，而网关上远不止（探一轮就能
+    # 摸出一百多个）。一个写死的 id 只要不在【最常用的那 60 条】里，就会在这里被
+    # 当成"不存在"—— 而这个脚本报出来的话是"点下去会被网关拒"，那是一句会让人去
+    # 追一个不存在的漂移的谎。按 id 的尾段单独搜一次，真的搜不到才算漂了。
+    for mid in sorted(m for m in mine if m not in live):
+        try:
+            hits = qumge_catalog.models(mid.split("/", 1)[-1], limit=60)["models"]
+        except Exception:  # noqa: BLE001
+            # 单独这一次查询挂了，不能升级成"这个 id 不存在"—— 和上面同一个道理。
+            live.add(mid)
+            continue
+        live.update(m["id"] for m in hits)
+
     missing = sorted(m for m in mine if m not in live)
     if not missing:
-        print(f"model-matrix: {len(mine)} 个写死的 id 都在网关上（网关共 {len(live)} 个）")
+        # 【不说"网关共 N 个"】那个数是我们这一趟见到的条数，不是网关的总数 ——
+        # 一次最多问到 60 个，总数只有 qumge 自己知道。这个脚本的整个存在理由就是
+        # 不让一个假数字在无人复核的地方待着。
+        print(f"model-matrix: {len(mine)} 个写死的 id 都在网关上")
         return 0
 
     print(f"model-matrix: {len(missing)} 个写死的 id 在网关上【不存在】——")
