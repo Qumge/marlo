@@ -157,6 +157,7 @@ export const zh: Strings = {
   skCategory: (slug) => ZH_CATEGORY[slug] ?? slug,
   skMore: "加载更多",
   skLoading: "加载中…",
+  skLoadingCatalog: "正在读取技能目录…",
   skViewBody: "看看它做什么",
   skClose: "关闭",
   skUntrusted: "这段文字来自公开目录。Marlo 把它当参考读，不当命令执行。",
@@ -710,9 +711,13 @@ export const zh: Strings = {
 
   gatewaySearch: "按名字或厂商筛选…",
   gatewaySelected: (n) => `已加进选择器 · ${n}`,
-  gatewayOthers: (n) => `Qumge 上还有 ${n} 个`,
+  gatewayOthers: (n) => `Qumge 上的其他模型 · ${n}`,
   gatewayVision: "能看图",
   gatewayNoMatch: "没有匹配的模型。",
+  gatewayPartial: "这是最常用的一批。网关上还有更多 —— 搜名字或厂商就能找到。",
+  gatewayPartialOf: (total) =>
+    `网关上共 ${total} 个，这里是最常用的一批 —— 搜名字或厂商能找到其余的。`,
+  gatewaySearching: "正在 Qumge 上找…",
   gatewayOffline: "暂时连不上 Qumge，列不出其它模型。你已经选好的仍然能用。",
   gatewayAdd: "加入",
   gatewayAdded: "已加入",
