@@ -59,6 +59,54 @@ VERSION="$(node -p "require('$BRAND_CONF').version")"
 TRIPLE="$(rustc -vV | sed -n 's/host: //p')"   # e.g. aarch64-apple-darwin
 ARCH="${TRIPLE%%-*}"
 
+# ── 凭据：两个 env 文件，【在任何消费者之前】读进来 ────────────────────────────
+#
+# 【为什么在这里，不在用到它的那一步旁边】两个坑都是"读得太晚"，都真实发生过：
+#
+#   1. .ocw-notary.env 里有 APPLE_SIGNING_IDENTITY，而它原来【只在 [5/5] 里 source】，
+#      并且那个 source 就写在 `if [ -n "$APPLE_SIGNING_IDENTITY" ]` 分支【里面】——
+#      先有鸡还是先有蛋：提供这个变量的文件，被一个需要这个变量才会执行的分支挡着。
+#      本机因此从来没签过名，脚本还一路安静地打印 "unsigned dev build"。
+#      而签边车（[2/5]）和 tauri build（[3/5]）都比 [5/5] 早，它们同样要这个变量。
+#
+#   2. .ocw-updater.env 原来是【裸 source】，没有 set -a。source 只设 shell 变量，
+#      不导出 —— 脚本自己的 `[ -n "$TAURI_SIGNING_PRIVATE_KEY" ]` 看得见（于是打开了
+#      createUpdaterArtifacts），但 `npm run tauri build` 是【子进程】，环境里没有它。
+#      结果：tauri 看到配置里有公钥、环境里没私钥，在 .app 已经产出之后中止。
+#
+# 【set -a 不能省】这两个文件里是裸的 KEY=value，没有 export。set -a 让 source 期间
+# 的赋值自动导出，子进程才看得见。公证那块一直是这么写的，更新器那块漏了 —— 同一个
+# 文件里两种写法，而注释还说它们遵循 "the same convention"。
+# 【坏文件不该炸掉构建】这些文件是手写的，值里常有空格和括号
+# （APPLE_SIGNING_IDENTITY 就是 `Developer ID Application: Name (TEAMID)`）。没加引号
+# 的话 bash 在 `(` 上报语法错误，而 set -e 会让整个构建停在一句和打包毫无关系的
+# 报错上。放进 if 条件里，source 失败就只是走"没有凭据"那条路 —— 那条路本来就存在，
+# 而且下面每一步都会大声说自己没签名。
+#
+# 【为什么先 bash -n 再 source，而不是 `if ! source`】语法错误发生在【解析】阶段，
+# 不是命令失败 —— `if !` 抓不住它，整个脚本照样当场死掉（实测退出码 2）。
+# bash -n 在子进程里只解析不执行，坏文件返回非零而拖不垮调用方。
+load_env() {  # $1 = 文件路径；读不了就返回非零，调用方当作"没有凭据"
+  if ! bash -n "$1" 2>/dev/null; then
+    echo "    WARNING: $1 语法有问题，跳过 —— 多半是值里有空格或括号却没加引号，比如" >&2
+    echo "             APPLE_SIGNING_IDENTITY=Developer ID Application: Name (TEAMID)" >&2
+    echo "             要写成 APPLE_SIGNING_IDENTITY=\"Developer ID Application: Name (TEAMID)\"" >&2
+    return 1
+  fi
+  set -a
+  # shellcheck disable=SC1090
+  source "$1"
+  set +a
+}
+NOTARY_ENV="${OCW_NOTARY_ENV:-$PLATFORM/../.ocw-notary.env}"
+if [ -z "${APPLE_SIGNING_IDENTITY:-}" ] && [ -f "$NOTARY_ENV" ]; then
+  load_env "$NOTARY_ENV" || true
+fi
+UPDATER_ENV="${OCW_UPDATER_ENV:-$PLATFORM/../.ocw-updater.env}"
+if [ -z "${TAURI_SIGNING_PRIVATE_KEY:-}" ] && [ -f "$UPDATER_ENV" ]; then
+  load_env "$UPDATER_ENV" || true
+fi
+
 # CI keychain bootstrap: on a fresh runner the Developer ID cert exists only as the
 # APPLE_CERTIFICATE secret (base64 .p12) — import it into a throwaway keychain so the
 # sidecar codesign calls below can find the identity ("no identity found", v0.1.3 run
@@ -169,11 +217,7 @@ echo "==> [3/5] tauri build (.app)"
 # `.ocw-updater.env` one directory above the repo (same convention as the notary env).
 # Keyless builds skip the overlay entirely so dev/fork builds keep working; keyless
 # RELEASES would strand every install without auto-update, hence the loud warning.
-UPDATER_ENV="${OCW_UPDATER_ENV:-$PLATFORM/../.ocw-updater.env}"
-if [ -z "${TAURI_SIGNING_PRIVATE_KEY:-}" ] && [ -f "$UPDATER_ENV" ]; then
-  # shellcheck disable=SC1090
-  source "$UPDATER_ENV"
-fi
+# 凭据在脚本开头就读进来了（见那里的注释：读得太晚踩过两次）。
 # The asset catalog rides in through the same overlay mechanism rather than
 # tauri.conf.json, because gen/Assets.car only exists on macOS — actool is an
 # Xcode tool. Listing it in the committed config broke the Windows build
@@ -297,11 +341,8 @@ elif [ -n "${APPLE_SIGNING_IDENTITY:-}" ]; then
   NOTARYTOOL_API_KEY_ID="${NOTARYTOOL_API_KEY_ID:-${APPLE_API_KEY:-}}"
   NOTARYTOOL_API_ISSUER_ID="${NOTARYTOOL_API_ISSUER_ID:-${APPLE_API_ISSUER:-}}"
 
-  NOTARY_ENV="${OCW_NOTARY_ENV:-$PLATFORM/../.ocw-notary.env}"
-  if [ -z "${NOTARYTOOL_API_KEY_PATH:-}" ] && [ -f "$NOTARY_ENV" ]; then
-    set -a; # shellcheck disable=SC1090
-    source "$NOTARY_ENV"; set +a
-  fi
+  # NOTARY_ENV 在脚本开头就 source 过了 —— 它同时提供 APPLE_SIGNING_IDENTITY，而那个
+  # 变量在 [2/5]、[3/5] 就要用，比这里早得多。
   if [ -n "${NOTARYTOOL_API_KEY_PATH:-}" ] && [ -n "${NOTARYTOOL_API_KEY_ID:-}" ] \
      && [ -n "${NOTARYTOOL_API_ISSUER_ID:-}" ]; then
     xcrun notarytool submit "$DMG" \
