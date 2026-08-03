@@ -877,17 +877,26 @@ button.btn.danger { color: var(--accent); }
 }
 .mlist-row:hover .mlist-make { visibility: visible; }
 .mlist-make:hover { color: var(--ink); border-color: var(--ink); }
-.mlist-add { display: flex; gap: 8px; margin-top: 8px; }
+/* 【一行里的控件定死同一个高度】原来三个各自算各自的：输入框是 13px 字 + 7px
+   内边距，按钮是 12.5px + 5px。实测（编译后的 CSS，WebKit 和 Chromium 一致）
+   输入框 35.5px、按钮 30.8px —— 差 4.7px，并排放着一眼就看得出，而且字号一改
+   就又歪一次。再加上 .btn-primary 自带 align-self: flex-start（它平时是独立成块
+   的确认按钮），按钮还会被顶到行首。
+   height + padding-block: 0 是唯一不随字号漂的做法。 */
+.mlist-add { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
 .mlist-add input {
-  flex: 1; background: var(--panel); border: 1px solid var(--line-strong); border-radius: 8px;
-  padding: 7px 10px; color: var(--ink); font: inherit; font-size: 13px; outline: none;
+  flex: 1; height: 34px; background: var(--panel); border: 1px solid var(--line-strong);
+  border-radius: 8px; padding: 0 10px; color: var(--ink); font: inherit; font-size: 13px;
+  outline: none;
 }
 .mlist-add input:focus { border-color: var(--accent); }
 .mlist-add select {
-  background: var(--panel); border: 1px solid var(--line-strong); border-radius: 8px;
-  padding: 7px 8px; color: var(--ink); font: inherit; font-size: 13px; outline: none;
+  height: 34px; background: var(--panel); border: 1px solid var(--line-strong);
+  border-radius: 8px; padding: 0 8px; color: var(--ink); font: inherit; font-size: 13px;
+  outline: none;
 }
 .mlist-add select:focus { border-color: var(--accent); }
+.mlist-add button.btn-primary { height: 34px; padding-block: 0; align-self: center; }
 
 /* .mcp-error is used by ScheduledView; the MCP servers list itself is Tailwind-styled inline
    (ManageTabs McpTab/McpRow/AddForm). */
@@ -1240,7 +1249,15 @@ button.btn.ghost:hover { color: var(--ink); }
 .tmpl-textarea { resize: vertical; min-height: 64px; line-height: 1.45; }
 .tmpl-sched { display: flex; gap: 14px; flex-wrap: wrap; }
 .tmpl-field { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; color: var(--muted); }
-.tmpl-time, .tmpl-select { padding: 6px 9px; }
+/* 【时间框和下拉定死同高】它们并排站在「At」和「重复」两栏里，报上来的是看着
+   没对齐（0.7.0，macOS）。
+   说清楚证据到哪儿为止：拿编译出来的 CSS 在 Playwright 的 WebKit 和 Chromium
+   里都量过，改之前两者【本来就一样高】（37.5 / 35.5，各自引擎内相等），复现不出
+   来。应用跑的是 Tauri 的 WKWebView，和 Playwright 的 WebKit 不是一回事，原生
+   select 的尺寸只有在那里才算数。
+   所以这条不是"我定位到了原因"，是"把两者钉死，让它不可能不一样"—— 定高之后
+   浏览器的原生尺寸再说不上话。 */
+.tmpl-time, .tmpl-select { height: 34px; padding: 0 9px; }
 .tmpl-form-actions { display: flex; align-items: center; gap: 12px; margin-top: 2px; }
 
 
