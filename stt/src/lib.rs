@@ -127,16 +127,15 @@ impl Dictation {
         &self.model_path
     }
 
-    /// Downloads the default model atomically. Hosts should call this only after an explicit
-    /// user action because it is a sizeable download.
-    pub fn install_default_model(&self) -> Result<(), String> {
-        self.install_default_model_with_progress(|_| {})
-    }
-
     /// Downloads and verifies the default model atomically, reporting byte progress to the host.
     /// A canceled/failed transfer never replaces a previously verified model.
+    ///
+    /// `proxy` 形如 `http://127.0.0.1:7897`，由宿主决定（壳里的 proxy::detect）。这个
+    /// 库【不自己去探】：探测要读环境变量和操作系统设置，那是宿主的事，两处各探一遍
+    /// 必然会漂。传 None 就是直连。
     pub fn install_default_model_with_progress(
         &self,
+        proxy: Option<&str>,
         mut on_progress: impl FnMut(DownloadProgress),
     ) -> Result<(), String> {
         if self.status().model_verified {
@@ -163,10 +162,17 @@ impl Dictation {
             // Per-read timeout, not overall: a 142 MB transfer legitimately takes minutes, but
             // a stalled connection must surface as an error — the cancel flag is only observed
             // between reads, so an indefinitely blocked read would also make Cancel unresponsive.
-            let agent = ureq::AgentBuilder::new()
+            let mut builder = ureq::AgentBuilder::new()
                 .timeout_connect(std::time::Duration::from_secs(30))
-                .timeout_read(std::time::Duration::from_secs(30))
-                .build();
+                .timeout_read(std::time::Duration::from_secs(30));
+            // 【显式传，不靠 ureq 的 proxy-from-env】那个 feature 没开，而且就算开了，
+            // 它读的也只是环境变量 —— 双击启动的 app 没有 shell 环境变量。
+            if let Some(p) = proxy {
+                builder = builder.proxy(
+                    ureq::Proxy::new(p).map_err(|e| format!("Bad proxy {p}: {e}"))?,
+                );
+            }
+            let agent = builder.build();
             let response = agent
                 .get(DEFAULT_MODEL_URL)
                 .call()
