@@ -490,16 +490,32 @@ fn cancel_dictation(state: tauri::State<Arc<Dictation>>) {
     state.cancel();
 }
 
+/// 这台机器上探到的代理，没探到就是 null。
+///
+/// 【给界面用来解释失败】下载失败时，「网络坏了」和「你的代理没被用上」是两回事，
+/// 而后者用户自己能解决（把 VPN 客户端切到系统代理模式）。界面据此决定要不要多说
+/// 那一句 —— 文案在界面那边，才能跟着语言走。
+#[tauri::command]
+fn system_proxy() -> Option<String> {
+    proxy::detect()
+}
+
 #[tauri::command]
 async fn download_dictation_model(
     app: tauri::AppHandle,
     state: tauri::State<'_, Arc<Dictation>>,
 ) -> Result<VoiceInputStatus, String> {
     let dictation = state.inner().clone();
+    // 【每次点的时候现取，不缓存】用户很可能刚打开 VPN 就来点这个按钮。启动时探到的
+    // 值会是开 VPN 之前的那个空。
+    let proxy = proxy::detect();
     tauri::async_runtime::spawn_blocking(move || {
-        dictation.install_default_model_with_progress(|progress: DownloadProgress| {
-            let _ = app.emit("dictation-download-progress", progress);
-        })?;
+        dictation.install_default_model_with_progress(
+            proxy.as_deref(),
+            |progress: DownloadProgress| {
+                let _ = app.emit("dictation-download-progress", progress);
+            },
+        )?;
         Ok::<VoiceInputStatus, String>(voice_input_status(&dictation))
     })
     .await
@@ -704,6 +720,7 @@ pub fn run() {
             start_dictation,
             stop_dictation,
             cancel_dictation,
+            system_proxy,
             download_dictation_model,
             cancel_dictation_model_download,
             verify_dictation_model,
@@ -735,6 +752,14 @@ pub fn run() {
                 // ("relay off, no messages" was undiagnosable with everything on /dev/null).
                 // One file per launch, previous run kept as .old.
                 .stdin(Stdio::null());
+            // 【边车的代理】httpx 默认就读这两个变量（trust_env=True），所以 Python 侧
+            // 一行不用改。这里是唯一能设它的时机 —— 进程环境只有 spawn 那一刻能定。
+            //
+            // 不设 HTTP_PROXY：我们出网的目标全是 https，而多设一个变量就多一处会和
+            // 上面那两个不一致。
+            if let Some(p) = proxy::detect() {
+                server_cmd.env("HTTPS_PROXY", &p).env("ALL_PROXY", &p);
+            }
             match server_log_file() {
                 Some(log) => {
                     if let Ok(err_clone) = log.try_clone() {
