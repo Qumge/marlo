@@ -143,6 +143,38 @@ describe("ModelChecklist — qumge 合成一个列表", () => {
     expect(addModel).toHaveBeenCalledWith(OPUS);
   });
 
+  it("列表说自己只是一批，总数由目录给", async () => {
+    // 原来段标题写「Qumge 上还有 56 个」，那个 56 是"已加载的 60 条减去已勾的"。
+    // list_models 一次最多给 60，网关上远不止 —— 这个数不是我们能算出来的。
+    (gatewayModels as any).mockResolvedValueOnce({ models: GW, total: 312 });
+    renderList("qumge", { curated: [SOL] });
+
+    const note = await screen.findByTestId("gateway-partial");
+    expect(note.textContent).toContain("312");
+    // 段标题只说渲染了多少 —— 一条没勾的。
+    expect(screen.getByTestId("mlist-others").textContent).toContain("1");
+  });
+
+  it("目录给不出总数时，只说是一批，不报数字", async () => {
+    // 【回退】qumge 还没上线新表头。宁可不报，也不报一个假的。
+    (gatewayModels as any).mockResolvedValueOnce({ models: GW });
+    renderList("qumge", { curated: [SOL] });
+
+    const note = await screen.findByTestId("gateway-partial");
+    expect(note.textContent).toContain("most-used batch");
+    // 一个数字都不能有 —— 报不出总数的时候，任何数字都会被读成总数。
+    expect(note.textContent).not.toMatch(/\d/);
+  });
+
+  it("筛选之后不再说「这是最常用的一批」", async () => {
+    // 筛完看到的是搜索结果，不是那一批。这句话在这一刻正好说反了。
+    renderList("qumge", { curated: [SOL] });
+    await screen.findByTestId("gateway-partial");
+
+    fireEvent.change(screen.getByTestId("gateway-search"), { target: { value: "anthropic" } });
+    expect(screen.queryByTestId("gateway-partial")).toBeNull();
+  });
+
   it("价格对【已选】的行也显示", async () => {
     // 原来价格只在"还没选"的那一半可见：选进来之后就看不到自己在花多少钱，而那
     // 恰恰是事后想复查时唯一想看的数字。

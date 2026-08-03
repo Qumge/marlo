@@ -64,6 +64,9 @@ export function ModelChecklist({
   const [gq, setGq] = useState("");
   const [gModels, setGModels] = useState<GatewayModel[]>([]);
   const [gErr, setGErr] = useState(false);
+  // 网关上一共有多少个能当 agent 用的模型 —— 【由目录给】，界面数不出来：
+  // list_models 一次最多给 60。目录给不出就是 null，文案退回不报总数的那版。
+  const [gTotal, setGTotal] = useState<number | null>(null);
 
   // qumge 是唯一一个我们能把模型清单【问出来】的 provider —— 也就只有它能把
   // 「已选」和「可选」合成一个列表。
@@ -77,6 +80,7 @@ export function ModelChecklist({
     gatewayModels("")
       .then((r) => {
         setGModels(r.models || []);
+        setGTotal(r.total ?? null);
         setGErr(!!r.error);
       })
       .catch(() => {
@@ -264,6 +268,17 @@ export function ModelChecklist({
             {t("gatewayOthers")(filtering ? shownOthers.length : others.length)}
           </div>
           <div className="mlist-others">{shownOthers.map(row)}</div>
+          {/* 【「这只是一部分」在这里说，不在标题里说】标题的职责是"渲染了多少就
+              说多少"。原来它写「Qumge 上还有 56 个」，而 56 是已加载的 60 条减去
+              已勾的 —— list_models 一次最多给 60，网关上远不止，那句话是假的。
+
+              【只在没筛选时出现】筛选后用户看到的是搜索结果，再说"这是最常用的
+              一批"就又错了一次。网关连不上时也不说 —— 那时该看的是 gErr 那句。 */}
+          {!filtering && !gErr && (
+            <div className="mlist-note" data-testid="gateway-partial">
+              {gTotal ? t("gatewayPartialOf")(gTotal) : t("gatewayPartial")}
+            </div>
+          )}
         </>
       )}
 
