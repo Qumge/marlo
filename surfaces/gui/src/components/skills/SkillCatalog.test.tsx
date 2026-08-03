@@ -52,6 +52,51 @@ afterEach(() => {
 });
 
 describe("技能目录", () => {
+  it("首屏在等目录回来时是骨架，不是空白", async () => {
+    // 挂载那次 run("") 要出网，实测 4.5 秒（超时上限 20 秒）。那段时间里 results
+    // 还是 null，而整个目录区包在 results !== null 里 —— 一个像素都不渲染。用户
+    // 看到的就是"什么也没有"。
+    let release: () => void = () => {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise((resolve) => {
+            release = () =>
+              resolve({
+                json: async () => ({
+                  results: [
+                    { name: "autowhisper", summary: "内容创作", slug: "x/y/aw", meta: "vetted by qumge" },
+                  ],
+                }),
+              });
+          }),
+      ),
+    );
+
+    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} onError={() => {}} />);
+
+    expect(await screen.findByTestId("skills-catalog-loading")).toBeTruthy();
+    expect(screen.queryByTestId("skills-results")).toBeNull();
+
+    release();
+
+    expect(await screen.findByTestId("skills-results")).toBeTruthy();
+    // 出了结果骨架必须走 —— 两个一起在，读起来像"还有一批没加载完"。
+    expect(screen.queryByTestId("skills-catalog-loading")).toBeNull();
+  });
+
+  it("目录连不上时骨架不残留，只剩错误条", async () => {
+    // catch 分支（SkillCatalog.tsx:81-83）只写 searchErr，results 永远停在 null。
+    // 骨架只看 null 的话，会在错误条底下一直转。
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("connection refused"); }));
+
+    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} onError={() => {}} />);
+
+    expect(await screen.findByTestId("skills-error")).toBeTruthy();
+    expect(screen.queryByTestId("skills-catalog-loading")).toBeNull();
+  });
+
   it("能搜目录，结果里带来源和「需要先连」", async () => {
     // owner 的判断：用户也要能自己看。一个东西你完全看不见里面有什么，是很难
     // 信任它的。
