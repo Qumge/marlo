@@ -647,13 +647,14 @@ def create_app(manager: SessionManager) -> FastAPI:
             return {"results": [], "error": str(exc)}
 
     @app.get("/v1/gateway/models")
-    def gateway_models(q: str = "") -> dict[str, Any]:
+    def gateway_models(q: str = "", limit: int = 30) -> dict[str, Any]:
         # 网关能路由到的模型。在这之前，想用 4 个精选之外的，用户得手打完整 id
         # —— 一个中小商家老板不知道有哪些模型，也不知道 id 长什么样。
+        # limit 可调：界面一次取全量（六十来条）在本地筛，不是每敲一次字打一次网关。
         from ..skills import qumge_catalog
 
         try:
-            return {"models": qumge_catalog.models(q)}
+            return {"models": qumge_catalog.models(q, limit=limit)}
         except Exception as exc:  # noqa: BLE001
             return {"models": [], "error": str(exc)}
 

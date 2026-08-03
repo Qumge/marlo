@@ -100,13 +100,20 @@ def test_search_of_nothing_is_not_a_network_call():
     assert r["results"] == [] and r["has_more"] is False
 
 
+# id 带厂商段（qumge:<vendor>/<model>）—— 那是网关的契约，缺了它网关会拒。
+# 头一条【故意】不带厂商前缀：真实目录里排第一的那条就是这样，而厂商名要能从
+# 别的行学出来补上它。
 MODELS_TEXT = """6 model(s) on the Qumge gateway, most used first.
 Use the full id (the `qumge:` line) as the model.
 
-  qumge:claude-opus-5
+  qumge:anthropic/claude-opus-5
     Claude Opus 5 · $5.00/$25.00 per Mtok · vision
-  qumge:gpt-5.6-sol
+  qumge:openai/gpt-5.6-sol
     OpenAI: GPT-5.6 Sol · $5.00/$30.00 per Mtok · vision
+  qumge:anthropic/claude-haiku-4.5
+    Anthropic: Claude Haiku 4.5 · $1.00/$5.00 per Mtok
+  qumge:x-ai/grok-4.5
+    xAI: Grok 4.5 · $2.00/$6.00 per Mtok · vision
 """
 
 
@@ -114,10 +121,51 @@ def test_models_returns_ids_that_can_be_used_verbatim():
     # 这条工具存在的全部理由就是省掉"手打完整 id"。少了 qumge: 前缀，用户抄过去
     # 是不能用的。
     r = q.models(client=_Fake(MODELS_TEXT))
-    assert [m["id"] for m in r] == ["qumge:claude-opus-5", "qumge:gpt-5.6-sol"]
+    assert [m["id"] for m in r][:2] == [
+        "qumge:anthropic/claude-opus-5",
+        "qumge:openai/gpt-5.6-sol",
+    ]
     assert all(m["id"].startswith("qumge:") for m in r)
     # 标签里要有价格 —— 一个要为 token 付钱的人，选之前得看得到。
     assert "$5.00" in r[0]["label"]
+
+
+def test_models_splits_the_label_into_columns():
+    """界面要把名字、厂商、价格排成不同的列，不能让每个调用方自己去拆那一串。"""
+    r = {m["id"]: m for m in q.models(client=_Fake(MODELS_TEXT))}
+
+    sol = r["qumge:openai/gpt-5.6-sol"]
+    # 厂商前缀从名字里摘掉了 —— 它单独成一列。
+    assert sol["name"] == "GPT-5.6 Sol"
+    assert sol["vendor"] == "OpenAI"
+    assert sol["price"] == "$5.00/$30.00 per Mtok"
+    assert sol["vision"] is True
+
+    # 【厂商靠 id 段认，不靠 label 的冒号】这一条 label 里压根没有厂商前缀
+    # （真实目录里排第一的那条就是这样），厂商得从别的 anthropic 行学出来 ——
+    # 而且要显示成 "Anthropic" 而不是把 slug 首字母大写。
+    opus = r["qumge:anthropic/claude-opus-5"]
+    assert opus["name"] == "Claude Opus 5"
+    assert opus["vendor"] == "Anthropic"
+
+    # 首字母大写救不了这些：openai -> OpenAI、x-ai -> xAI。
+    assert r["qumge:x-ai/grok-4.5"]["vendor"] == "xAI"
+    assert r["qumge:x-ai/grok-4.5"]["name"] == "Grok 4.5"
+
+    # 【没有 vision 那一段时价格不能错位】靠位置取第 2 段的话，这一条会把
+    # 价格取对但 vision 认成 True；靠 $ 认才稳。
+    haiku = r["qumge:anthropic/claude-haiku-4.5"]
+    assert haiku["price"] == "$1.00/$5.00 per Mtok"
+    assert haiku["vision"] is False
+
+
+def test_models_does_not_mistake_a_colon_in_the_name_for_a_vendor():
+    """【否定对照】靠"出现了冒号"来拆的话，这一条会被读成厂商 GPT-5、名字 Turbo。"""
+    r = q.models(client=_Fake(
+        "1 model\n\n  qumge:openai/gpt-5-turbo\n    GPT-5: Turbo · $1.00/$2.00 per Mtok\n"
+    ))
+    assert r[0]["name"] == "GPT-5: Turbo"
+    assert r[0]["vendor"] == "openai"   # 学不到好看的写法就退回 slug，但绝不瞎拆
 
 
 def test_models_survives_a_catalog_that_says_nothing():

@@ -756,9 +756,16 @@ export const en = {
   validating: "Validating…",
   searchPlaceholder: "Search",
 
-  gatewayBrowse: "Browse Qumge models",
   gatewaySearch: "Filter by name or vendor…",
-  gatewayHint: "One key, every model below. Add the ones you want in the picker.",
+  // 已选和可选是【同一个列表的两段】，不是两份清单。段标题带上条数，因为"我选了
+  // 几个"和"还能选多少"正是这一屏要回答的两个问题。
+  gatewaySelected: (n: number) => `In your picker · ${n}`,
+  gatewayOthers: (n: number) => `${n} more on Qumge`,
+  gatewayVision: "vision",
+  gatewayNoMatch: "No model matches that.",
+  // 网关列不出来时，已选那一段仍然在（它来自本地设置）—— 这句话要说清楚哪一半
+  // 还能用，否则用户看到半屏空白只会以为整页坏了。
+  gatewayOffline: "Can't reach Qumge to list the rest right now. The models you've already picked still work.",
   gatewayAdd: "Add",
   gatewayAdded: "Added",
 

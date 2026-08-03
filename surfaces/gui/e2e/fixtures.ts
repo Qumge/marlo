@@ -26,7 +26,16 @@ const HEALTH = { status: "ok", default_workspace: null, model: "anthropic:claude
 const SETTINGS = {
   provider: "openai",
   model: "anthropic:claude-opus-4-8",
-  models: ["anthropic:claude-opus-4-8", "gpt-5.5", "gpt-4o", "gpt-4o-mini", "o3-mini"],
+  // qumge:… 那条是给「模型」页的合并列表用的：它要有一条【已选】的，否则那一段
+  // 空着，e2e 只能证明"其余"那一半渲染了。
+  models: [
+    "anthropic:claude-opus-4-8",
+    "gpt-5.5",
+    "gpt-4o",
+    "gpt-4o-mini",
+    "o3-mini",
+    "qumge:openai/gpt-5.6-sol",
+  ],
   has_key: true,
   model_ready: true,
   source: "store",
@@ -361,6 +370,9 @@ const PROVIDERS = [
   // ollama: keyless local provider — "configured" without proving anything runs; the
   // onboarding gallery shows "No key needed" and its form is endpoint + Detect (§39).
   { name: "ollama", title: "Ollama (local models)", needs_key: false, fields: [{ key: "base_url", label: "Endpoint", secret: false, required: false, help: "", placeholder: "http://127.0.0.1:11434", default: "http://127.0.0.1:11434" }], configured: true, values: {}, suggested_models: ["qwen3-coder:30b"], key_set_at: null, last_used_at: null },
+  // qumge: 网关 —— 唯一一个我们能把模型清单【问出来】的 provider，也就只有它的
+  // 模型页是"已选 + 其余"合成的一个列表（别的只有一份静态勾选清单 + 手打行）。
+  { name: "qumge", title: "Qumge", needs_key: true, blurb: "Uses Qumge's OpenAI-compatible API — the endpoint is prefilled, just add your key.", fields: [{ key: "api_key", label: "Qumge API key", secret: true, required: true, help: "", placeholder: "" }], configured: true, values: {}, suggested_models: ["openai/gpt-5.6-sol"], key_set_at: "2026-07-01", last_used_at: null },
 ];
 
 /** Install the API + WebSocket mocks on a page. Returns handles for assertions/seed data. */
@@ -905,6 +917,20 @@ export async function mockApi(page: import("@playwright/test").Page) {
         skills: skills
           .filter((s) => s.enabled)
           .map((s) => ({ name: s.name, description: s.description, scope: s.scope, enabled: true })),
+      });
+    }
+    if (p.endsWith("/v1/gateway/models")) {
+      // 后端把 label 拆成了字段（qumge_catalog.models）。没有这个分支的话请求会落
+      // 到最后的 json({})，「其余」那一段渲染成空 —— 于是"两份列表合成了一份"那条
+      // e2e 只能证明筛选框挂上了，证不到主张本身。
+      // gpt-5.6-sol 【故意】和 SETTINGS.models 里那条重合：它要出现在【已选】那一段，
+      // 而不是在"其余"里再出现一次 —— 同一个模型在一个列表里露两次正是要修的问题。
+      return json({
+        models: [
+          { id: "qumge:openai/gpt-5.6-sol", name: "GPT-5.6 Sol", vendor: "OpenAI", price: "$5.00/$30.00 per Mtok", vision: true, label: "OpenAI: GPT-5.6 Sol · $5.00/$30.00 per Mtok · vision" },
+          { id: "qumge:anthropic/claude-opus-5", name: "Claude Opus 5", vendor: "Anthropic", price: "$5.00/$25.00 per Mtok", vision: true, label: "Claude Opus 5 · $5.00/$25.00 per Mtok · vision" },
+          { id: "qumge:x-ai/grok-4.5", name: "Grok 4.5", vendor: "xAI", price: "$2.00/$6.00 per Mtok", vision: true, label: "xAI: Grok 4.5 · $2.00/$6.00 per Mtok · vision" },
+        ],
       });
     }
     if (p.endsWith("/v1/skills/search")) {

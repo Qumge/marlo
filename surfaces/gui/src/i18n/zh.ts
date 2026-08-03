@@ -708,9 +708,12 @@ export const zh: Strings = {
   validating: "验证中…",
   searchPlaceholder: "搜索",
 
-  gatewayBrowse: "浏览 Qumge 的模型",
   gatewaySearch: "按名字或厂商筛选…",
-  gatewayHint: "一个 key，下面每个都能用。把你想要的加进选择器。",
+  gatewaySelected: (n) => `已加进选择器 · ${n}`,
+  gatewayOthers: (n) => `Qumge 上还有 ${n} 个`,
+  gatewayVision: "能看图",
+  gatewayNoMatch: "没有匹配的模型。",
+  gatewayOffline: "暂时连不上 Qumge，列不出其它模型。你已经选好的仍然能用。",
   gatewayAdd: "加入",
   gatewayAdded: "已加入",
 

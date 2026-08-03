@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   addModel,
   gatewayModels,
@@ -30,8 +30,18 @@ const MODEL_FAMILIES: Record<string, { value: string; label: keyof Strings }[]> 
 
 // One provider's models as a checklist: tick = shown in the composer's model picker (the
 // curated list), the black "default" badge marks the model new sessions use, and hovering any
-// other row reveals "Make default". A free-type row below adds models by hand, so brand-new
-// releases work without an app update. Shared by Onboarding and Manage → Configure Models.
+// other row reveals "Make default". Shared by Onboarding and Manage → Configure Models.
+//
+// 【qumge 是一个列表，别的 provider 是另一种形状】
+// 这一屏原来有两份列表在讲同一件事：上面是 matrix.py 硬编码的四条精选（勾选框），
+// 下面是折叠面板里网关实时的六十条超集（「加入」链接）。同一个模型在两处长得不一样、
+// 用两套控件、语义还不对称 —— 勾选可以撤销，「已加入」不能，要撤得滚回上面那份去找。
+// 而且价格只在【还没选】的那一半可见：选进来之后就看不到自己在花多少钱，恰恰是事后
+// 想复查时唯一想看的数字。两份之间也没有任何东西在对账，结果就是硬编码那份漂掉了
+// （claude-opus-4-6 在网关上根本不存在，而它默认勾着）。
+//
+// 现在是一个列表、一种控件：已选的排在上面，其余的排在下面，勾和撤是同一个动作的
+// 正反面。别的 provider 我们问不到模型清单，保持原样（静态勾选清单 + 手打行）。
 export function ModelChecklist({
   provider,
   knownProviders,
@@ -51,22 +61,32 @@ export function ModelChecklist({
 }) {
   const t = useT();
   const [draft, setDraft] = useState("");
-  const [browsing, setBrowsing] = useState(false);
   const [gq, setGq] = useState("");
   const [gModels, setGModels] = useState<GatewayModel[]>([]);
+  const [gErr, setGErr] = useState(false);
 
-  // 打开时取一次，输入时防抖再取。关着的时候不发请求 —— 这条要出网。
+  // qumge 是唯一一个我们能把模型清单【问出来】的 provider —— 也就只有它能把
+  // 「已选」和「可选」合成一个列表。
+  const isGateway = provider === "qumge";
+
+  // 【一次取全量，在本地筛】网关上是六十来条，一次拿回来毫无压力。按 gq 去服务端
+  // 筛的话有两个代价：每敲一次字要出网；而且【已选】那一段的价格也是从这份清单里
+  // 来的，筛掉之后那几行的价格会跟着闪没。
   useEffect(() => {
-    if (!browsing) return;
-    const h = setTimeout(() => {
-      gatewayModels(gq.trim()).then((r) => setGModels(r.models || [])).catch(() => setGModels([]));
-    }, gq.trim() ? 400 : 0);
-    return () => clearTimeout(h);
-  }, [browsing, gq]);
+    if (!isGateway) return;
+    gatewayModels("")
+      .then((r) => {
+        setGModels(r.models || []);
+        setGErr(!!r.error);
+      })
+      .catch(() => {
+        setGModels([]);
+        setGErr(true);
+      });
+  }, [isGateway]);
 
   // 上游 0.1.7 加的 family 下拉：Bedrock/Vertex 的同一个 provider 下挂着不同
-  // 模型家族（Anthropic / Nova / Nemotron…），加模型时要先选家族。和上面那个
-  // 网关浏览器互不相干 —— 两边都留。
+  // 模型家族（Anthropic / Nova / Nemotron…），加模型时要先选家族。
   const families = MODEL_FAMILIES[provider];
   const [family, setFamily] = useState(families?.[0]?.value || "");
 
@@ -111,111 +131,145 @@ export function ModelChecklist({
     }
   };
 
+  const gwById = useMemo(() => new Map(gModels.map((m) => [m.id, m])), [gModels]);
+
+  const nameOf = (id: string) => gwById.get(id)?.name || labels?.[id] || bare(id);
+  const metaOf = (id: string) => {
+    const g = gwById.get(id);
+    if (!g) return "";
+    return [g.vendor, g.price, g.vision ? t("gatewayVision") : ""].filter(Boolean).join(" · ");
+  };
+  const matches = (id: string) => {
+    const q = gq.trim().toLowerCase();
+    if (!q) return true;
+    return `${nameOf(id)} ${metaOf(id)} ${id}`.toLowerCase().includes(q);
+  };
+
+  // 【已选来自本地设置，可选来自网关】合成一个列表，但两个来源的可用性不一样：
+  // 网关连不上时，用户仍然要能取消勾选、换默认，所以已选那一段绝不能依赖网络。
+  const selected = rows.filter(checked);
+  const others = isGateway
+    ? [
+        ...rows.filter((id) => !checked(id)),
+        ...gModels.map((m) => m.id).filter((id) => !rows.includes(id)),
+      ]
+    : [];
+
+  // 勾选时【不】立即重排：行留在原地，等下次进入或筛选变化时才归位。点一下就把
+  // 脚下的地抽走，是这类列表最容易犯的错。
+  const row = (id: string) => {
+    const isDefault = id === defaultModel;
+    const meta = metaOf(id);
+    return (
+      <div className={"mlist-row" + (checked(id) ? "" : " off")} key={id} data-testid={`mrow-${id}`}>
+        <label className="mlist-main">
+          <input
+            type="checkbox"
+            checked={checked(id)}
+            disabled={isDefault}
+            title={isDefault ? t("mtDefaultAlwaysShown") : undefined}
+            onChange={(e) => tick(id, e.target.checked)}
+            data-testid={`mcheck-${id}`}
+          />
+          <span className="mlist-text">
+            <span className="mlist-name" title={id}>
+              {nameOf(id)}
+            </span>
+            {meta && <span className="mlist-meta">{meta}</span>}
+          </span>
+        </label>
+        {isDefault ? (
+          <span className="mlist-default">default</span>
+        ) : (
+          <button className="mlist-make" onClick={() => makeDefault(id)}>
+            {t("mtMakeDefault")}
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  if (!isGateway) {
+    return (
+      <div className="mlist">
+        {rows.map(row)}
+        <div className="mlist-add">
+          {families && (
+            <select
+              value={family}
+              onChange={(e) => setFamily(e.target.value)}
+              aria-label={t("mcModelFamily")}
+              data-testid="mlist-family"
+            >
+              {families.map((f) => (
+                <option key={f.value} value={f.value}>
+                  {t(f.label) as string}
+                </option>
+              ))}
+            </select>
+          )}
+          {/* 别的 provider 我们问不到模型清单，手打是唯一的路 —— 也是新模型发布
+              当天不用等我们发版的那条路。qumge 不需要它：整份清单就在下面。 */}
+          <input
+            placeholder={t("uiAddAnotherModel")}
+            value={draft}
+            spellCheck={false}
+            autoComplete="off"
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && add()}
+          />
+          <button className="btn-primary sm" onClick={add} disabled={!draft.trim()}>
+            {t("uiAdd")}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const filtering = !!gq.trim();
+  const shownSelected = selected.filter(matches);
+  const shownOthers = others.filter(matches);
+
   return (
     <div className="mlist">
-      {rows.map((id) => {
-        const isDefault = id === defaultModel;
-        return (
-          <div className={"mlist-row" + (checked(id) ? "" : " off")} key={id}>
-            <label className="mlist-main">
-              <input
-                type="checkbox"
-                checked={checked(id)}
-                disabled={isDefault}
-                title={isDefault ? t("mtDefaultAlwaysShown") : undefined}
-                onChange={(e) => tick(id, e.target.checked)}
-              />
-              <span className="mlist-name" title={id}>
-                {labels?.[id] || bare(id)}
-              </span>
-            </label>
-            {isDefault ? (
-              <span className="mlist-default">default</span>
-            ) : (
-              <button className="mlist-make" onClick={() => makeDefault(id)}>
-                {t("mtMakeDefault")}
-              </button>
-            )}
+      <input
+        className="mlist-filter"
+        placeholder={t("gatewaySearch")}
+        value={gq}
+        spellCheck={false}
+        autoComplete="off"
+        onChange={(e) => setGq(e.target.value)}
+        data-testid="gateway-search"
+      />
+
+      {/* 【筛选时空段整段不渲染】否则会留下一个"已加进选择器 · 1"底下一条都没有的
+          孤儿标题 —— 那个 1 说的是总数，读起来却像"这里应该有一条但它不见了"。
+          而没筛选时【要】显示 0：那时它说的是"你的选择器是空的"，是有用的信息。 */}
+      {(!filtering || shownSelected.length > 0) && (
+        <>
+          <div className="mlist-sec" data-testid="mlist-selected">
+            {t("gatewaySelected")(filtering ? shownSelected.length : selected.length)}
           </div>
-        );
-      })}
-      {/* Qumge 是【网关】：一个 key 后面有 244 个能跑 agent 的模型，而这份清单
-          里只有 4 个精选的。在这之前想用别的，用户得手打完整 id
-          （qumge:google/gemini-2.5-pro）——一个中小商家老板不知道有哪些模型，
-          也不知道 id 长什么样，等于没有这条路。
-          只对 qumge 显示：别的 provider 我们问不到它的模型清单。 */}
-      {provider === "qumge" && (
-        <div className="mt-3">
-          <button
-            className="text-[12.5px] text-accent hover:underline"
-            onClick={() => setBrowsing((v) => !v)}
-            data-testid="gateway-browse"
-          >
-            {t("gatewayBrowse")}
-          </button>
-          {browsing && (
-            <div className="mt-2 rounded-xl border border-line p-3">
-              <div className="text-[11.5px] text-faint mb-2">{t("gatewayHint")}</div>
-              <input
-                className="w-full px-3 py-1.5 mb-2 rounded-full border border-line bg-panel text-[13px] outline-none focus:border-accent"
-                placeholder={t("gatewaySearch")}
-                value={gq}
-                onChange={(e) => setGq(e.target.value)}
-                data-testid="gateway-search"
-              />
-              <div className="max-h-64 overflow-y-auto">
-                {gModels.map((m) => (
-                  <div key={m.id} className="flex items-center gap-2 py-1.5" data-testid={`gw-${m.id}`}>
-                    <span className="min-w-0 flex-1 text-[12.5px] truncate">{m.label}</span>
-                    {curated.includes(m.id) ? (
-                      <span className="text-[11.5px] text-faint shrink-0">{t("gatewayAdded")}</span>
-                    ) : (
-                      <button
-                        className="shrink-0 text-[12px] text-accent hover:underline"
-                        onClick={async () => {
-                          await addModel(m.id);
-                          await refresh();
-                        }}
-                        data-testid={`gw-add-${m.id}`}
-                      >
-                        {t("gatewayAdd")}
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+          {shownSelected.map(row)}
+        </>
       )}
 
-      <div className="mlist-add">
-        {families && (
-          <select
-            value={family}
-            onChange={(e) => setFamily(e.target.value)}
-            aria-label={t("mcModelFamily")}
-            data-testid="mlist-family"
-          >
-            {families.map((f) => (
-              <option key={f.value} value={f.value}>
-                {t(f.label) as string}
-              </option>
-            ))}
-          </select>
-        )}
-        <input
-          placeholder={t("uiAddAnotherModel")}
-          value={draft}
-          spellCheck={false}
-          autoComplete="off"
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && add()}
-        />
-        <button className="btn-primary sm" onClick={add} disabled={!draft.trim()}>
-          {t("uiAdd")}
-        </button>
-      </div>
+      {/* 离线提示【不能】挂在"其余"那一段里：网关挂了那段就是空的，一旦用户还在
+          筛选，整段被隐藏，最该看到的那句话就跟着没了。 */}
+      {gErr && <div className="mlist-note" data-testid="gateway-offline">{t("gatewayOffline")}</div>}
+
+      {(!filtering || shownOthers.length > 0) && (
+        <>
+          <div className="mlist-sec" data-testid="mlist-others">
+            {t("gatewayOthers")(filtering ? shownOthers.length : others.length)}
+          </div>
+          <div className="mlist-others">{shownOthers.map(row)}</div>
+        </>
+      )}
+
+      {filtering && !shownSelected.length && !shownOthers.length && (
+        <div className="mlist-note" data-testid="gateway-nomatch">{t("gatewayNoMatch")}</div>
+      )}
     </div>
   );
 }
