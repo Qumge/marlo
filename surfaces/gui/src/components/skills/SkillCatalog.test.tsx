@@ -34,6 +34,17 @@ const serve = (results: any[] = [], opts: any = {}) =>
     }),
   );
 
+// 打出去的每一个 URL。搜索改成显式提交之后，"有没有真的出网"本身就是被测的行为。
+const calls = () => (globalThis.fetch as any).mock.calls.map((c: any[]) => String(c[0]));
+const searched = (q: string) =>
+  calls().filter((u: string) => u.includes(`/v1/skills/search?q=${encodeURIComponent(q)}&`));
+
+// 敲字 + 点「搜索」。分开写是因为这两件事现在【真的是两件事】。
+const submit = (q: string) => {
+  fireEvent.change(screen.getByTestId("skills-search"), { target: { value: q } });
+  fireEvent.click(screen.getByTestId("skills-search-go"));
+};
+
 beforeEach(() => setLocale("zh"));
 afterEach(() => {
   cleanup();
@@ -49,11 +60,43 @@ describe("技能目录", () => {
         meta: "vetted by qumge · first-party", needs: "autowhisper" },
     ]);
     render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} onError={() => {}} />);
-    fireEvent.change(screen.getByTestId("skills-search"), { target: { value: "视频" } });
     await waitFor(() => expect(screen.getByTestId("catalog-autowhisper")).toBeTruthy(), { timeout: 2000 });
+    submit("视频");
+    await waitFor(() => expect(searched("视频").length).toBe(1));
     expect(screen.getByText(/vetted by qumge/)).toBeTruthy();
     // 装之前就说清楚它要账号 —— 装完才发现连不上是最差的顺序。
     expect(screen.getByText(/需要先连/)).toBeTruthy();
+  });
+
+  it("敲字【不】等于搜索 —— 要点了「搜索」才出网", async () => {
+    // 【否定对照】原来是敲字 400ms 防抖自动搜。这条路要出网，每敲一个字打一次
+    // 目录既慢又白费，而"我什么时候真的搜了"在自动搜里是看不见的。
+    serve([{ name: "a", summary: "s", slug: "o/r/a", meta: "m", needs: "", group: "g" }]);
+    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} onError={() => {}} />);
+    await waitFor(() => expect(screen.getByTestId("catalog-a")).toBeTruthy(), { timeout: 2000 });
+
+    fireEvent.change(screen.getByTestId("skills-search"), { target: { value: "视频" } });
+    // 比原来那个 400ms 防抖长：如果防抖还在，这里已经打出去了。
+    await new Promise((r) => setTimeout(r, 600));
+    expect(searched("视频")).toEqual([]);
+
+    fireEvent.click(screen.getByTestId("skills-search-go"));
+    await waitFor(() => expect(searched("视频").length).toBe(1));
+  });
+
+  it("「重置」清空输入框，并把默认的浏览列表放回来", async () => {
+    // 重置【不是】"清空输入框"的同义词：删字只是把 q 变空，不会重新去要一次，
+    // 那份默认列表光靠删字回不去。
+    serve([{ name: "a", summary: "s", slug: "o/r/a", meta: "m", needs: "", group: "g" }]);
+    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} onError={() => {}} />);
+    await waitFor(() => expect(screen.getByTestId("catalog-a")).toBeTruthy(), { timeout: 2000 });
+    submit("视频");
+    await waitFor(() => expect(searched("视频").length).toBe(1));
+
+    fireEvent.click(screen.getByTestId("skills-reset"));
+    expect((screen.getByTestId("skills-search") as HTMLInputElement).value).toBe("");
+    // 首屏那次 + 重置这次 = 2。只清框不重搜的话这里停在 1。
+    await waitFor(() => expect(searched("").length).toBe(2));
   });
 
   it("已经装了的不再显示「添加」", async () => {
@@ -61,7 +104,6 @@ describe("技能目录", () => {
       [{ name: "autowhisper", summary: "s", slug: "x/y/autowhisper", meta: "m", needs: "" }],
     );
     render(<SkillCatalog installedNames={new Set(["autowhisper"])} onInstalled={() => {}} onError={() => {}} />);
-    fireEvent.change(screen.getByTestId("skills-search"), { target: { value: "auto" } });
     await waitFor(() => expect(screen.getByTestId("catalog-autowhisper")).toBeTruthy(), { timeout: 2000 });
     expect(screen.queryByTestId("install-autowhisper")).toBeNull();
   });
@@ -70,10 +112,58 @@ describe("技能目录", () => {
     const installed: string[] = [];
     serve([{ name: "a", summary: "s", slug: "o/r/a", meta: "m", needs: "" }], { installed });
     render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} onError={() => {}} />);
-    fireEvent.change(screen.getByTestId("skills-search"), { target: { value: "a" } });
     await waitFor(() => expect(screen.getByTestId("install-a")).toBeTruthy(), { timeout: 2000 });
     fireEvent.click(screen.getByTestId("install-a"));
     await waitFor(() => expect(installed).toEqual(["o/r/a"]));
+  });
+
+  it("分类是【页签】，名字译成中文，点一个只剩那一类", async () => {
+    // 浏览一次回来 30 条、横跨七八个分类。堆叠成一节一节的话，想看某一类得先滚过
+    // 前面所有类。
+    // meta 用【真实形状】——「category: <slug> · N stars on owner/repo」。写成 "m"
+    // 的话，条目里那处分类名根本没被测到（第一版就是这样，靠截图才发现漏了）。
+    serve([
+      { name: "a", summary: "s", slug: "o/r/a", needs: "", group: "content-writing",
+        meta: "category: content-writing · 312 stars on GitHub" },
+      { name: "b", summary: "s", slug: "o/r/b", needs: "", group: "personal-productivity",
+        meta: "category: personal-productivity · 99 stars on GitHub" },
+    ]);
+    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} onError={() => {}} />);
+    await waitFor(() => expect(screen.getByTestId("skills-tabs")).toBeTruthy(), { timeout: 2000 });
+
+    // content-writing 是 qumge 内部的写法，中文界面上不该出现它 —— 页签上不该，
+    // 条目自己的 meta 里【也】不该。只译一处的话，同一个词在同一屏上有两种写法，
+    // 看起来像两个不同的东西，比两处都不译更糟。
+    expect(screen.getByTestId("skills-tab-content-writing").textContent).toContain("写内容");
+    expect(screen.getByTestId("catalog-a").textContent).toContain("写内容 · 312 stars on GitHub");
+    expect(screen.queryByText(/content-writing/)).toBeNull();
+    expect(screen.queryByText(/category:/)).toBeNull();
+    // 条数写在页签上：过滤的是【已经加载的这批】，不是目录里那一整个分类。
+    expect(screen.getByTestId("skills-tab-all").textContent).toContain("全部 · 2");
+
+    expect(screen.getByTestId("catalog-a")).toBeTruthy();
+    expect(screen.getByTestId("catalog-b")).toBeTruthy();
+    fireEvent.click(screen.getByTestId("skills-tab-content-writing"));
+    expect(screen.getByTestId("catalog-a")).toBeTruthy();
+    expect(screen.queryByTestId("catalog-b")).toBeNull();
+  });
+
+  it("重新搜一次会退回「全部」页签", async () => {
+    // 结果整批换掉了，旧页签多半不在新结果里 —— 停在它上面就是一屏空白，而用户
+    // 会读成"没搜到"。
+    serve([{ name: "a", summary: "s", slug: "o/r/a", meta: "m", needs: "", group: "content-writing" }]);
+    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} onError={() => {}} />);
+    await waitFor(() => expect(screen.getByTestId("skills-tab-content-writing")).toBeTruthy(), { timeout: 2000 });
+    fireEvent.click(screen.getByTestId("skills-tab-content-writing"));
+
+    // 选中一个页签时不渲染分节标题 —— 页签自己就是那个标题。
+    expect(screen.queryByTestId("skills-group-content-writing")).toBeNull();
+
+    submit("视频");
+    await waitFor(() => expect(searched("视频").length).toBe(1));
+    // 标题回来了，就是"退回了全部"。
+    await waitFor(() =>
+      expect(screen.getByTestId("skills-group-content-writing")).toBeTruthy());
   });
 
   it("安装失败走页面级错误条，不挂在「连不上目录：」下面", async () => {

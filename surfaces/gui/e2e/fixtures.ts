@@ -928,9 +928,11 @@ export async function mockApi(page: import("@playwright/test").Page) {
             name: "meeting-notes",
             summary: "Turn a raw transcript into decisions and owners.",
             slug: "acme/skills/meeting-notes",
-            meta: "category: productivity · 312 stars on GitHub",
+            meta: "category: personal-productivity · 312 stars on GitHub",
             needs: "Google Calendar",
-            group: "productivity",
+            // 用【真的】分类 slug：页签名字要经过译名表，写一个表里没有的假分类
+            // 等于永远在测那条兜底分支。
+            group: "personal-productivity",
           },
         ],
         has_more: false,
