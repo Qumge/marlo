@@ -163,13 +163,72 @@ def search(
 _MODEL = re.compile(r"^\s*(qumge:\S+)\s*\n\s*(.+?)\s*$", re.MULTILINE)
 
 
-def models(query: str = "", *, limit: int = 30, client: Optional[httpx.Client] = None) -> list[dict[str, str]]:
-    """返回 [{id, label}]。id 是可以直接用的完整模型 id。"""
+def _norm(s: str) -> str:
+    """抹掉大小写和标点，用来比对"这段文字是不是那个厂商的名字"。
+
+    OpenAI/openai、xAI/x-ai、Z.ai/z-ai —— 三种写法都要认成同一个。
+    """
+    return re.sub(r"[^a-z0-9]", "", s.lower())
+
+
+def _vendor_slug(model_id: str) -> str:
+    """qumge:anthropic/claude-opus-4.6 -> anthropic。
+
+    厂商从 **id** 里取，不从 label 里取：id 的形状是网关自己的契约（它的说明里
+    写着"qumge: 后面是 provider/model，缺了 provider 就拒绝"），而 label 的厂商
+    前缀时有时无 —— 排在第一的那条就没有。
+    """
+    tail = model_id.split(":", 1)[1] if ":" in model_id else model_id
+    return tail.split("/", 1)[0] if "/" in tail else ""
+
+
+def models(query: str = "", *, limit: int = 30, client: Optional[httpx.Client] = None) -> list[dict[str, Any]]:
+    """返回 [{id, name, vendor, price, vision, label}]。
+
+    id 是可以直接用的完整模型 id；其余几个是把 label 那一整串拆开的结果。
+
+    【为什么拆】界面要把它们排成不同的列：名字是主角，厂商和价格是次要信息。
+    糊成一个字符串的话，每个调用方都得自己再拆一遍,而拆法散在各处必然会漂。
+    label 原样留着当兜底，也让老调用方不至于一改就断。
+    """
     args: dict[str, Any] = {"limit": limit}
     if query.strip():
         args["query"] = query.strip()
     text = _call("list_models", args, client=client)
-    return [{"id": m.group(1), "label": m.group(2)} for m in _MODEL.finditer(text)]
+    rows = [(m.group(1), m.group(2)) for m in _MODEL.finditer(text)]
+
+    # slug -> 好看的厂商名，从这一批 label 自己学出来。把 slug 首字母大写会得到
+    # "Openai"、"X-ai"、"Z-ai"，而目录里写的是 OpenAI / xAI / Z.ai。学出来的表
+    # 还能补上目录漏掉前缀的那几条，并且 qumge 以后加新厂商时不用我们跟着改表。
+    vendors: dict[str, str] = {}
+    for mid, label in rows:
+        head = label.split(" · ", 1)[0]
+        slug = _vendor_slug(mid)
+        if slug and ": " in head:
+            pre = head.split(": ", 1)[0].strip()
+            # 【只认对得上 id 的那一段】靠"出现了冒号"来判断的话，一个叫
+            # "GPT-5: Turbo" 的模型会被拆成厂商 GPT-5、名字 Turbo。
+            if _norm(pre) == _norm(slug):
+                vendors.setdefault(slug, pre)
+
+    out: list[dict[str, Any]] = []
+    for mid, label in rows:
+        slug = _vendor_slug(mid)
+        parts = [p.strip() for p in label.split(" · ")]
+        name = parts[0]
+        if ": " in name and _norm(name.split(": ", 1)[0]) == _norm(slug):
+            name = name.split(": ", 1)[1].strip()
+        out.append({
+            "id": mid,
+            "name": name,
+            "vendor": vendors.get(slug, slug),
+            # 价格靠 $ 认，不靠位置：没有 vision 那一段的模型（60 条里有 13 条）
+            # 位置就错了一位，而错位的结果是把 "vision" 当成价格显示出去。
+            "price": next((p for p in parts[1:] if p.startswith("$")), ""),
+            "vision": "vision" in parts,
+            "label": label,
+        })
+    return out
 
 
 def detail(slug: str, *, client: Optional[httpx.Client] = None) -> str:

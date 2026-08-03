@@ -71,6 +71,46 @@ test("Models: provider gallery states; vendor form previews models", async ({ pa
   await expect(page.getByTestId("set-provider-openai")).toBeVisible();
 });
 
+// 【模型页：一个列表，不是两份】
+// 这一页原来有两份列表在讲同一件事：上面是硬编码的精选（勾选框），下面折叠着网关
+// 实时的超集（「加入」链接）。同一个模型两处两种长相、两套控件，而且语义不对称 ——
+// 勾选能撤，「加入」不能。这条盯着合并之后的三件事：已选和其余在同一个列表里、
+// 用的是同一种控件、价格对已选那一段也可见。
+test("Models: qumge 的已选和其余是同一个列表，价格对已选也可见", async ({ page }) => {
+  await page.goto("/");
+  await page.getByTestId("account-row").click();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("button", { name: "Models", exact: true }).click();
+  await page.getByTestId("set-provider-qumge").click();
+
+  const sol = page.getByTestId("mrow-qumge:openai/gpt-5.6-sol");
+  const opus = page.getByTestId("mrow-qumge:anthropic/claude-opus-5");
+
+  // 已选那一条来自本地设置，其余的来自网关 —— 但它们在同一个列表里，长得一样。
+  await expect(sol).toBeVisible();
+  await expect(opus).toBeVisible();
+  await expect(page.getByTestId("mcheck-qumge:openai/gpt-5.6-sol")).toBeChecked();
+  await expect(page.getByTestId("mcheck-qumge:anthropic/claude-opus-5")).not.toBeChecked();
+
+  // 价格对【已选】的行也显示：选进来之后看不到自己在花多少钱，恰恰是事后想复查
+  // 时唯一想看的数字。
+  await expect(sol).toContainText("$5.00/$30.00 per Mtok");
+  await expect(sol).toContainText("OpenAI");
+  // 厂商是单独一列，不能同时糊在名字里。
+  await expect(sol).not.toContainText("OpenAI: GPT-5.6 Sol");
+
+  // 同一个模型不会在一个列表里露两次（gpt-5.6-sol 两个来源都有）。
+  await expect(page.getByTestId("mrow-qumge:openai/gpt-5.6-sol")).toHaveCount(1);
+
+  // 筛选同时作用于两段。
+  await page.getByTestId("gateway-search").fill("anthropic");
+  await expect(opus).toBeVisible();
+  await expect(sol).toHaveCount(0);
+
+  // 手打框没了 —— 那份清单就是入口，随手敲两个字符不该能变成清单里的一行。
+  await expect(page.getByPlaceholder("Add another model…")).toHaveCount(0);
+});
+
 // UX-021: a configured provider's form shows the in-field saved state and the Remove key…
 // affordance; removing reverts the card to "Not set up".
 test("Models: Remove key reverts a configured provider", async ({ page }) => {

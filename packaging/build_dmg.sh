@@ -86,10 +86,15 @@ fi
 # signs and notarises cleanly, then aborts the app inside did_finish_launching before
 # any window exists. 0.2.0 shipped that way. Runs before the 4-minute Rust build so
 # the failure is immediate.
-echo "==> [0/5] checking bundled icons and product name"
+echo "==> [0/5] checking bundled icons, product name and model ids"
 python3 "$HERE/check_icons.py"
 python3 "$HERE/check_branding.py"
 python3 "$HERE/check_i18n.py"
+# 走 venv 的 python，不是系统的：上面三个是纯标准库，这一个要 import coworker 和
+# httpx。发版是最该知道"我们写死的模型 id 还有效吗"的时刻 —— 一个漂掉的 id 会以
+# "选择器里点下去被网关拒"的形式落到每一个用户手上。
+# 连不上 qumge 时它退出 0，所以网络问题不会挡住发版。
+"$PLATFORM/.venv/bin/python" "$HERE/check_model_matrix.py"
 
 echo "==> [1/5] PyInstaller: bundling openworker-server ($TRIPLE)"
 "$PLATFORM/.venv/bin/pyinstaller" --noconfirm --clean \

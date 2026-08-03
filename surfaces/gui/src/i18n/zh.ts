@@ -1,5 +1,28 @@
 import type { Strings } from "./en";
 
+// 目录的分类。slug（marketing-growth 这种）是 qumge 内部的写法，中文界面上直接
+// 显示它等于把实现细节摊给用户看。译名按【用户想干的事】说，不按开发术语说：
+// devops-security 是「运维与安全」不是「DevOps」，ai-agent-dev 才保留 AI ——
+// 那个词中文用户本来就这么说。
+const ZH_CATEGORY: Record<string, string> = {
+  "automation-workflow": "自动化与流程",
+  "data-analytics": "数据分析",
+  "code-write-refactor": "写代码与重构",
+  "ai-agent-dev": "AI 助手开发",
+  "design-frontend": "设计与前端",
+  "code-review-debug": "代码审查与排错",
+  "devops-security": "运维与安全",
+  "api-integration": "接口对接",
+  "personal-productivity": "个人效率",
+  "marketing-growth": "市场与增长",
+  "content-writing": "写内容",
+  testing: "测试",
+  documentation: "写文档",
+  database: "数据库",
+  "files-spreadsheets": "文件与表格",
+  other: "其它",
+};
+
 // `: Strings` is the guard. Drop a key, misspell one, or add a key to en.ts and
 // forget this file, and `npm run build` fails before anything ships.
 //
@@ -122,12 +145,16 @@ export const zh: Strings = {
   skEmpty: "还没装任何技能。",
   skEmptyHow: "这些不用你从列表里挑 —— 跟 Marlo 说你要做什么，它自己会去找。",
   skSearch: "搜 Qumge 的技能目录…",
+  skSearchBtn: "搜索",
+  skReset: "重置",
   skInstalled: "已装",
   skInstall: "添加",
   skInstalling: "添加中…",
   skNeeds: "需要先连：",
   skNoResults: "没搜到。试试直接说你要做的事，而不是工具的名字。",
   skVetted: "Qumge 精选",
+  skAll: "全部",
+  skCategory: (slug) => ZH_CATEGORY[slug] ?? slug,
   skMore: "加载更多",
   skLoading: "加载中…",
   skViewBody: "看看它做什么",
@@ -681,9 +708,12 @@ export const zh: Strings = {
   validating: "验证中…",
   searchPlaceholder: "搜索",
 
-  gatewayBrowse: "浏览 Qumge 的模型",
   gatewaySearch: "按名字或厂商筛选…",
-  gatewayHint: "一个 key，下面每个都能用。把你想要的加进选择器。",
+  gatewaySelected: (n) => `已加进选择器 · ${n}`,
+  gatewayOthers: (n) => `Qumge 上还有 ${n} 个`,
+  gatewayVision: "能看图",
+  gatewayNoMatch: "没有匹配的模型。",
+  gatewayOffline: "暂时连不上 Qumge，列不出其它模型。你已经选好的仍然能用。",
   gatewayAdd: "加入",
   gatewayAdded: "已加入",
 

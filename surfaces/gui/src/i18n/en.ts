@@ -5,6 +5,29 @@
 //
 // Values may be strings or functions of named arguments. Keep them flat and
 // grouped by surface; a key is cheaper to find than a nested path.
+// Qumge's category slugs, as `list_categories` returns them. Sixteen of them,
+// a closed set the catalog owns — this is a lookup, not a growing chore. An
+// unknown slug falls through to itself: a new category showing up as
+// "video-editing" reads worse than English, but far better than blank.
+const EN_CATEGORY: Record<string, string> = {
+  "automation-workflow": "Automation & workflow",
+  "data-analytics": "Data & analytics",
+  "code-write-refactor": "Writing & refactoring code",
+  "ai-agent-dev": "AI agent development",
+  "design-frontend": "Design & frontend",
+  "code-review-debug": "Code review & debugging",
+  "devops-security": "DevOps & security",
+  "api-integration": "API integration",
+  "personal-productivity": "Personal productivity",
+  "marketing-growth": "Marketing & growth",
+  "content-writing": "Content writing",
+  testing: "Testing",
+  documentation: "Documentation",
+  database: "Databases",
+  "files-spreadsheets": "Files & spreadsheets",
+  other: "Everything else",
+};
+
 export const en = {
   // -- chrome ---------------------------------------------------------------
   appName: "Marlo",
@@ -36,12 +59,21 @@ export const en = {
   skEmpty: "Nothing installed yet.",
   skEmptyHow: "You don't pick these from a list — tell Marlo what you need done and it looks for one.",
   skSearch: "Search Qumge's catalog…",
+  // Search is an explicit act now, not a side effect of typing — so it needs a
+  // button. Reset is its pair: it puts the browse list back, which is the one
+  // state you cannot get to by typing.
+  skSearchBtn: "Search",
+  skReset: "Reset",
   skInstalled: "Installed",
   skInstall: "Add",
   skInstalling: "Adding…",
   skNeeds: "needs a connection:",
   skNoResults: "Nothing found. Try describing the job instead of naming a tool.",
   skVetted: "Vetted by Qumge",
+  // Catalog categories, as tabs. The slug is the catalog's own spelling and
+  // never belongs on screen — see EN_CATEGORY above.
+  skAll: "All",
+  skCategory: (slug: string) => EN_CATEGORY[slug] ?? slug,
   skMore: "Load more",
   skLoading: "Loading…",
   skViewBody: "What it does",
@@ -724,9 +756,16 @@ export const en = {
   validating: "Validating…",
   searchPlaceholder: "Search",
 
-  gatewayBrowse: "Browse Qumge models",
   gatewaySearch: "Filter by name or vendor…",
-  gatewayHint: "One key, every model below. Add the ones you want in the picker.",
+  // 已选和可选是【同一个列表的两段】，不是两份清单。段标题带上条数，因为"我选了
+  // 几个"和"还能选多少"正是这一屏要回答的两个问题。
+  gatewaySelected: (n: number) => `In your picker · ${n}`,
+  gatewayOthers: (n: number) => `${n} more on Qumge`,
+  gatewayVision: "vision",
+  gatewayNoMatch: "No model matches that.",
+  // 网关列不出来时，已选那一段仍然在（它来自本地设置）—— 这句话要说清楚哪一半
+  // 还能用，否则用户看到半屏空白只会以为整页坏了。
+  gatewayOffline: "Can't reach Qumge to list the rest right now. The models you've already picked still work.",
   gatewayAdd: "Add",
   gatewayAdded: "Added",
 

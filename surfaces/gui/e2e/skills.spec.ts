@@ -46,6 +46,32 @@ test("skills: 已装列表和目录在同一页上，不用先点菜单", async 
   await expect(page.getByTestId("skills-browse-catalog")).toHaveCount(0);
 });
 
+test("skills: 分类是页签，搜索要点按钮，重置把浏览列表放回来", async ({ page }) => {
+  await openSkills(page);
+  await expect(page.getByTestId("skills-results")).toBeVisible();
+
+  // 分类做成页签，名字经过译名表 —— personal-productivity 是 qumge 内部的写法，
+  // 界面上出现它等于把实现细节摊给用户看。条数写在页签上，因为它过滤的是【已经
+  // 加载的这批】，不是目录里那一整个分类。
+  await expect(page.getByTestId("skills-tab-all")).toContainText("All · 2");
+  await expect(page.getByTestId("skills-tab-personal-productivity")).toContainText(
+    "Personal productivity",
+  );
+  await expect(page.getByTestId("skills-tab-__vetted__")).toContainText("Vetted by Qumge");
+
+  // 点一个页签，只剩那一类。
+  await page.getByTestId("skills-tab-__vetted__").click();
+  await expect(page.getByTestId("catalog-invoice-chaser")).toBeVisible();
+  await expect(page.getByTestId("catalog-meeting-notes")).toHaveCount(0);
+
+  // 「重置」不只是清空输入框：它把默认的浏览列表和「全部」页签一起放回来。
+  await page.getByTestId("skills-search").fill("invoice");
+  await page.getByTestId("skills-reset").click();
+  await expect(page.getByTestId("skills-search")).toHaveValue("");
+  await expect(page.getByTestId("catalog-meeting-notes")).toBeVisible();
+  await expect(page.getByTestId("catalog-invoice-chaser")).toBeVisible();
+});
+
 test("skills: 点移除，技能真的没了", async ({ page }) => {
   // 【这条以前是不可能过的】移除打的是 POST /v1/skills/uninstall，后端没有
   // 这个路由，错误被吞掉，列表一刷新技能又回来。

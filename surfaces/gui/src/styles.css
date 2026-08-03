@@ -867,6 +867,26 @@ button.btn.danger { color: var(--accent); }
 .mlist-main input { accent-color: var(--accent); margin: 0; }
 .mlist-name { font-size: 13.5px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mlist-row.off .mlist-name { color: var(--muted); }
+/* 名字是主角，厂商/价格/能看图是次要信息 —— 同一行里分成两列，而不是糊成一个
+   标签。价格对【所有】行都显示，包括已选的：选进来之后看不到自己在花多少钱，
+   恰恰是事后想复查时唯一想看的数字。 */
+.mlist-text { display: flex; align-items: baseline; gap: 10px; flex: 1; min-width: 0; }
+.mlist-meta { font-size: 11.5px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mlist-sec { font-size: 11.5px; font-weight: 600; color: var(--muted); margin: 14px 0 4px; }
+/* 紧跟筛选框的那个段标题收一点。用相邻兄弟选择器而不是 :first-of-type ——
+   后者说的是"同类元素里的第一个 div"，在这里【碰巧】成立，但中间插进任何一个
+   div 就会静悄悄换一个标题变窄。 */
+.mlist-filter + .mlist-sec { margin-top: 10px; }
+.mlist-note { font-size: 12px; color: var(--muted); padding: 6px 8px; }
+/* 六十来条要有个头：其余那一段自己滚，已选的永远在视野里。 */
+.mlist-others { max-height: 320px; overflow-y: auto; }
+.mlist-filter {
+  width: 100%; height: 34px; padding: 0 12px; background: var(--panel);
+  border: 1px solid var(--line-strong); border-radius: 999px;
+  color: var(--ink); font: inherit; font-size: 13px; outline: none;
+}
+.mlist-filter:focus { border-color: var(--accent); }
+.mlist-filter::placeholder { color: var(--faint); }
 .mlist-default {
   background: var(--ink); color: var(--panel); font-size: 10.5px; font-weight: 600;
   padding: 2px 9px; border-radius: 999px; letter-spacing: 0.03em; flex: none;
@@ -877,17 +897,25 @@ button.btn.danger { color: var(--accent); }
 }
 .mlist-row:hover .mlist-make { visibility: visible; }
 .mlist-make:hover { color: var(--ink); border-color: var(--ink); }
-.mlist-add { display: flex; gap: 8px; margin-top: 8px; }
+/* 【一行里的控件定死同一个高度】原来三个各自算各自的：输入框是 13px 字 + 7px
+   内边距，按钮是 12.5px + 5px，算出来差五六个像素。并排放着一眼就看得出没对齐，
+   而且字号一改就又歪一次。再加上 .btn-primary 自带 align-self: flex-start（它
+   平时是独立成块的确认按钮），按钮还会被顶到行首。
+   height + padding-block: 0 是唯一不随字号漂的做法。 */
+.mlist-add { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
 .mlist-add input {
-  flex: 1; background: var(--panel); border: 1px solid var(--line-strong); border-radius: 8px;
-  padding: 7px 10px; color: var(--ink); font: inherit; font-size: 13px; outline: none;
+  flex: 1; height: 34px; background: var(--panel); border: 1px solid var(--line-strong);
+  border-radius: 8px; padding: 0 10px; color: var(--ink); font: inherit; font-size: 13px;
+  outline: none;
 }
 .mlist-add input:focus { border-color: var(--accent); }
 .mlist-add select {
-  background: var(--panel); border: 1px solid var(--line-strong); border-radius: 8px;
-  padding: 7px 8px; color: var(--ink); font: inherit; font-size: 13px; outline: none;
+  height: 34px; background: var(--panel); border: 1px solid var(--line-strong);
+  border-radius: 8px; padding: 0 8px; color: var(--ink); font: inherit; font-size: 13px;
+  outline: none;
 }
 .mlist-add select:focus { border-color: var(--accent); }
+.mlist-add button.btn-primary { height: 34px; padding-block: 0; align-self: center; }
 
 /* .mcp-error is used by ScheduledView; the MCP servers list itself is Tailwind-styled inline
    (ManageTabs McpTab/McpRow/AddForm). */
@@ -1240,7 +1268,10 @@ button.btn.ghost:hover { color: var(--ink); }
 .tmpl-textarea { resize: vertical; min-height: 64px; line-height: 1.45; }
 .tmpl-sched { display: flex; gap: 14px; flex-wrap: wrap; }
 .tmpl-field { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; color: var(--muted); }
-.tmpl-time, .tmpl-select { padding: 6px 9px; }
+/* 【时间框和下拉必须同高】它们并排站在「At」和「重复」两栏里，而 input[type=time]
+   和 select 的固有高度不一样（select 自带原生的箭头区），同样的 padding 算出来
+   差好几个像素 —— 一眼就看得出没对齐。定死高度，别让浏览器的原生尺寸说了算。 */
+.tmpl-time, .tmpl-select { height: 34px; padding: 0 9px; }
 .tmpl-form-actions { display: flex; align-items: center; gap: 12px; margin-top: 2px; }
 
 

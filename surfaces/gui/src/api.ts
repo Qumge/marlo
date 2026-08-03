@@ -651,14 +651,29 @@ export async function searchSkills(
   return res.json();
 }
 
-/** 网关能路由到的模型 —— 免得用户手打完整 id。 */
+/** 网关能路由到的模型 —— 免得用户手打完整 id。
+ *
+ * name/vendor/price/vision 由后端拆好（qumge_catalog.models）。界面要把它们排成
+ * 不同的列，拆法留在前端的话，每个用到的地方都得自己拆一遍。label 是原样那一整串，
+ * 留作兜底。 */
 export interface GatewayModel {
   id: string;
+  name: string;
+  vendor: string;
+  price: string;
+  vision: boolean;
   label: string;
 }
 
-export async function gatewayModels(q = ""): Promise<{ models: GatewayModel[]; error?: string }> {
-  const res = await fetch(`${httpBase()}/v1/gateway/models?q=${encodeURIComponent(q)}`);
+/** limit 默认给大：界面是一次取全量、在本地筛。每敲一次字打一次网关既慢，又会让
+ *  【已选】那一段的价格跟着筛选闪没（它的信息也从这份清单里来）。 */
+export async function gatewayModels(
+  q = "",
+  limit = 200,
+): Promise<{ models: GatewayModel[]; error?: string }> {
+  const res = await fetch(
+    `${httpBase()}/v1/gateway/models?q=${encodeURIComponent(q)}&limit=${limit}`,
+  );
   return res.json();
 }
 

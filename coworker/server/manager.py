@@ -1563,7 +1563,7 @@ class SessionManager(QumgeManagerMixin):
         "mistral": ["mistral-large-latest", "mistral-small-latest"],
         "qumge": [
             "anthropic/claude-sonnet-4.6",
-            "anthropic/claude-opus-4-6",
+            "anthropic/claude-opus-4.6",
             "openai/gpt-5.6-sol",
             "deepseek/deepseek-v4-flash",
         ],
