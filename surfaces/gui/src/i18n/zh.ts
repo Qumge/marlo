@@ -432,6 +432,7 @@ export const zh: Strings = {
   setTestAgain: "再测一次",
   setTestMic: "测试麦克风",
   setVoiceActionFailed: "语音输入没能完成这个操作。",
+  setVoiceNoProxy: "没有检测到系统代理。如果你在用 VPN，把它切到系统代理模式再试一次。",
   setPersonasLede: "哪些同事启用并显示在选择器里，以及安装新的角色包。",
   setUpToDate: "已经是最新版本。",
   setMicWorks: "你的麦克风和本地转写引擎工作正常。",

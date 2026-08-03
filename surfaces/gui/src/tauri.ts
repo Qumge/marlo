@@ -87,6 +87,8 @@ export const startDictation = () => invokeStrict<DictationStatus>("start_dictati
 export const stopDictation = () => invokeStrict<string>("stop_dictation");
 export const cancelDictation = () => invokeStrict<void>("cancel_dictation");
 export const downloadDictationModel = () => invokeStrict<DictationStatus>("download_dictation_model");
+/** 这台机器上探到的代理，没探到就是 null —— 下载失败时用来解释是不是代理没被用上。 */
+export const systemProxy = () => invokeStrict<string | null>("system_proxy");
 export const cancelDictationModelDownload = () => invokeStrict<void>("cancel_dictation_model_download");
 export const verifyDictationModel = () => invokeStrict<DictationStatus>("verify_dictation_model");
 export const markDictationTestPassed = () => invokeStrict<DictationStatus>("mark_dictation_test_passed");

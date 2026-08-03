@@ -38,6 +38,7 @@ import {
   type DictationStatus,
 } from "../tauri";
 import { useThemePref } from "../theme";
+import { downloadHint } from "../voiceProxyHint";
 import { Icon } from "./Icon";
 import { PanelHead } from "./IntegrationsView";
 import { ModelsTab } from "./ManageTabs";
@@ -206,7 +207,10 @@ function VoiceInputSection() {
     try {
       publish(await downloadDictationModel());
     } catch (downloadError) {
-      setError(voiceError(downloadError));
+      // ureq 那句原话只说"连接被重置"，说不出"你的代理没被用上"—— 而那是用户
+      // 自己能解决的唯一一种。
+      const hint = await downloadHint();
+      setError([voiceError(downloadError), hint].filter(Boolean).join(" "));
       const latest = await getDictationStatus();
       if (latest) publish(latest);
     } finally {
