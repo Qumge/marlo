@@ -458,6 +458,10 @@ export const en = {
   setTestAgain: "Test again",
   setTestMic: "Test microphone",
   setVoiceActionFailed: "Voice Input could not complete that action.",
+  // 【失败时最该说的那句】「连不上」和「你的代理没被用上」是两回事，后者用户自己
+  // 能解决（把 VPN 客户端切到系统代理模式）。
+  setVoiceNoProxy:
+    "No system proxy detected. If you use a VPN, switch it to system-proxy mode and try again.",
   setPersonasLede: "Which coworkers are enabled and shown in the picker, plus installing new persona bundles.",
   setUpToDate: "You're on the latest version.",
   setMicWorks: "Your microphone and local transcription engine are working.",
