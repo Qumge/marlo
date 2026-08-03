@@ -212,7 +212,10 @@ MATRIX: dict[str, ModelEntry] = {
     "qumge:anthropic/claude-sonnet-4.6": ModelEntry(
         "Claude Sonnet 4.6 · via Qumge", _AGENTIC_VISION
     ),
-    "qumge:anthropic/claude-opus-4-6": ModelEntry(
+    # 【点号不是连字符】网关上这一条叫 claude-opus-4.6。写成 4-6 的话它不在网关的
+    # 61 个模型里，请求会被拒 —— 而这一条是默认勾上的，用户什么都没做就踩得到。
+    # 这正是硬编码一份精选表的代价：它和网关的实时清单之间没有任何东西在对账。
+    "qumge:anthropic/claude-opus-4.6": ModelEntry(
         "Claude Opus 4.6 · via Qumge", _AGENTIC_VISION
     ),
     "qumge:openai/gpt-5.6-sol": ModelEntry("GPT-5.6 Sol · via Qumge", _AGENTIC_VISION),

@@ -50,6 +50,23 @@ def test_qumge_models_match_native_capabilities():
         )
 
 
+def test_qumge_matrix_and_compat_lists_are_in_lockstep():
+    """matrix.py 和 manager.py 的两份 qumge 清单必须【一模一样】。
+
+    matrix.py 的注释一直写着"keep the two lists in lockstep"，但拦着的只有能力那
+    一半（上面那条）——【成员】那一半没有任何东西在看。于是 2026-08-03 修
+    claude-opus-4-6 这个错 id 时，两处得靠人记得都改；漏一处的症状是模型能出现在
+    选择器里、点下去却被网关拒，而两份清单看起来都"有这一条"。
+
+    这条只查两份之间对不对得上，不出网。"这个 id 网关上到底存不存在"要问 qumge，
+    在 packaging/check_model_matrix.py 里 —— CI 是 hermetic 的，不在这里做。
+    """
+    from coworker.providers.matrix import MATRIX
+
+    in_matrix = {k[len("qumge:") :] for k in MATRIX if k.startswith("qumge:")}
+    assert in_matrix == set(SessionManager.COMPAT_MODELS["qumge"])
+
+
 def test_qumge_claude_and_gpt_models_get_vision_and_pdf():
     # Concrete sanity check alongside the property above: a Qumge-routed Claude/GPT model
     # must look exactly as capable as talking to Claude/GPT directly.

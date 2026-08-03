@@ -3,7 +3,15 @@
 
 name: CI
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  # 只给 model-drift 用 —— 它要出网，而上面那三个 job 是 hermetic 的。漂移是按
+  # qumge 的时钟发生的，不是按我们提交的时钟：挂在 push 上只是把同一件事查一百遍，
+  # 每天查一次就能在一天之内发现。
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
 
 jobs:
   pytest:
@@ -68,3 +76,25 @@ jobs:
       - name: e2e
         working-directory: surfaces/gui
         run: npm run e2e
+
+  # 我们写死的 qumge 模型 id，在网关上是不是真的存在。
+  #
+  # 【为什么单独一个 job、还只在定时/手动时跑】上面三个是 hermetic 的（见文件头），
+  # 这一个必须出网。混进去等于把 CI 的可靠性押在 qumge 的可达性上，网络抖一下就红，
+  # 红得多了就没人看了。
+  # 脚本自己也守着这条线：连不上 / 网关没返回东西都退出 0，只有【真的查到清单、
+  # 而某个 id 不在里面】才退出 1。
+  model-drift:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "." -c requirements-ci.txt
+      - name: Check qumge model ids against the live gateway
+        run: python packaging/check_model_matrix.py
