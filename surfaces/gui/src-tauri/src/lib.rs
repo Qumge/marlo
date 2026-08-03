@@ -14,6 +14,8 @@
 //! passes `OPENAI_API_KEY` through. A Finder-launched app has no shell env — there the key
 //! comes from the SecretStore (Settings tab), see `coworker.providers.resolve_api_key`.
 
+mod proxy;
+
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 #[cfg(target_os = "windows")]
