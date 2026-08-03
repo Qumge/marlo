@@ -143,6 +143,66 @@ describe("ModelChecklist — qumge 合成一个列表", () => {
     expect(addModel).toHaveBeenCalledWith(OPUS);
   });
 
+  const MISTRAL = {
+    id: "qumge:mistralai/mistral-medium-3.1",
+    name: "Mistral Medium 3.1",
+    vendor: "Mistral",
+    price: "$0.40/$2.00 per Mtok",
+    vision: false,
+    label: "Mistral: Mistral Medium 3.1 · $0.40/$2.00 per Mtok",
+  };
+
+  it("本地筛不到就去网关搜 —— 那是够到另外一百多个的唯一通道", async () => {
+    // list_models 一次最多给 60 条，而筛选原来只对这 60 条做字符串包含。敲
+    // mistral 得到「没有匹配的模型」，网关上其实有 23 条 —— 文案说了谎，唯一的
+    // 补救路又恰好是堵死的。
+    (gatewayModels as any)
+      .mockResolvedValueOnce({ models: GW, total: 312 })
+      .mockResolvedValueOnce({ models: [MISTRAL] });
+    renderList("qumge", { curated: [SOL] });
+    await screen.findByTestId(`mrow-${OPUS}`);
+
+    fireEvent.change(screen.getByTestId("gateway-search"), { target: { value: "mistral" } });
+
+    expect(await screen.findByTestId(`mrow-${MISTRAL.id}`)).toBeTruthy();
+    expect(gatewayModels).toHaveBeenCalledWith("mistral");
+  });
+
+  it("出网期间说自己在找，找完了才说没有", async () => {
+    // 不说的话就是技能页那个病的翻版：空白加一句「没有匹配的模型」，而其实正在搜。
+    renderList("qumge", { curated: [SOL] });
+    await screen.findByTestId(`mrow-${OPUS}`);
+
+    fireEvent.change(screen.getByTestId("gateway-search"), { target: { value: "zzzz" } });
+
+    expect(await screen.findByTestId("gateway-searching")).toBeTruthy();
+    // 正在找的时候不能同时说"没有匹配的模型"—— 那是还没问出结果的话。
+    expect(screen.queryByTestId("gateway-nomatch")).toBeNull();
+
+    expect(await screen.findByTestId("gateway-nomatch")).toBeTruthy();
+    expect(screen.queryByTestId("gateway-searching")).toBeNull();
+  });
+
+  it("同一个词不重复出网", async () => {
+    // 结果并进了同一份缓存，第二次筛同一个词是纯本地的事。
+    (gatewayModels as any)
+      .mockResolvedValueOnce({ models: GW })
+      .mockResolvedValueOnce({ models: [MISTRAL] });
+    renderList("qumge", { curated: [SOL] });
+    await screen.findByTestId(`mrow-${OPUS}`);
+
+    const box = screen.getByTestId("gateway-search");
+    fireEvent.change(box, { target: { value: "mistral" } });
+    await screen.findByTestId(`mrow-${MISTRAL.id}`);
+
+    fireEvent.change(box, { target: { value: "" } });
+    fireEvent.change(box, { target: { value: "mistral" } });
+    await screen.findByTestId(`mrow-${MISTRAL.id}`);
+
+    // 挂载 1 次 + 搜索 1 次，就这两次。
+    expect((gatewayModels as any).mock.calls.length).toBe(2);
+  });
+
   it("列表说自己只是一批，总数由目录给", async () => {
     // 原来段标题写「Qumge 上还有 56 个」，那个 56 是"已加载的 60 条减去已勾的"。
     // list_models 一次最多给 60，网关上远不止 —— 这个数不是我们能算出来的。
@@ -223,8 +283,10 @@ describe("ModelChecklist — qumge 合成一个列表", () => {
     expect(screen.getByTestId("mlist-others").textContent).toContain("1");
 
     // 什么都筛不到时才说"没有匹配的模型"。
+    // 【时机变了】本地筛不到不再等于"没有"—— 网关上还有一百多个够不着的模型。
+    // 现在要等它去问过一轮，才能说没有。
     fireEvent.change(screen.getByTestId("gateway-search"), { target: { value: "zzzz" } });
-    expect(screen.getByTestId("gateway-nomatch")).toBeTruthy();
+    expect(await screen.findByTestId("gateway-nomatch")).toBeTruthy();
 
     // 【否定对照】没筛选时，空的已选段【要】留着 —— 那时的 0 是有用的信息
     // （"你的选择器是空的"），不是一个 bug。

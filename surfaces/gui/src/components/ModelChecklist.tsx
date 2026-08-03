@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   addModel,
   gatewayModels,
@@ -67,6 +67,14 @@ export function ModelChecklist({
   // 网关上一共有多少个能当 agent 用的模型 —— 【由目录给】，界面数不出来：
   // list_models 一次最多给 60。目录给不出就是 null，文案退回不报总数的那版。
   const [gTotal, setGTotal] = useState<number | null>(null);
+  // 正在去网关搜（含防抖那 400ms —— 那段时间也得说话，否则又是一段空白）。
+  const [remote, setRemote] = useState(false);
+  // 【已经问过网关的词】小写。同一个词不重复出网：结果并进了 gModels，第二次筛
+  // 就是纯本地的事了。补价格用的厂商 slug 也记在这里 —— 都是"问过了"。
+  const tried = useRef(new Set<string>());
+  // 【谁最后发的谁说了算】连着改筛选词时，先发的那次晚回来会把后发的盖掉，而
+  // 界面上看不出任何异常，只是列表和输入框对不上。
+  const seq = useRef(0);
 
   // qumge 是唯一一个我们能把模型清单【问出来】的 provider —— 也就只有它能把
   // 「已选」和「可选」合成一个列表。
@@ -136,6 +144,14 @@ export function ModelChecklist({
   };
 
   const gwById = useMemo(() => new Map(gModels.map((m) => [m.id, m])), [gModels]);
+
+  // 网关搜回来的并进同一份缓存，不单独存一份：并进去之后本地 matches() 自然就把
+  // 它们显示出来，后续再筛同一个词也不用再出网。
+  const merge = (incoming: GatewayModel[]) =>
+    setGModels((prev) => {
+      const seen = new Set(prev.map((m) => m.id));
+      return [...prev, ...incoming.filter((m) => !seen.has(m.id))];
+    });
 
   const nameOf = (id: string) => gwById.get(id)?.name || labels?.[id] || bare(id);
   const metaOf = (id: string) => {
@@ -234,6 +250,37 @@ export function ModelChecklist({
   const shownSelected = selected.filter(matches);
   const shownOthers = others.filter(matches);
 
+  // 【本地筛不到，就去网关问一次】list_models 一次最多给 60 条，网关上远不止 ——
+  // 搜索是够到其余那些的唯一通道。原来 matches() 只对已加载的 60 条做字符串包含，
+  // 敲 mistral 得到「没有匹配的模型」，而网关上有 23 条。
+  //
+  // 【防抖 400ms】不防的话敲 mistral 会在 mis / mist / mistr… 每一步都 0 结果、
+  // 每一步打一次网。常见情况（找 Claude / GPT）本地就筛到了，根本走不到这里。
+  //
+  // 【能这么做是因为网关的 query 是子串匹配】实测「便宜的能看图的模型」/「cheap
+  // vision model」一律返回 0 条。服务端能命中的词，本地 matches() 那三段拼接里
+  // 必然也有，所以并进来的结果不会被本地筛再滤掉。
+  const q = gq.trim();
+  const localHits = shownSelected.length + shownOthers.length;
+  useEffect(() => {
+    if (!isGateway || !q || localHits > 0 || tried.current.has(q.toLowerCase())) return;
+    const mine = ++seq.current;
+    setRemote(true);
+    const timer = setTimeout(async () => {
+      tried.current.add(q.toLowerCase());
+      const r = await gatewayModels(q).catch(() => null);
+      if (mine !== seq.current) return;   // 更新的那次会自己收尾
+      setRemote(false);
+      if (r) merge(r.models || []);
+    }, 400);
+    // 【cleanup 里也关掉 remote】改词时先归位，新的那次要么重新点亮、要么本地就
+    // 筛到了。不归位的话，本地筛到之后指示灯会一直亮着。
+    return () => {
+      clearTimeout(timer);
+      setRemote(false);
+    };
+  }, [q, localHits, isGateway]);
+
   return (
     <div className="mlist">
       <input
@@ -282,7 +329,13 @@ export function ModelChecklist({
         </>
       )}
 
-      {filtering && !shownSelected.length && !shownOthers.length && (
+      {/* 【正在找的时候不说"没有"】那是还没问出结果的话。防抖那 400ms 也算在
+          "正在找"里 —— 否则会先闪一下"没有匹配的模型"再改口。 */}
+      {remote && (
+        <div className="mlist-note" data-testid="gateway-searching">{t("gatewaySearching")}</div>
+      )}
+
+      {filtering && !remote && !shownSelected.length && !shownOthers.length && (
         <div className="mlist-note" data-testid="gateway-nomatch">{t("gatewayNoMatch")}</div>
       )}
     </div>
