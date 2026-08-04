@@ -193,6 +193,49 @@ describe("技能目录", () => {
     expect(screen.queryByTestId("catalog-b")).toBeNull();
   });
 
+  it("分节顺序跟着服务端，不是哪一类条数多哪一类排前面", async () => {
+    // 服务端已经按 star 排好了，第 1 条是 ★64,979 的 api-integration。但那一组只有
+    // 1 条，content-writing 有 2 条 —— 按组大小排的话，目录里最火的那条会被整节压到
+    // 后面去，而用户在首屏根本看不到它。这正是 qumg 那边刚拿掉的那个轴，不能让它在
+    // 客户端以「组大小」的形式回来。
+    serve([
+      { name: "reach", summary: "s", slug: "o/r/reach", needs: "", group: "api-integration",
+        meta: "category: api-integration · 64979 stars on GitHub" },
+      { name: "a", summary: "s", slug: "o/r/a", needs: "", group: "content-writing",
+        meta: "category: content-writing · 312 stars on GitHub" },
+      { name: "b", summary: "s", slug: "o/r/b", needs: "", group: "content-writing",
+        meta: "category: content-writing · 99 stars on GitHub" },
+    ]);
+    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} onError={() => {}} />);
+    await waitFor(() => expect(screen.getByTestId("skills-group-api-integration")).toBeTruthy(),
+      { timeout: 2000 });
+
+    // 断言的是【屏幕上从上到下的次序】，不是"这两节都在"—— 后者按组大小排也是绿的。
+    expect(
+      [...document.querySelectorAll("[data-testid^='skills-group-']")]
+        .map((el) => el.getAttribute("data-testid")),
+    ).toEqual(["skills-group-api-integration", "skills-group-content-writing"]);
+  });
+
+  it("精选那一组仍然置顶，哪怕它不是结果里的第一条", async () => {
+    // 上面那条改了节序之后，唯一还在给 featured 兜底的就是这个置顶。搜索结果里
+    // featured 排在精确命中之后 —— 那时精选组不是第一组，置顶才真的起作用。
+    serve([
+      { name: "a", summary: "s", slug: "o/r/a", needs: "", group: "content-writing",
+        meta: "category: content-writing · 312 stars on GitHub" },
+      { name: "autowhisper", summary: "s", slug: "o/r/aw", needs: "", group: "__vetted__",
+        meta: "vetted by qumge" },
+    ]);
+    render(<SkillCatalog installedNames={new Set()} onInstalled={() => {}} onError={() => {}} />);
+    await waitFor(() => expect(screen.getByTestId("skills-group-__vetted__")).toBeTruthy(),
+      { timeout: 2000 });
+
+    expect(
+      [...document.querySelectorAll("[data-testid^='skills-group-']")]
+        .map((el) => el.getAttribute("data-testid")),
+    ).toEqual(["skills-group-__vetted__", "skills-group-content-writing"]);
+  });
+
   it("重新搜一次会退回「全部」页签", async () => {
     // 结果整批换掉了，旧页签多半不在新结果里 —— 停在它上面就是一屏空白，而用户
     // 会读成"没搜到"。

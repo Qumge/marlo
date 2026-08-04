@@ -10,15 +10,34 @@ import { GRP, GRP_H, PILL_LINE, PILL_QUIET, ROW } from "../connectors/ui";
 
 // 按分类分组，我们审过的排最前。分组本身就是页签的来源 —— 名字在 i18n 里译
 // （skCategory），这里只管分。
+//
+// 【节序跟着服务端给的顺序走，不按组大小】（2026-08-04 改）。原来的 tiebreak 是
+// `b[1].length - a[1].length` —— 哪一类条数多，哪一类整节排在最上面。而服务端返回
+// 的结果本来是按 star 排好的，这一行会把那个顺序整个盖掉：Agent-Reach ★64,979 是
+// 返回结果的第 1 条，但它属于 api-integration，那一组要是只占 30 条里的 2 条，就
+// 被占 8 条的 content-writing 整节压下去 —— 打开目录的人在首屏看不到最火的东西。
+// 「哪一类条数多」和「哪一条更值得看」没有关系；qumg 那边刚把浏览的分类白名单
+// 拿掉，同一个轴不能在这里以「组大小」的形式回来。
+//
+// 页签、条数、翻译、选中单类的行为都不动 —— 坏的只是默认那一屏的节序。
 function groupsOf(rows: CatalogSkill[]): [string, CatalogSkill[]][] {
   const by = new Map<string, CatalogSkill[]>();
   for (const r of rows) {
     const g = r.group || "other";
     (by.get(g) ?? by.set(g, []).get(g)!).push(r);
   }
-  return [...by.entries()].sort((a, b) =>
-    a[0] === "__vetted__" ? -1 : b[0] === "__vetted__" ? 1 : b[1].length - a[1].length,
-  );
+  // Map 保留插入顺序 ⇒ entries 已经是「各组第一条在结果里的先后」，不用再算 index。
+  // 用 filter 拼而不是 sort：sort 的稳定性是规范保证的，但「靠稳定性保住顺序」读
+  // 起来像是没排，下一个人很容易再往比较函数里塞一条规则，就又回到今天这个 bug。
+  //
+  // __vetted__ 仍然置顶：它对应服务端的 featured，是同一个判断的两半。浏览时服务端
+  // 已经把 featured 排在最前，这个置顶不改变任何东西；真正起作用的是【搜索】结果 ——
+  // 那里 featured 排在精确命中之后，它所在的组不一定是第一组。
+  const entries = [...by.entries()];
+  return [
+    ...entries.filter(([g]) => g === "__vetted__"),
+    ...entries.filter(([g]) => g !== "__vetted__"),
+  ];
 }
 
 // 技能目录 —— qumge.com 上 4500+ 条公开技能的搜索/浏览/安装界面。
