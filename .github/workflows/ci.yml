@@ -57,6 +57,16 @@ jobs:
       - name: Unit tests
         working-directory: surfaces/gui
         run: npm test
+      # 上游 JSX 里会显示给用户的英文，中文表里都有吗？
+      #
+      # 【为什么现在才进 CI】这个守卫写好之后【从来没有人跑过它】—— 它一直只是个
+      # 手动脚本，而手动的守卫等于没有守卫。2026-08-04 第一次真的跑，报出 140 条
+      # 缺译文（判据修好之后），其中 clear / › Tools / default / Light 这些就长在
+      # 已翻译的按钮旁边，在中文界面上待了不知道多久。
+      #
+      # 它依赖 npm ci 装的 @babel/parser（判据是 AST 的），所以放在这个 job 里。
+      - name: i18n — 上游 JSX 的英文有没有中文
+        run: node packaging/check_i18n_text.mjs
 
   gui-e2e:
     runs-on: ubuntu-latest

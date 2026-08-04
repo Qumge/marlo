@@ -20,7 +20,7 @@ const ROOT = path.resolve(path.dirname(url.fileURLToPath(import.meta.url)), ".."
 const GUI = path.join(ROOT, "surfaces/gui");
 const SRC = path.join(GUI, "src");
 
-const { collect, shouldSkip } = await import(
+const { collect, isBrandOnly, shouldSkip } = await import(
   url.pathToFileURL(path.join(GUI, "i18n-jsx.mjs")).href
 );
 
@@ -55,15 +55,13 @@ if (scanned < 50) {
   process.exit(1);
 }
 
-// 专名不需要译文 —— tx() 查不到就回退原文，而"Marlo"的正确译文【就是】"Marlo"。
-// 判据抄 check_i18n.py 的 _brands_only：把专名抠掉之后还剩两个以上英文单词才算句子。
-// "以专名开头就豁免"是错的写法（那一版让 "Marlo v1.2 is ready to install." 整句隐形）。
-const BRANDS =
-  /\b(Marlo|Qumge|OpenWorker|Gmail|Slack|Notion|GitHub|GitLab|Jira|Outlook|Telegram|Discord|WhatsApp|Dropbox|Box|Stripe|Asana|HubSpot|Linear|Figma|Canva|Zendesk|Confluence|QuickBooks|DocuSign|ClickUp|Attio|PostHog|Mixpanel|Amplitude|Apollo|Hunter|AutoWhisper|MCP|IMAP|SMTP|OAuth|API|URL|JSON|PDF|Ollama|Claude|OpenAI|Anthropic|Gemini|DeepSeek|Windows|macOS|Word|Excel|Google|Calendar|Bedrock|Vertex|OpenRouter|Kimi|Qwen|MiniMax|Together|Fireworks|Mistral)\b/g;
-
-function brandsOnly(s) {
-  return (s.replace(BRANDS, " ").match(/\b[A-Za-z]{2,}\b/g) ?? []).length < 2;
-}
+// 专名豁免的判据搬去了 i18n-jsx.mjs（和 isProse 并排），因为它和"哪些字要翻"是
+// 同一个问题的两半，而那个文件头上写着规则只写一份、两个消费者都 import 它。
+//
+// 门槛也在那次一起改了：原来是"去掉专名后不足【两个】英文词就算专名"，那条把每一个
+// 【单词标签】都放过了 —— clear / cancel / default / Light / Rename 提取得到、没有
+// 译文、守卫报绿。现在是"一个词都不剩"才豁免。见那边的注释和 i18nJsx.test.ts。
+const brandsOnly = isBrandOnly;
 
 // 【刻意保留英文的】SlackHowItWorks.tsx 里那张模拟 Slack 截图的外壳：频道名、
 // 时间戳、Slack 自己的导航标签、Slack 的输入框占位符。组件注释里写着它"pinned to
@@ -82,6 +80,27 @@ const DELIBERATELY_ENGLISH = new Set([
   // 模拟图里被 @ 的那个 bot。它是【上游的】名字，出现在这里是这张图的虚构内容
   // 的一部分（和 Emma W / Lumina Labs 同类），不是我们产品里的字符串。
   "@OpenWorker summarize this thread",
+  // 2026-08-04：判据放宽之后又提取到这些，还是同一条边界 —— 都是那张图的【外壳】
+  // 和虚构内容：频道名、成员数、Slack 自己的线程面板和回复计数、应用角标、模拟的
+  // 人名和头像缩写、两个模拟导航项、以及会话标题。翻了它就不像 Slack 的截图了。
+  "# general",
+  "· 24 members",
+  "Thread",
+  "1 reply",
+  "2 replies",
+  "Reply…",
+  "APP",
+  "OW",
+  "Emma W",
+  "Priya N",
+  "Jira vs Linear",
+  "Message OpenWorker…",
+  "via Slack",
+  "⌕ Search",
+  "◷ Automations",
+  // 技能文件夹名的【示例】（placeholder="weekly-report"）。翻成中文等于教人把
+  // 文件夹命名成中文 —— 那是给机器看的名字，照抄才是对的。
+  "weekly-report",
 ]);
 
 if (process.argv.includes("--list")) {
