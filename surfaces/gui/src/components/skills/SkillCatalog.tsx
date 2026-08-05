@@ -194,7 +194,13 @@ export function SkillCatalog({
     <>
       {bundleRows.length > 0 && (
         <section data-testid="skill-bundles">
-          <div className={GRP_H + " !mt-0"}>{t("skBundles")}</div>
+          {/* 【不要加 !mt-0】。这一段上面【永远有一张卡片】—— 已装技能列表、
+              空状态卡、或者正在填的编辑表单（见 SkillsView）。GRP_H 自带的 mt-6
+              就是"和上一组拉开距离"用的，正是这里要的。
+              !mt-0 是给"面板里的第一个标题、上面什么都没有"用的
+              （ConnectorsList / GmailDetail / SkillsView 里那几处），照抄到这里
+              会让标题贴到上一张卡片上。 */}
+          <div className={GRP_H}>{t("skBundles")}</div>
           <div className="text-[12px] text-muted mb-2">{t("skBundlesSub")}</div>
           <div className={GRP}>
             {bundleRows.map((bundle) => (
