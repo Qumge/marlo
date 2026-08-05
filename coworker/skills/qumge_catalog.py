@@ -357,3 +357,87 @@ def uninstall(name: str) -> dict[str, Any]:
     except (FileNotFoundError, KeyError, ValueError):
         return {"ok": False, "name": name, "error": "not installed"}
     return {"ok": True, "name": name}
+
+
+# ---- 用途包 ----
+_BUNDLE = re.compile(
+    r"^\s{2}(?P<slug>bundle:[a-z0-9-]+)\s*\n"
+    r"\s+(?P<title>\S.*?)\s*\n"
+    r"\s+(?P<outcome>\S.*?)\s*\n"
+    r"\s+(?P<count>\d+)\s+skills?\s*$",
+    re.MULTILINE,
+)
+_MISSING = re.compile(r"^NOTE: only \d+ of \d+ skills.*$", re.MULTILINE)
+
+
+def bundles(*, client: Optional[httpx.Client] = None) -> list[dict[str, Any]]:
+    """List the hand-picked bundles exposed by Qumge."""
+    text = _call("list_bundles", {}, client=client)
+    return [
+        {
+            "slug": match.group("slug"),
+            "title": match.group("title").strip(),
+            "outcome": match.group("outcome").strip(),
+            "count": int(match.group("count")),
+        }
+        for match in _BUNDLE.finditer(text)
+    ]
+
+
+def _skill_store():
+    from .store import SkillStore
+
+    return SkillStore()
+
+
+def _sections(text: str) -> list[str]:
+    """Split get_bundle output into the body inside each independent guard."""
+    sections: list[str] = []
+    pos = 0
+    while True:
+        opening = text.find(_OPEN, pos)
+        if opening == -1:
+            return sections
+        closing = text.find(_CLOSE, opening)
+        if closing == -1:
+            return sections
+        body_start = text.find("\n", text.find("---", opening))
+        if body_start != -1 and body_start < closing:
+            body = text[body_start + 1 : closing].strip()
+            if body:
+                sections.append(body)
+        pos = closing + len(_CLOSE)
+
+
+def install_bundle(slug: str, *, client: Optional[httpx.Client] = None) -> dict[str, Any]:
+    """Install every skill returned for one bundle in a single operation."""
+    slug = (slug or "").strip()
+    if not slug.startswith("bundle:") or "/" in slug:
+        raise ValueError("bundle slug must be bundle:<name> with no slash")
+
+    text = _call("get_bundle", {"slug": slug}, client=client)
+    bodies = _sections(text)
+    if not bodies:
+        raise RuntimeError("catalog returned an empty bundle")
+
+    store = _skill_store()
+    installed: list[dict[str, Any]] = []
+    for body in bodies:
+        name, description, instructions = _split_front_matter(body)
+        result = store.create(
+            name=name or "skill",
+            description=description,
+            instructions=instructions,
+            source=f"qumge:{slug}",
+        )
+        installed.append({
+            "name": result["name"],
+            "path": str(Path(result["path"]) / "SKILL.md"),
+        })
+
+    missing = _MISSING.search(text)
+    return {
+        "ok": True,
+        "installed": installed,
+        "missing_note": missing.group(0) if missing else "",
+    }
