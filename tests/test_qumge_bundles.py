@@ -33,6 +33,26 @@ def test_bundle_slug_passed_to_install_raises_loudly():
         qumge_catalog.install("bundle:competitor-research")
 
 
+def _explode(*_args, **_kwargs):
+    raise AssertionError(
+        "guard did not short-circuit — a real HTTP request would have gone out"
+    )
+
+
+def test_install_bundle_rejects_a_skill_slug(monkeypatch):
+    monkeypatch.setattr(qumge_catalog, "_call", _explode)
+    with pytest.raises(ValueError):
+        qumge_catalog.install_bundle(
+            "ScrapeCreators/social-media-research-skills/outlier-post-finder"
+        )
+
+
+def test_install_bundle_rejects_a_slug_without_the_bundle_prefix(monkeypatch):
+    monkeypatch.setattr(qumge_catalog, "_call", _explode)
+    with pytest.raises(ValueError):
+        qumge_catalog.install_bundle("competitor-research")
+
+
 BUNDLE_TEXT = """# See what your competitors are posting
 
 One summary across platforms.

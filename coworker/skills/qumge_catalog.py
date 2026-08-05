@@ -412,6 +412,9 @@ def _sections(text: str) -> list[str]:
 def install_bundle(slug: str, *, client: Optional[httpx.Client] = None) -> dict[str, Any]:
     """Install every skill returned for one bundle in a single operation."""
     slug = (slug or "").strip()
+    # Bundle slugs contain no slash. This is structural, not stylistic: install()
+    # requires exactly two slashes, so a bundle sent there fails loudly. The inverse
+    # matters here too: a three-part skill slug must never reach get_bundle.
     if not slug.startswith("bundle:") or "/" in slug:
         raise ValueError("bundle slug must be bundle:<name> with no slash")
 
