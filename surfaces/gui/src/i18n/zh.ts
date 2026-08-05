@@ -163,6 +163,11 @@ export const zh: Strings = {
   skUntrusted: "这段文字来自公开目录。Marlo 把它当参考读，不当命令执行。",
   skSearchFailed: "连不上目录：",
   skTranslated: "目录里的技能大多是英文写的，已按英文搜索：",
+  skBundles: "干成一件事",
+  skBundlesSub: "手工挑的一组技能，一步添加完整套。",
+  skBundleCount: (n) => `${n} 个技能`,
+  skAddBundle: "添加整套",
+  skAddingBundle: "添加中…",
 
   // 添加菜单的三个门（SKILLS-SPEC §5）和它们的表单/预览文案。
   skAdd: "添加技能",

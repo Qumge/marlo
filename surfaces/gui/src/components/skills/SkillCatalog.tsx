@@ -6,6 +6,11 @@ import {
   type CatalogSkill,
 } from "../../api";
 import { useT } from "../../i18n";
+import {
+  bundles as loadBundles,
+  installBundle,
+  type SkillBundle,
+} from "../../api.qumge";
 import { GRP, GRP_H, PILL_LINE, PILL_QUIET, ROW } from "../connectors/ui";
 
 // 按分类分组，我们审过的排最前。分组本身就是页签的来源 —— 名字在 i18n 里译
@@ -78,6 +83,9 @@ export function SkillCatalog({
   const [tab, setTab] = useState("");
   // 装之前先看看它到底会做什么 —— 一条技能就是一段【会被当成指令读】的文字。
   const [detail, setDetail] = useState<{ name: string; body: string } | null>(null);
+  const [bundleRows, setBundleRows] = useState<SkillBundle[]>([]);
+  const [bundleBusy, setBundleBusy] = useState<string | null>(null);
+  const [bundleNote, setBundleNote] = useState("");
 
   // 【谁最后发的谁说了算】原来靠防抖 effect 的 cleanup 挡乱序，改成点按钮触发之后
   // 那层没有了 —— 连点两下搜索，先发的那次晚回来会盖掉后发的结果，而界面上看不出
@@ -107,8 +115,34 @@ export function SkillCatalog({
   // 首屏【不是】空白：没输入不是"不搜"，是浏览 —— 铺一份排名靠前的默认列表。
   // 空白会让人以为目录里没东西。
   useEffect(() => {
-    run("");
+    // Let the main catalog claim the first request. Besides making the useful
+    // browse list appear first on a slow connection, this keeps bundles from
+    // competing with it for the sidecar/catalog connection during startup.
+    run("").finally(() => {
+      // A catalog outage must not leave a feature-shaped empty box. The individual
+      // skill list already reports its own failure; bundles simply stay absent.
+      loadBundles().then(setBundleRows).catch(() => setBundleRows([]));
+    });
   }, []);
+
+  const addBundle = async (bundle: SkillBundle) => {
+    setBundleBusy(bundle.slug);
+    setBundleNote("");
+    const r = await installBundle(bundle.slug).catch((e) => ({
+      ok: false,
+      installed: [],
+      missing_note: "",
+      error: String(e),
+    }));
+    setBundleBusy(null);
+    if (!r.ok) {
+      onError(r.error || t("skWentWrong"));
+      return;
+    }
+    onError("");
+    onInstalled();
+    setBundleNote(r.missing_note || "");
+  };
 
   const loadMore = async () => {
     setLoadingMore(true);
@@ -158,6 +192,39 @@ export function SkillCatalog({
 
   return (
     <>
+      {bundleRows.length > 0 && (
+        <section data-testid="skill-bundles">
+          <div className={GRP_H + " !mt-0"}>{t("skBundles")}</div>
+          <div className="text-[12px] text-muted mb-2">{t("skBundlesSub")}</div>
+          <div className={GRP}>
+            {bundleRows.map((bundle) => (
+              <div key={bundle.slug} className={ROW}>
+                <span className="min-w-0 flex-1">
+                  <span className="font-medium text-[13.5px]">{bundle.title}</span>
+                  <span className="block text-[12px] text-muted">{bundle.outcome}</span>
+                  <span className="block text-[11.5px] text-faint mt-0.5">
+                    {t("skBundleCount")(bundle.count)}
+                  </span>
+                </span>
+                <button
+                  className={PILL_QUIET + " shrink-0 disabled:opacity-50"}
+                  disabled={bundleBusy === bundle.slug}
+                  onClick={() => addBundle(bundle)}
+                  data-testid={`install-${bundle.slug}`}
+                >
+                  {bundleBusy === bundle.slug ? t("skAddingBundle") : t("skAddBundle")}
+                </button>
+              </div>
+            ))}
+          </div>
+          {bundleNote && (
+            <div className="text-[12px] text-warnInk mt-2" data-testid="bundle-missing-note">
+              {bundleNote}
+            </div>
+          )}
+        </section>
+      )}
+
       {/* 搜索框在【页面中部】，紧贴它过滤的那批结果，而不是像「连接」页那样蹲在
           页头。合页之后这一页有两批东西：上半页是已装的，下半页才是目录 —— 搜索
           只作用于后者。搬到页顶会让它看起来像在搜整页（包括已装列表）。

@@ -84,6 +84,11 @@ export const en = {
   skUntrusted: "This text comes from a public catalog. Marlo reads it as guidance, never as orders.",
   skSearchFailed: "Couldn't reach the catalog:",
   skTranslated: "Most catalog skills are written in English, so this was searched as:",
+  skBundles: "Get one job done",
+  skBundlesSub: "Hand-picked sets of skills. Add the whole set in one step.",
+  skBundleCount: (n: number) => `${n} skill${n === 1 ? "" : "s"}`,
+  skAddBundle: "Add set",
+  skAddingBundle: "Adding…",
 
   // 添加菜单的三个门（SKILLS-SPEC §5）和它们的表单/预览文案。
   skAdd: "Add skill",

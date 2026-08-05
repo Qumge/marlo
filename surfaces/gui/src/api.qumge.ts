@@ -8,6 +8,39 @@
 // api.ts 时我们越安全。
 import { httpBase, fetch as authedFetch } from "./api";
 
+export interface SkillBundle {
+  slug: string;
+  title: string;
+  outcome: string;
+  count: number;
+}
+
+export interface InstallBundleResult {
+  ok: boolean;
+  installed: { name: string; path: string }[];
+  missing_note: string;
+  error?: string;
+}
+
+/** Purpose-built sets from the same catalog as the individual skill search. */
+export async function bundles(): Promise<SkillBundle[]> {
+  const res = await authedFetch(`${httpBase()}/v1/skills/bundles`);
+  const body = await res.json();
+  if (!res.ok) throw new Error(body?.error || "Could not load skill bundles.");
+  return body?.bundles ?? [];
+}
+
+export async function installBundle(slug: string): Promise<InstallBundleResult> {
+  const res = await authedFetch(`${httpBase()}/v1/skills/bundles/install`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ slug }),
+  });
+  const body = await res.json();
+  if (!res.ok) throw new Error(body?.error || "Could not install the skill bundle.");
+  return body;
+}
+
 /** Qumge credit. `null` when it cannot be known — signed out, offline, server
  * down — because the UI does the same thing with all of them: shows nothing. An
  * error banner in front of someone trying to work is worse than a missing

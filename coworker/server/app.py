@@ -678,6 +678,24 @@ def create_app(manager: SessionManager) -> FastAPI:
         except Exception as exc:  # noqa: BLE001
             return {"ok": False, "error": str(exc)}
 
+    @app.get("/v1/skills/bundles")
+    def skill_bundles() -> dict[str, Any]:
+        from ..skills import qumge_catalog
+
+        try:
+            return {"bundles": qumge_catalog.bundles()}
+        except Exception as exc:  # noqa: BLE001
+            return {"bundles": [], "error": str(exc)}
+
+    @app.post("/v1/skills/bundles/install")
+    def install_skill_bundle(body: dict) -> dict[str, Any]:
+        from ..skills import qumge_catalog
+
+        try:
+            return qumge_catalog.install_bundle(str((body or {}).get("slug", "")))
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "installed": [], "missing_note": "", "error": str(exc)}
+
     @app.get("/v1/workspaces/recent")
     def recent_workspaces() -> dict[str, Any]:
         return {"workspaces": manager.recent_workspaces()}
