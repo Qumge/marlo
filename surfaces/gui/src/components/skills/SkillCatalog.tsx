@@ -201,7 +201,6 @@ export function SkillCatalog({
               （ConnectorsList / GmailDetail / SkillsView 里那几处），照抄到这里
               会让标题贴到上一张卡片上。 */}
           <div className={GRP_H}>{t("skBundles")}</div>
-          <div className="text-[12px] text-muted mb-2">{t("skBundlesSub")}</div>
           <div className={GRP}>
             {bundleRows.map((bundle) => (
               <div key={bundle.slug} className={ROW}>

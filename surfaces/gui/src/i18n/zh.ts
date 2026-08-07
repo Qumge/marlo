@@ -164,7 +164,6 @@ export const zh: Strings = {
   skSearchFailed: "连不上目录：",
   skTranslated: "目录里的技能大多是英文写的，已按英文搜索：",
   skBundles: "干成一件事",
-  skBundlesSub: "手工挑的一组技能，一步添加完整套。",
   skBundleCount: (n) => `${n} 个技能`,
   skAddBundle: "添加整套",
   skAddingBundle: "添加中…",

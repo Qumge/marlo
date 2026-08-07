@@ -85,7 +85,6 @@ export const en = {
   skSearchFailed: "Couldn't reach the catalog:",
   skTranslated: "Most catalog skills are written in English, so this was searched as:",
   skBundles: "Get one job done",
-  skBundlesSub: "Hand-picked sets of skills. Add the whole set in one step.",
   skBundleCount: (n: number) => `${n} skill${n === 1 ? "" : "s"}`,
   skAddBundle: "Add set",
   skAddingBundle: "Adding…",
