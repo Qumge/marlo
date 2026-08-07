@@ -399,6 +399,39 @@ def test_switch_model_appends_notice_only_midsession(tmp_path):
     assert all(m.get("role") != "notice" for m in engine._outbound_messages())
 
 
+def test_outbound_repairs_orphaned_tool_calls(tmp_path):
+    """A crashed connector requester can leave assistant tool_calls without results.
+    Hosted APIs reject that shape; outbound feed must synthesize error tool messages
+    without mutating the persisted transcript.
+    """
+    engine, _ = _engine(tmp_path, [_text_turn("ok")])
+    engine.messages = [
+        {"role": "user", "content": "link my email"},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {
+                    "id": "call_orphan",
+                    "type": "function",
+                    "function": {
+                        "name": "request_connector",
+                        "arguments": '{"connector":"gmail"}',
+                    },
+                }
+            ],
+        },
+        {"role": "user", "content": "browser no response"},
+    ]
+    out = engine._outbound_messages()
+    roles = [m.get("role") for m in out]
+    assert roles == ["user", "assistant", "tool", "user"]
+    assert out[2]["tool_call_id"] == "call_orphan"
+    assert "not executed" in out[2]["content"]
+    # Canonical history is untouched — no silent rewrite of the saved thread.
+    assert [m.get("role") for m in engine.messages] == ["user", "assistant", "user"]
+
+
 def test_switch_model_warns_when_images_meet_text_only_model(tmp_path):
     class NoVisionProvider(ScriptedProvider):
         def capabilities(self, model):

@@ -1711,9 +1711,35 @@ def create_app(manager: SessionManager) -> FastAPI:
         # 对话里 agent 要账号的那条路（request_connector）住在 connect_routes.py。
         # 它是 115 行、要等两次（卡片点头 + 浏览器 OAuth 回来），原本整块嵌在这里 ——
         # 而这个文件是上游改得最勤的之一。挂载点留一行就够了。
+        #
+        # 【必须注入】：route / visibility / mirror / parse_json / connect_managed
+        # 都是本 handler 的闭包（或本模块的路由）。搬文件时如果漏传，运行时
+        # NameError，assistant tool_calls 落盘却没有 tool 结果，下一轮 400。
         from .connect_routes import make_connector_requester
 
-        connector_requester = make_connector_requester(manager, session_id)
+        async def _connector_on_card(data: dict) -> None:
+            # Engine also yields CONNECTOR_REQUESTED (drains the requester's queue),
+            # which run_turn broadcasts. This extra broadcast is intentionally NOT
+            # done here — one card event is enough. Hook kept for future surfaces.
+            return None
+
+        async def _connector_connect_mcp(name: str) -> dict[str, Any]:
+            # Same background start as POST /v1/connectors/{name}/mcp-connect.
+            asyncio.create_task(manager.mcp_connect_connector(name))
+            return {"ok": True, "started": True}
+
+        connector_requester = make_connector_requester(
+            manager,
+            session_id,
+            route=_route,
+            visibility=_visibility,
+            mirror=_mirror,
+            parse_json=_parse_json,
+            connect_managed=connector_connect_managed,
+            on_card=_connector_on_card,
+            connect_mcp=_connector_connect_mcp,
+            inbox_visibility_inbox=VIS_INBOX,
+        )
 
         async def directory_requester(args: dict, tool_call_id=None) -> dict:
             # The engine has already emitted DIRECTORY_REQUESTED. Park, await, then apply the grant.
@@ -1871,6 +1897,7 @@ def create_app(manager: SessionManager) -> FastAPI:
             "turn_start",
             "permission_required",
             "directory_requested",
+            "connector_requested",
             "plan_proposed",
             "iteration_end",
         }
@@ -1892,6 +1919,25 @@ def create_app(manager: SessionManager) -> FastAPI:
                     )
                     if event.type.value in _CHECKPOINTS:
                         manager.save(session_id, engine)
+            except Exception as exc:
+                # Uncaught mid-turn errors used to leave the session idle with
+                # orphaned tool_calls and no ERROR event — the GUI just hung.
+                import traceback
+
+                traceback.print_exc()
+                try:
+                    await manager.broadcast_session(
+                        session_id,
+                        {
+                            "type": "error",
+                            "data": {
+                                "error": str(exc),
+                                "error_type": type(exc).__name__,
+                            },
+                        },
+                    )
+                except Exception:
+                    pass
             finally:
                 manager.mark_idle(session_id)
                 manager.save(session_id, engine)

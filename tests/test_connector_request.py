@@ -139,12 +139,27 @@ def test_without_a_requester_it_reports_failure_not_success():
 
 
 def test_it_emits_the_card_before_waiting():
-    # 顺序要紧：先发事件（界面画出卡片），再等。反过来用户看不到要他做什么。
+    # 顺序要紧：先发完整卡片（界面画出 title / user_code），再等。
+    # 卡片经 requester._card_queue 进 engine 事件流。
+    import asyncio as _asyncio
+
     seen = []
+    card_q: _asyncio.Queue = _asyncio.Queue()
 
     async def requester(args, tool_call_id=None):
+        await card_q.put(
+            {
+                "connector": "gmail",
+                "title": "Gmail",
+                "reason": "read your mail",
+                "brokered_by": "OpenWorker Cloud",
+                "user_code": "",
+            }
+        )
         seen.append("waited")
         return {"connected": True}
+
+    requester._card_queue = card_q  # type: ignore[attr-defined]
 
     eng = TurnEngine.__new__(TurnEngine)
     eng.connector_requester = requester
@@ -159,8 +174,39 @@ def test_it_emits_the_card_before_waiting():
     events = asyncio.run(_drain(eng, _Call()))
     assert events[0].type.value == "connector_requested"
     assert events[0].data["connector"] == "gmail"
+    assert events[0].data["title"] == "Gmail"
+    assert events[0].data["brokered_by"] == "OpenWorker Cloud"
     assert seen == ["waited"]
     assert events[-1].data["status"] == "ok"
+
+
+def test_manual_only_connector_does_not_emit_a_card():
+    # email / API token 等没有一键路径：不该弹 Connect 卡片，只回 tool 结果。
+    async def requester(args, tool_call_id=None):
+        return {
+            "connected": False,
+            "needs_manual_setup": True,
+            "error": "Email (IMAP) has no one-click sign-in in chat",
+        }
+
+    requester._card_queue = asyncio.Queue()  # type: ignore[attr-defined]
+
+    eng = TurnEngine.__new__(TurnEngine)
+    eng.connector_requester = requester
+    eng.messages = []
+    eng._audit = lambda *a, **k: None
+
+    async def _interruptible(coro, interrupted=None):
+        return await coro
+
+    eng._interruptible = _interruptible
+
+    events = asyncio.run(_drain(eng, _Call(connector="email")))
+    kinds = [e.type.value for e in events]
+    assert "connector_requested" not in kinds
+    assert kinds[-1] == "tool_finished"
+    assert events[-1].data["status"] == "denied"
+    assert any("needs_manual_setup" in str(m) or "no one-click" in str(m) for m in eng.messages)
 
 
 def test_a_decline_is_denied_not_an_error():
@@ -182,3 +228,28 @@ def test_a_decline_is_denied_not_an_error():
     assert events[-1].data["status"] == "denied"
     # 工具结果进了消息历史，agent 读得到原因
     assert any("declined" in str(m) for m in eng.messages)
+
+
+def test_requester_exception_still_writes_a_tool_result():
+    """搬家漏注入 → NameError。异常不能吃掉 tool 结果，否则下一轮 OpenAI 400。"""
+
+    async def requester(args, tool_call_id=None):
+        raise NameError("_route is not defined")
+
+    eng = TurnEngine.__new__(TurnEngine)
+    eng.connector_requester = requester
+    eng.messages = []
+    eng._audit = lambda *a, **k: None
+
+    async def _interruptible(coro, interrupted=None):
+        return await coro
+
+    eng._interruptible = _interruptible
+
+    events = asyncio.run(_drain(eng, _Call()))
+    assert events[-1].type.value == "tool_finished"
+    assert events[-1].data["status"] == "denied"
+    tool_msgs = [m for m in eng.messages if m.get("role") == "tool"]
+    assert len(tool_msgs) == 1
+    assert tool_msgs[0]["tool_call_id"] == "tc1"
+    assert "NameError" in tool_msgs[0]["content"] or "_route" in tool_msgs[0]["content"]

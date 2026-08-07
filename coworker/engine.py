@@ -888,13 +888,20 @@ class TurnEngine:
         else:
             yield Event(EventType.PLAN_PROPOSED, {"plan": plan})
             self._audit(tool_call, stage="plan_proposed")
-            result = await self._interruptible(
-                self.plan_approver(dict(args), tool_call.id),
-                interrupted={"approved": False, "error": "interrupted by user"},
-            ) or {
-                "approved": False,
-                "error": "no response",
-            }
+            try:
+                result = await self._interruptible(
+                    self.plan_approver(dict(args), tool_call.id),
+                    interrupted={"approved": False, "error": "interrupted by user"},
+                ) or {
+                    "approved": False,
+                    "error": "no response",
+                }
+            except Exception as exc:
+                result = {
+                    "approved": False,
+                    "error": f"plan approval failed: {exc}",
+                    "error_type": type(exc).__name__,
+                }
 
         if result.get("approved"):
             # The approver may pick the post-plan mode ("interactive" asks per write,
@@ -930,13 +937,16 @@ class TurnEngine:
     async def _handle_connector_request(
         self, tool_call: ToolCall
     ) -> AsyncIterator[Event]:
-        """Emit the connect prompt, await the user's out-of-band decision, and return the
-        outcome as the tool result.
+        """Await the connect prompt + browser round-trip; return the outcome as the tool
+        result.
 
-        Mirrors _handle_directory_request deliberately. That path is proven and the GUI
-        already has a card for its shape; keeping them identical means the card can be
-        copied rather than reinvented, and means "a skill declares the connection it
-        needs" can reuse this instead of inventing a third mechanism.
+        Unlike directory_requested, the card payload (title, brokered_by, device user_code)
+        is only known AFTER the requester classifies the path and maybe starts a device
+        flow. Emitting CONNECTOR_REQUESTED before that produced half-empty cards and —
+        worse — a Connect button for form-only connectors (email IMAP) that then failed
+        with "no managed OAuth path". The requester emits the full card via its `on_card`
+        hook (websocket broadcast); this method drains the requester's card queue so the
+        same Event still flows through the engine stream (checkpoints, TUI, tests).
         """
         args = tool_call.arguments or {}
         if self.connector_requester is None:
@@ -947,25 +957,60 @@ class TurnEngine:
                 "error": "connector requests aren't available here",
             }
         else:
-            yield Event(
-                EventType.CONNECTOR_REQUESTED,
-                {
-                    "connector": str(args.get("connector", "")),
-                    "reason": str(args.get("reason", "")),
-                },
-            )
             self._audit(
                 tool_call,
                 stage="connector_requested",
                 reason=str(args.get("reason", "")),
             )
-            result = await self._interruptible(
-                self.connector_requester(dict(args), tool_call.id),
-                interrupted={"connected": False, "error": "interrupted by user"},
-            ) or {
-                "connected": False,
-                "error": "no response",
-            }
+            # Card queue is attached by make_connector_requester; drain it while the
+            # requester runs so CONNECTOR_REQUESTED is full (or never fires on early
+            # needs_manual_setup returns).
+            card_q = getattr(self.connector_requester, "_card_queue", None)
+            # Requester failures (NameError from a bad extract, OAuth network blips, …)
+            # MUST still become a tool result. An assistant message with tool_calls and
+            # no following tool message is rejected by hosted chat APIs (400).
+            try:
+                req_task = asyncio.ensure_future(
+                    self._interruptible(
+                        self.connector_requester(dict(args), tool_call.id),
+                        interrupted={
+                            "connected": False,
+                            "error": "interrupted by user",
+                        },
+                    )
+                )
+                # At most one card. Race-safe: wait for card OR requester finish;
+                # if the requester finished first (manual-setup early return, or a
+                # fast put+return race), drain any leftover card from the queue.
+                card_emitted = False
+                if card_q is not None:
+                    get_card = asyncio.ensure_future(card_q.get())
+                    done, _ = await asyncio.wait(
+                        {req_task, get_card},
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+                    if get_card in done:
+                        yield Event(EventType.CONNECTOR_REQUESTED, get_card.result())
+                        card_emitted = True
+                    else:
+                        get_card.cancel()
+                result = (await req_task) or {
+                    "connected": False,
+                    "error": "no response",
+                }
+                if card_q is not None and not card_emitted:
+                    try:
+                        yield Event(
+                            EventType.CONNECTOR_REQUESTED, card_q.get_nowait()
+                        )
+                    except asyncio.QueueEmpty:
+                        pass
+            except Exception as exc:
+                result = {
+                    "connected": False,
+                    "error": f"connector request failed: {exc}",
+                    "error_type": type(exc).__name__,
+                }
 
         status = "ok" if result.get("connected") else "denied"
         self.messages.append(_tool_result_message(tool_call, result))
@@ -1010,13 +1055,20 @@ class TurnEngine:
                 stage="directory_requested",
                 reason=str(args.get("reason", "")),
             )
-            result = await self._interruptible(
-                self.directory_requester(dict(args), tool_call.id),
-                interrupted={"granted": False, "error": "interrupted by user"},
-            ) or {
-                "granted": False,
-                "error": "no response",
-            }
+            try:
+                result = await self._interruptible(
+                    self.directory_requester(dict(args), tool_call.id),
+                    interrupted={"granted": False, "error": "interrupted by user"},
+                ) or {
+                    "granted": False,
+                    "error": "no response",
+                }
+            except Exception as exc:
+                result = {
+                    "granted": False,
+                    "error": f"directory request failed: {exc}",
+                    "error_type": type(exc).__name__,
+                }
 
         status = "ok" if result.get("granted") else "denied"
         self.messages.append(_tool_result_message(tool_call, result))
@@ -1054,13 +1106,20 @@ class TurnEngine:
             # The asker is mode-aware (attended → live inline prompt; unattended → Inbox), so it
             # owns surfacing the question. The engine just awaits the answer.
             self._audit(tool_call, stage="question_requested", reason=question)
-            result = await self._interruptible(
-                self.question_asker(dict(args), tool_call.id),
-                interrupted={"answer": "", "error": "interrupted by user"},
-            ) or {
-                "answer": "",
-                "error": "no response",
-            }
+            try:
+                result = await self._interruptible(
+                    self.question_asker(dict(args), tool_call.id),
+                    interrupted={"answer": "", "error": "interrupted by user"},
+                ) or {
+                    "answer": "",
+                    "error": "no response",
+                }
+            except Exception as exc:
+                result = {
+                    "answer": "",
+                    "error": f"question failed: {exc}",
+                    "error_type": type(exc).__name__,
+                }
 
         status = "ok" if result.get("answer") else "denied"
         self.messages.append(_tool_result_message(tool_call, result))
@@ -1123,6 +1182,12 @@ class TurnEngine:
             for msg in source_messages
             if msg.get("role") != "notice"
         ]
+        # Hosted chat templates reject history where an assistant tool_calls message
+        # lacks a tool result for every tool_call_id. A crashed requester / mid-turn
+        # exception can leave that shape on disk; synthesize error results outbound
+        # only so the next turn can still talk to the model. Canonical history is
+        # left alone (GUI replay still shows the incomplete card).
+        out = _repair_orphaned_tool_calls(out)
         # PDF attachments (stored as `file` parts) are adapted to the ACTIVE model right
         # here — never in the persisted history — so a mid-session model switch always
         # re-decides: native PDF models get the real document, the rest get the local
@@ -1254,6 +1319,51 @@ def _tool_error_message(tool_call: ToolCall, reason: str) -> dict[str, Any]:
         "content": json.dumps({"error": "tool call not executed", "reason": reason}),
         "ts": time.time(),
     }
+
+
+def _repair_orphaned_tool_calls(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Insert synthetic tool-error results for any assistant tool_call_id that has no
+    following tool message. Outbound-only safety net for hosted providers that hard-fail
+    on incomplete tool_calls sequences (OpenAI 400 invalid_request_error).
+    """
+    answered = {
+        m.get("tool_call_id")
+        for m in messages
+        if m.get("role") == "tool" and m.get("tool_call_id")
+    }
+    missing: list[tuple[int, str]] = []  # (insert_after_index, tool_call_id)
+    for i, msg in enumerate(messages):
+        if msg.get("role") != "assistant" or not msg.get("tool_calls"):
+            continue
+        for tc in msg["tool_calls"]:
+            tc_id = tc.get("id")
+            if not tc_id or tc_id in answered:
+                continue
+            missing.append((i, tc_id))
+            answered.add(tc_id)  # one synthetic per id
+    if not missing:
+        return messages
+    # Insert right after each orphaning assistant message (stable from back so indices hold).
+    out = list(messages)
+    by_after: dict[int, list[str]] = {}
+    for after, tc_id in missing:
+        by_after.setdefault(after, []).append(tc_id)
+    for after in sorted(by_after, reverse=True):
+        synthetics = [
+            {
+                "role": "tool",
+                "tool_call_id": tc_id,
+                "content": json.dumps(
+                    {
+                        "error": "tool call not executed",
+                        "reason": "previous turn ended without a tool result",
+                    }
+                ),
+            }
+            for tc_id in by_after[after]
+        ]
+        out[after + 1 : after + 1] = synthetics
+    return out
 
 
 def _preview(value: Any, max_chars: int = 300) -> str:
