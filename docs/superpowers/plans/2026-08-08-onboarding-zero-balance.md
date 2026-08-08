@@ -527,6 +527,7 @@ export function TopUpCard({
   useEffect(() => {
     if (props.canSpend !== false || !text.trim()) setGated(false);
   }, [props.canSpend, text]);
+```
 
 并在 textarea 所在容器**上方**渲染 `{gated && props.topUpSlot}`（见下一步 —— 卡片由 `App.tsx` 传进来，`Composer` 不认识 `QumgeBalance`，保持它对 qumge 无知）。相应在 props 里再加一行：
 
