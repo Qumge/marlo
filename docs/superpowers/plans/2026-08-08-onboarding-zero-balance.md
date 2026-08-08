@@ -670,9 +670,11 @@ class _Status402(Exception):
 
 
 def test_gateway_402_reads_as_out_of_credit():
+    from coworker.providers import errors
+
     msg = friendly_model_error("qumge:deepseek/deepseek-v4-flash", _Status402("Payment Required"))
-    assert msg is not None
-    assert "credit" in msg.lower()
+    # 身份，不是「含有 credit 这个词」—— engine 就是靠这个身份决定要不要挂充值按钮
+    assert msg is errors.NO_CREDIT
 
 
 def test_402_is_matched_on_the_code_not_on_guessed_body_text():
@@ -712,19 +714,25 @@ Expected: FAIL —— 返回 `None`
 # have to guess how the gateway words its body (or re-guess when it rewords it).
 _NO_CREDIT_STATUS = 402
 _NO_CREDIT_TEXT = ("insufficient balance", "insufficient_balance", "payment required")
+
+# MODULE-LEVEL and interpolation-free on purpose. The caller has to tell "is this the
+# out-of-credit failure?" so it can offer a top-up button, and the only two ways to
+# answer that are this constant's identity or a substring match on the sentence below.
+# A substring match makes the wording a silent contract: reword it and `error_kind`
+# quietly stops being set, with no test going red. `friendly is NO_CREDIT` cannot rot.
+NO_CREDIT = (
+    "Your Qumge balance is empty — add credit to keep going. "
+    "The amount and the top-up link are in the account row at the bottom of the sidebar."
+)
 ```
 
 在 `friendly_model_error` 里，**放在 `_NO_QUOTA` 判断之前**：
 
 ```python
-    no_credit = (
-        "Your Qumge balance is empty — add credit to keep going. "
-        "The amount and the top-up link are in the account row at the bottom of the sidebar."
-    )
     if getattr(exc, "status_code", None) == _NO_CREDIT_STATUS:
-        return no_credit
+        return NO_CREDIT
     if any(marker in text for marker in _NO_CREDIT_TEXT):
-        return no_credit
+        return NO_CREDIT
 ```
 
 - [ ] **Step 4: 跑测试，确认通过**
