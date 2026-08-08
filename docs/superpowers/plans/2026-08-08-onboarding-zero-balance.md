@@ -152,12 +152,19 @@ describe("useQumgeAccount store", () => {
   });
   afterEach(() => vi.useRealTimers());
 
-  it("一次 refresh 只打一次接口，无论多少订阅者", async () => {
-    refreshQumgeAccount();
-    refreshQumgeAccount();
-    await vi.runOnlyPendingTimersAsync();
-    // 两次显式 refresh 是两次调用；关键是没有第二个定时器在背后偷偷再打
-    expect((getQumgeAccount as any).mock.calls.length).toBe(2);
+  it("两个订阅者共用一个定时器 —— 一个周期只打一次接口", async () => {
+    // 这条测的是这个模块存在的全部理由。两个组件各自轮询，就会在屏幕上
+    // 显示互相矛盾的余额（BalanceChip.tsx:16-18 记过这个病）。
+    const A = () => { useQumgeAccount(); return null; };
+    const B = () => { useQumgeAccount(); return null; };
+    render(<><A /><B /></>);
+    await vi.waitFor(() => expect(getQumgeAccount).toHaveBeenCalled());
+    (getQumgeAccount as any).mockClear();
+
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    // 一个周期过去，只应该有一次请求。挂两个订阅者却打两次 = 两个定时器。
+    expect((getQumgeAccount as any).mock.calls.length).toBe(1);
   });
 
   it("fast 模式把轮询间隔降到 5 秒，关掉后回到 60 秒", () => {
@@ -304,7 +311,11 @@ git commit -m "refactor(gui): 账号状态收进单例 hook，一个时钟"
 
 **Interfaces:**
 - Consumes: Task 2 的 `useQumgeAccount()` / `setAccountPollFast()`；`QumgeBalance.can_spend`
-- Produces: `<Composer>` 多两个可选 prop `canSpend?: boolean` / `onTopUp?: () => void`；`<TopUpCard balance onTopUp onUseOwnKey />`
+- Produces: `<Composer>` 多三个可选 prop —— `canSpend?: boolean`、`onTopUp?: () => void`、`topUpSlot?: ReactNode`；`<TopUpCard balance onUseOwnKey />`
+
+**卡片按回车才出现**（owner 裁定 2026-08-09）。余额为 0 不等于立刻弹卡片：用户可能只是进来看看历史会话。拦截发生在他打完字、按下回车的那一刻 —— 那时「要花钱」这句话才落在一个具体的意图上。侧栏那个 `$0.00` chip 已经在做「常驻提醒」，卡片再做一遍就是重复。
+
+所以 Composer 内部有一个 `gated` 状态：初始 false，被闸门置 true，草稿清空或 `canSpend` 不再是 false 时归位。
 
 - [ ] **Step 1: 加文案键**
 
@@ -372,6 +383,26 @@ describe("composer 余额闸门", () => {
     render(<Composer {...base} onSend={onSend} canSpend={true} />);
     type("有钱");
     expect(onSend).toHaveBeenCalledOnce();
+  });
+
+  it("卡片不是常驻横幅 —— 打字期间不出现，按回车才出现", () => {
+    render(<Composer {...base} canSpend={false} topUpSlot={<div data-testid="card" />} />);
+    const box = screen.getByRole("textbox");
+    fireEvent.change(box, { target: { value: "还在打字" } });
+    expect(screen.queryByTestId("card")).toBeNull();
+    fireEvent.keyDown(box, { key: "Enter" });
+    expect(screen.getByTestId("card")).toBeInTheDocument();
+  });
+
+  it("充值回来后卡片自己消失，草稿还在", () => {
+    const { rerender } = render(
+      <Composer {...base} canSpend={false} topUpSlot={<div data-testid="card" />} />,
+    );
+    type("充值前打的字");
+    expect(screen.getByTestId("card")).toBeInTheDocument();
+    rerender(<Composer {...base} canSpend={true} topUpSlot={<div data-testid="card" />} />);
+    expect(screen.queryByTestId("card")).toBeNull();
+    expect(screen.getByRole("textbox")).toHaveValue("充值前打的字");
   });
 
   it("没连模型时先谈模型，不谈余额", () => {
@@ -472,19 +503,32 @@ export function TopUpCard({
 ```ts
     // Credit gate. AFTER needsModel on purpose: with no model connected, talking
     // about money answers a question the user has not reached yet.
+    //
+    // Flipping `gated` here — rather than deriving the card's visibility from
+    // canSpend alone — is what makes this an interception instead of a banner.
+    // A zero balance is not itself a reason to interrupt someone who has not
+    // asked for anything yet; the sidebar chip already carries that standing
+    // notice. The card earns its interruption at the moment the user commits
+    // to a request, with the request still on screen.
     if (props.canSpend === false) {
+      setGated(true);
       props.onTopUp?.();
       return;
     }
 ```
 
-组件内部计算 `needsCredit` 用于渲染卡片：
+组件内部状态，以及它归位的两个条件：
 
 ```ts
-  const needsCredit = props.canSpend === false;
-```
+  const [gated, setGated] = useState(false);
 
-并在 textarea 所在容器**上方**渲染 `{needsCredit && props.topUpSlot}`（见下一步 —— 卡片由 `App.tsx` 传进来，`Composer` 不认识 `QumgeBalance`，保持它对 qumge 无知）。相应在 props 里再加一行：
+  // 充值回来（canSpend 不再是 false）或者草稿被清空（发出去了/换会话了），
+  // 这张卡片就没有理由继续占着位置。
+  useEffect(() => {
+    if (props.canSpend !== false || !text.trim()) setGated(false);
+  }, [props.canSpend, text]);
+
+并在 textarea 所在容器**上方**渲染 `{gated && props.topUpSlot}`（见下一步 —— 卡片由 `App.tsx` 传进来，`Composer` 不认识 `QumgeBalance`，保持它对 qumge 无知）。相应在 props 里再加一行：
 
 ```ts
   // Rendered above the input when canSpend === false. Passed in rather than built
@@ -500,7 +544,6 @@ export function TopUpCard({
               canSpend={
                 model.startsWith("qumge:") ? qumgeAccount.balance?.can_spend : undefined
               }
-              onTopUp={() => {}}
               topUpSlot={
                 qumgeAccount.balance ? (
                   <TopUpCard balance={qumgeAccount.balance} onUseOwnKey={openModelSetup} />
@@ -739,7 +782,8 @@ Expected: FAIL —— `_append_notice() got an unexpected keyword argument 'caus
 
 ```python
                 friendly = friendly_model_error(self.model, exc)
-                no_credit = friendly is not None and "balance is empty" in friendly
+                # 身份比较，不是文本匹配 —— 见 errors.NO_CREDIT 那一段
+                no_credit = friendly is errors.NO_CREDIT
                 payload = {
                     "error": friendly or str(exc),
                     "error_type": type(exc).__name__,
