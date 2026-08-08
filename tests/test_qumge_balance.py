@@ -102,3 +102,23 @@ def test_a_missing_topup_url_still_leaves_somewhere_to_go(monkeypatch):
     # warning and no way to act on it.
     _stub(monkeypatch, payload={"balance_micro_usd": 0})
     assert "topup" in qb.fetch(_signed_in())["topup_url"]
+
+
+def test_can_spend_is_true_with_credit(monkeypatch):
+    _stub(monkeypatch, payload={"balance_micro_usd": 2_500_000, "currency": "USD"})
+    assert qb.fetch(_signed_in())["can_spend"] is True
+
+
+def test_can_spend_is_false_at_exactly_zero(monkeypatch):
+    """新注册账号就是这个状态 —— 第一层闸门唯一会触发的场景。"""
+    _stub(monkeypatch, payload={"balance_micro_usd": 0, "currency": "USD"})
+    bal = qb.fetch(_signed_in())
+    assert bal["can_spend"] is False
+    assert bal["low"] is True  # 两层叠加，不互斥
+
+
+def test_unknown_balance_carries_no_can_spend_at_all(monkeypatch):
+    """None 而不是 {"can_spend": False}。GUI 的「拿不到就不拦」整条规则
+    都建立在这上面：没有这个键，就没有任何东西能把闸门关上。"""
+    _stub(monkeypatch, raises=httpx.ConnectError("offline"))
+    assert qb.fetch(_signed_in()) is None
