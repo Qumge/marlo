@@ -1,10 +1,10 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { AttnBadge } from "./AttnBadge";
 import { BalanceChip } from "./BalanceChip";
 import { Icon, type IconName } from "./Icon";
 import { QumgeSignInModal } from "./QumgeSignInModal";
-import { getQumgeAccount, qumgeSignOut, type QumgeAccount } from "../api.qumge";
-import { CLOUD_CHANGED } from "../api";
+import { qumgeSignOut } from "../api.qumge";
+import { refreshQumgeAccount, useQumgeAccount } from "../useQumgeAccount";
 import { useT } from "../i18n";
 
 // 侧栏底部那一行 —— 账号、余额、以及那个菜单。
@@ -19,9 +19,6 @@ import { useT } from "../i18n";
 //     菜单里），收件箱徽标一出现它就落在行的中心，吞掉点击等于让人打不开
 //     自己的设置。
 //   · 邮箱未知时退回"已登录 Qumge"，不是"未登录"。
-
-// 每 60 秒刷一次：余额随着干活在变，只靠窗口聚焦会一直显示旧数字。
-const ACCOUNT_REFRESH_MS = 60_000;
 
 export function AccountRow({
   onOpenInbox,
@@ -55,25 +52,7 @@ export function AccountRow({
   const t = useT();
   const [appMenuOpen, setAppMenuOpen] = useState(false);
   const [signInOpen, setSignInOpen] = useState(false);
-  const [account, setAccount] = useState<QumgeAccount>({
-    signed_in: false,
-    email: null,
-    balance: null,
-  });
-
-  const refreshAccount = () => getQumgeAccount().then(setAccount).catch(() => {});
-  useEffect(() => {
-    refreshAccount();
-    const onFocus = () => refreshAccount();
-    window.addEventListener("focus", onFocus);
-    window.addEventListener(CLOUD_CHANGED, onFocus);
-    const timer = window.setInterval(refreshAccount, ACCOUNT_REFRESH_MS);
-    return () => {
-      window.clearInterval(timer);
-      window.removeEventListener("focus", onFocus);
-      window.removeEventListener(CLOUD_CHANGED, onFocus);
-    };
-  }, []);
+  const account = useQumgeAccount();
 
   const appMenuItem = (
   icon: IconName,
@@ -177,7 +156,7 @@ export function AccountRow({
                       showed their Qumge address. */}
                   {appMenuItem("signOut", t("signOut"), async () => {
                     await qumgeSignOut();
-                    await refreshAccount();
+                    refreshQumgeAccount();
                   })}
                 </>
               )}
@@ -192,7 +171,7 @@ export function AccountRow({
           }
           data-testid="account-row"
           onClick={() => {
-            if (!appMenuOpen) void refreshAccount();
+            if (!appMenuOpen) refreshQumgeAccount();
             setAppMenuOpen((v) => !v);
           }}
           aria-haspopup="menu"
@@ -274,7 +253,7 @@ export function AccountRow({
       {signInOpen && (
         <QumgeSignInModal
           onClose={() => setSignInOpen(false)}
-          onConnected={() => void refreshAccount()}
+          onConnected={() => refreshQumgeAccount()}
         />
       )}
     </>
