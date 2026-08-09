@@ -284,6 +284,10 @@ def test_no_credit_topup_url_missing_key_is_none():
         "javascript:alert(1)",
         "not a url",
         "ftp://qumge.com/topup",
+        # 方案正确的 scheme + 空 netloc。上面几条【只靠 scheme 那半边守卫就全被挡了】，
+        # 所以把 `or not parsed.netloc` 删掉，它们照样全绿（review 实测过 46 条全过）。
+        # 这一条是唯一能钉住 netloc 那半边的。
+        "https:///no-host",
         "",
         "/relative/path",
     ],
