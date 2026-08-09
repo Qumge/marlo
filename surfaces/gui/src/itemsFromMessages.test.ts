@@ -67,6 +67,13 @@ describe("itemsFromMessages notices", () => {
       { kind: "notice", tone: "warn", text: "Error: model down", retriable: true },
     ]);
   });
+
+  it("error notice 的 cause 透到 item 上（刷新后按钮还在）", () => {
+    const items = itemsFromMessages([
+      { role: "notice", kind: "error", text: "out of credit", cause: "no_credit" } as any,
+    ]);
+    expect(items[0]).toMatchObject({ kind: "notice", retriable: true, cause: "no_credit" });
+  });
 });
 
 describe("itemsFromMessages model switch", () => {

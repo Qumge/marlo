@@ -94,3 +94,47 @@ def test_unrelated_errors_pass_through_raw():
         friendly_model_error("gpt-5.6-sol", RuntimeError("connection reset by peer"))
         is None
     )
+
+
+# -- gateway 402 (no credit) -------------------------------------------------------------
+class _Status402(Exception):
+    """OpenAI SDK 的 APIStatusError 形状：状态码在属性上，不在字符串里。"""
+
+    status_code = 402
+
+
+def test_gateway_402_reads_as_out_of_credit():
+    from coworker.providers import errors
+
+    msg = friendly_model_error("qumge:deepseek/deepseek-v4-flash", _Status402("Payment Required"))
+    # 身份，不是「含有 credit 这个词」—— engine 就是靠这个身份决定要不要挂充值按钮
+    assert msg is errors.NO_CREDIT
+
+
+def test_402_is_matched_on_the_code_not_on_guessed_body_text():
+    """Qumge 网关的 body 措辞我们不知道，也不该猜。402 只有一个含义。"""
+
+    class _Bare(Exception):
+        status_code = 402
+
+    assert friendly_model_error("qumge:x", _Bare("")) is not None
+
+
+def test_text_fallback_when_the_sdk_swallowed_the_status_code():
+    from coworker.providers import errors
+
+    # 身份，不是 is not None —— 把 "insufficient balance" 误加进 _NO_QUOTA 而不是
+    # _NO_CREDIT_TEXT 的实现会返回「配额」那句话，is not None 照样绿
+    assert friendly_model_error("qumge:x", Exception("insufficient balance")) is errors.NO_CREDIT
+
+
+def test_404_and_429_are_unaffected():
+    class _NotFound(Exception):
+        status_code = 404
+
+    class _RateLimited(Exception):
+        status_code = 429
+
+    # 一码多义：404 也可能是 base_url 写错，429 也可能只是让你慢点
+    assert friendly_model_error("qumge:x", _NotFound("upstream boom")) is None
+    assert friendly_model_error("qumge:x", _RateLimited("slow down")) is None

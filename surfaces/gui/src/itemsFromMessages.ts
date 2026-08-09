@@ -78,7 +78,14 @@ export function itemsFromMessages(messages: ConversationMessage[]): Item[] {
             : m.kind === "compacted"
               ? // The subtle "compacted here" divider (OPE-27) — the transcript itself is intact.
                 { kind: "notice", tone: "info", text: m.text || "Context compacted" }
-              : { kind: "notice", tone: "warn", text: "Error: " + (m.text || "unknown"), retriable: true },
+              : {
+                  kind: "notice",
+                  tone: "warn",
+                  text: "Error: " + (m.text || "unknown"),
+                  retriable: true,
+                  // 原因随 notice 一起持久化，所以刷新之后「去充值」按钮还在。
+                  ...(m.cause ? { cause: m.cause as string } : {}),
+                },
       );
     }
     // system messages are omitted; tool-result messages are folded into the tool row above

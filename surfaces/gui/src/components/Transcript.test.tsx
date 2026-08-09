@@ -4,7 +4,22 @@ import { Transcript } from "./Transcript";
 import { humanizeTool } from "../humanize";
 import type { Item } from "../types";
 
-afterEach(cleanup);
+// Transcript reads the account balance for the no-credit notice's top-up button
+// (Task 5) — the same store the sidebar row and composer gate already poll.
+let mockBalance: { topup_url: string } | null = { topup_url: "https://qumge.example/topup" };
+vi.mock("../useQumgeAccount", () => ({
+  useQumgeAccount: () => ({ signed_in: true, email: "a@b.c", balance: mockBalance }),
+}));
+const openExternalMock = vi.fn();
+vi.mock("../tauri", () => ({
+  openExternal: (url: string) => openExternalMock(url),
+}));
+
+afterEach(() => {
+  cleanup();
+  openExternalMock.mockClear();
+  mockBalance = { topup_url: "https://qumge.example/topup" };
+});
 
 // §33 TurnGroup: the user-message → final-answer span is ONE disclosure; interior assistant
 // text is narration INSIDE it, the trailing assistant text is the answer OUTSIDE it; steps
@@ -177,6 +192,27 @@ describe("bubble hover affordances (FB-005)", () => {
     const when = new Date(TS * 1000);
     expect(stamps[0].textContent).toBe(when.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
     expect(stamps[0].getAttribute("title")).toBe(when.toLocaleString());
+  });
+});
+
+describe("no-credit notice top-up button (Task 5)", () => {
+  it("renders the top-up button when the notice carries cause: no_credit, and wires it to balance.topup_url", () => {
+    const items: Item[] = [
+      { kind: "notice", tone: "warn", text: "Error: out of credit", retriable: true, cause: "no_credit" },
+    ];
+    render(<Transcript items={items} onApprove={vi.fn()} />);
+    const button = screen.getByTestId("notice-topup");
+    expect(button).toBeTruthy();
+    fireEvent.click(button);
+    expect(openExternalMock).toHaveBeenCalledWith("https://qumge.example/topup");
+  });
+
+  it("does not render the top-up button for a notice without cause: no_credit", () => {
+    const items: Item[] = [
+      { kind: "notice", tone: "warn", text: "Error: model down", retriable: true },
+    ];
+    render(<Transcript items={items} onApprove={vi.fn()} />);
+    expect(screen.queryByTestId("notice-topup")).toBeNull();
   });
 });
 

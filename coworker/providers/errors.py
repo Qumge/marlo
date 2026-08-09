@@ -34,6 +34,26 @@ _NO_QUOTA = (
     "billing hard limit",
 )
 
+# Gateway 402. Matched on the STATUS CODE, unlike everything else in this module.
+#
+# The rule at the top of this file ("match on the body, not just the status") exists
+# because 404 and 429 are each two different problems wearing one number — a 404 is
+# also a wrong base_url, a 429 is also plain rate limiting. 402 Payment Required has
+# no second meaning, so the code IS the diagnosis, and matching on it means we never
+# have to guess how the gateway words its body (or re-guess when it rewords it).
+_NO_CREDIT_STATUS = 402
+_NO_CREDIT_TEXT = ("insufficient balance", "insufficient_balance", "payment required")
+
+# MODULE-LEVEL and interpolation-free on purpose. The caller has to tell "is this the
+# out-of-credit failure?" so it can offer a top-up button, and the only two ways to
+# answer that are this constant's identity or a substring match on the sentence below.
+# A substring match makes the wording a silent contract: reword it and `error_kind`
+# quietly stops being set, with no test going red. `friendly is NO_CREDIT` cannot rot.
+NO_CREDIT = (
+    "Your Qumge balance is empty — add credit to keep going. "
+    "The amount and the top-up link are in the account row at the bottom of the sidebar."
+)
+
 
 def friendly_model_error(model: str, exc: Exception) -> Optional[str]:
     """One actionable sentence for "your account can't use this model" failures, or None."""
@@ -43,6 +63,10 @@ def friendly_model_error(model: str, exc: Exception) -> Optional[str]:
         "gradually or require a plan upgrade. Pick a different model, or check "
         "the provider's console for availability."
     )
+    if getattr(exc, "status_code", None) == _NO_CREDIT_STATUS:
+        return NO_CREDIT
+    if any(marker in text for marker in _NO_CREDIT_TEXT):
+        return NO_CREDIT
     if any(marker in text for marker in _NO_QUOTA):
         return (
             f"Your account is out of quota for {model} — add credits or raise the limit "
