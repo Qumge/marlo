@@ -67,6 +67,26 @@ describe("i18n", () => {
     delete (globalThis as any).__OCW_PLATFORM__;
   });
 
+  it("中文里 Mac 和后面的汉字之间要有空格 —— 「这台 Mac 上」不是「这台 Mac上」", () => {
+    (globalThis as any).__OCW_PLATFORM__ = "macos";
+    act(() => setLocale("zh"));
+    const dev = t("thisDevice")();
+    // 四处模板都是 ${dev} 紧跟汉字，所以空格必须由 thisDevice 自己带
+    expect(t("onboardLede")(dev)).toContain("这台 Mac 上");
+    expect(t("onboardLede")(dev)).not.toContain("Mac上");
+    expect(t("deviceHint")(dev)).toContain("这台 Mac 或");
+    delete (globalThis as any).__OCW_PLATFORM__;
+  });
+
+  it("Windows 的纯中文里【不】能有那个空格 —— 「这台电脑上」不是「这台电脑 上」", () => {
+    (globalThis as any).__OCW_PLATFORM__ = "windows";
+    act(() => setLocale("zh"));
+    const dev = t("thisDevice")();
+    expect(t("onboardLede")(dev)).toContain("这台电脑上");
+    expect(t("onboardLede")(dev)).not.toContain("电脑 上");
+    delete (globalThis as any).__OCW_PLATFORM__;
+  });
+
   it("macOS 上仍然说 Mac —— 主力平台不降级成「这台电脑」", () => {
     (globalThis as any).__OCW_PLATFORM__ = "macos";
     act(() => setLocale("en"));

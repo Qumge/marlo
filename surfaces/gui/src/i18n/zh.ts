@@ -78,7 +78,11 @@ export const zh: Strings = {
   nToolCallsSoFar: (n) => `已经用了 ${n} 次工具。`,
 
   welcomeTo: "欢迎使用 Marlo",
-  thisDevice: () => (platformOS() === "macos" ? "这台 Mac" : "这台电脑"),
+  // 【尾部那个空格是有意的】中西文混排要留空格：「这台 Mac 上」对，「这台 Mac上」错；
+  // 而纯中文的「这台电脑上」不能加空格。四处模板都是 ${dev} 紧跟汉字（上／或），
+  // 所以空格只能由这里按平台决定，模板里加死会把 Windows 那半边弄错。
+  // 别"顺手"删掉它 —— 0.7.6 就是这么把首屏第一句话弄成「这台 Mac上」的。
+  thisDevice: () => (platformOS() === "macos" ? "这台 Mac " : "这台电脑"),
   onboardLede: (dev) => `连上 Qumge 就能开始 —— 登录一次，所有模型都能用，密钥只存在${dev}上。`,
   connectToQumge: "连接 Qumge",
   useOwnKey: "改用我自己的 API key",
