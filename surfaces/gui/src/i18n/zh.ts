@@ -640,7 +640,6 @@ export const zh: Strings = {
   creditNeededTitle: "充值后就能跑这一单",
   creditNeededBody: "按用量扣费，不订阅。",
   addCredit2: "去充值",
-  useOwnKeyShort: "用我自己的 key",
 
   workingNow: "正在干活",
   sleeping: "休眠中（到点会自己醒）",

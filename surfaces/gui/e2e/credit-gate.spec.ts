@@ -14,6 +14,22 @@ test("零余额 → 拦住 → 充值 → 解锁 → 可发，全程草稿不丢
   await page.goto("/");
   await page.getByText("Draft the launch note").first().click(); // 先进一个会话，composer 才可用
 
+  const box = page.getByPlaceholder(/Ask the coworker/);
+
+  // 【守住 App.tsx:1638-1640 那一行】canSpend={isQumgeModel(model) ? balance.can_spend
+  // : undefined} —— 只在 isQumgeModel(model) 为真时才把 canSpend 接到账号余额上。这是
+  // 保护自带 key 用户的唯一一行：没有它，一个用自己 OpenAI/Anthropic key 的人只要恰好
+  // 也挂着一个余额 $0 的 Qumge 账号，发消息就会被一个跟他这次请求毫无关系的余额拦住。
+  //
+  // 种子会话此刻还停在 anthropic:claude-opus-4-8（非 qumge:），零余额路由也已经装好
+  // （见上面的 account.install()）——这正是验证「非 Qumge 模型不看 Qumge 余额」的唯一
+  // 窗口：往下几行一旦切成 qumge:openai/gpt-5.6-sol，这个窗口就永久关闭了。
+  const nonQumgeDraft = "非 qumge 模型不该被这个余额拦住";
+  await box.fill(nonQumgeDraft);
+  await box.press("Enter");
+  await expect(page.getByTestId("topup-card")).toHaveCount(0);
+  await expect(box).toHaveValue(""); // 清空 = 真的发出去了，不是被闸门吞掉
+
   // 【选择器落差】：种子会话的模型是 anthropic:claude-opus-4-8（非 qumge:）。
   // App.tsx 只在 isQumgeModel(model) 为真时才把 canSpend 接到账号余额上——
   // 这是故意的（自带 key 的用户不该被 Qumge 的余额拦住），但也意味着不切模型
@@ -22,8 +38,6 @@ test("零余额 → 拦住 → 充值 → 解锁 → 可发，全程草稿不丢
   const picker = page.locator(".dd").filter({ hasText: "Claude Opus 4.8" });
   await picker.locator(".pill").click();
   await page.locator(".dd-item").filter({ hasText: "openai/gpt-5.6-sol" }).click();
-
-  const box = page.getByPlaceholder(/Ask the coworker/);
 
   const draft = "帮我把这个文件夹里的发票按月分组";
   await box.fill(draft);

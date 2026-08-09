@@ -679,7 +679,6 @@ export const en = {
   creditNeededTitle: "Add credit to run this",
   creditNeededBody: "Pay for what you use — no subscription.",
   addCredit2: "Add credit",
-  useOwnKeyShort: "Use my own key",
 
   // -- sidebar --------------------------------------------------------------
   workingNow: "Working now",

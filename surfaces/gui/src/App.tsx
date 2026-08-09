@@ -1640,7 +1640,7 @@ export function App() {
               }
               topUpSlot={
                 qumgeAccount.balance ? (
-                  <TopUpCard balance={qumgeAccount.balance} onUseOwnKey={openModelSetup} />
+                  <TopUpCard balance={qumgeAccount.balance} />
                 ) : undefined
               }
               onTopUp={refreshQumgeAccount}
