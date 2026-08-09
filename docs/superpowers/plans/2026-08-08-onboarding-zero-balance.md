@@ -948,7 +948,7 @@ git commit -m "feat: 网关 402 变成带充值按钮的人话，且刷新后仍
 
 ```ts
   signUpHint: "No Qumge account yet? Sign up on the page that opens — you'll come straight back to this step.",
-  reopenBrowser: "Browser didn't open? Try again",
+  reopenBrowser: "Open the page again",
   codeExpired: "That code expired before it was used. Try again for a fresh one.",
 ```
 
@@ -956,7 +956,7 @@ git commit -m "feat: 网关 402 变成带充值按钮的人话，且刷新后仍
 
 ```ts
   signUpHint: "还没有 Qumge 账号？在打开的页面上注册一个 —— 注册完会自动回到这一步。",
-  reopenBrowser: "浏览器没打开？再试一次",
+  reopenBrowser: "再打开一次",
   codeExpired: "这个验证码还没用就过期了。点重试会给你一个新的。",
 ```
 
