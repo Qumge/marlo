@@ -128,7 +128,7 @@ OpenWorker was originally developed inside the aisuite repository before moving 
 
 ## Contributing
 
-Contributions and bug reports are welcome - open an [issue](https://github.com/andrewyng/openworker/issues) or a pull request. The app updates itself, so fixes reach installs quickly.
+Contributions are welcome - open a pull request. Bugs in Marlo go to [our issues](https://github.com/Qumge/marlo/issues); bugs in the underlying engine are usually [upstream's](https://github.com/andrewyng/openworker/issues). The app updates itself, so fixes reach installs quickly.
 For any PR, please attach screenshots of what was broken and how it is fixed now. We will shortly add features that you can contribute to.
 Please note that we are actively developing based off a internal list and goal, so we may not approve PRs that add features that are already under-development or deviates from our vision.
 
