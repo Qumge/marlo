@@ -594,19 +594,42 @@ git commit -m "feat(gui): 零余额时在发送前拦住并保住草稿"
 
 加到 `surfaces/gui/src/components/Onboarding.test.tsx`：
 
+**先补 mock。** `Onboarding.test.tsx:19-31` 的 `vi.mock("../api", ...)` 工厂只列了函数、没有常量。不补的话 `CLOUD_CHANGED` 是 `undefined`，测试和实现各自监听/派发一个字面量叫 `"undefined"` 的事件 —— 两边碰巧对上，测试变绿，而真正的常量（`api.ts:950` 的 `"coworker:cloud-changed"`）什么都没验证。往那个工厂加两行：
+
+```ts
+  CLOUD_CHANGED: "coworker:cloud-changed",
+  announceCloudChanged: () => window.dispatchEvent(new CustomEvent("coworker:cloud-changed")),
+```
+
+然后照本文件既有的设备流程写法（`Onboarding.test.tsx:182-207`）加这条：
+
 ```tsx
 it("登录成功立刻广播 CLOUD_CHANGED —— 否则余额 chip 要等满一轮轮询", async () => {
+  vi.useFakeTimers();
+  vi.mocked(startQumgeDevice).mockResolvedValue(QUMGE_START);
+  vi.mocked(pollQumgeDevice).mockResolvedValue({ status: "connected" });
   const seen = vi.fn();
   window.addEventListener(CLOUD_CHANGED, seen);
+
   render(<Onboarding onDone={vi.fn()} />);
-  fireEvent.click(await screen.findByTestId("qumge-connect-start"));
-  await screen.findByTestId("ob-qumge-connected");
+  await act(async () => { await Promise.resolve(); });
+
+  // 【关键】渲染之后、点击之前必须没广播过。少了这一条，一个在
+  // useEffect(() => ..., []) 里无脑广播的实现照样全绿 —— 而那是一种很可能
+  // 被写出来的错误实现（它也「让 chip 更早出现」）。
+  expect(seen).not.toHaveBeenCalled();
+
+  fireEvent.click(screen.getByTestId("qumge-connect-start"));
+  await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+  await act(() => vi.advanceTimersByTimeAsync(5000)); // connected 要等轮询那一跳
+
+  expect(screen.getByTestId("ob-qumge-connected")).toBeTruthy();
   expect(seen).toHaveBeenCalled();
   window.removeEventListener(CLOUD_CHANGED, seen);
 });
 ```
 
-（文件顶部按既有写法 import `CLOUD_CHANGED`。该文件已有 qumge 设备流程的 mock —— 沿用它，不要新建。）
+不装假定时器、不推进 5 秒的话 `onConnected` 永远不触发（它挂在 `QumgeConnect.tsx:61` 的 `setTimeout` 上），而 `findByTestId` 默认只等 1 秒。
 
 - [ ] **Step 2: 跑测试，确认它失败**
 
@@ -625,9 +648,11 @@ Expected: FAIL —— `seen` 没被调用
     // 的话，刚登录完的用户最长一分钟看不到自己的余额，而那一分钟正是他准备打
     // 第一句话的时候。第二层闸门（$0.00 + 去充值）能不能赶在他打字之前出现，
     // 就靠这一行。
-    window.dispatchEvent(new Event(CLOUD_CHANGED));
+    announceCloudChanged();
   };
 ```
+
+**用 `api.ts:950` 已有的 `announceCloudChanged()`，别自己 `new Event`。** 那是本仓库做这件事的既有写法（`CloudSignIn.tsx:27` 就这么调），而且用 `CustomEvent`；手写 dispatch 会和它分叉。`AccountRow` 和新的 `useQumgeAccount` hook 都已经在监听这个常量。
 
 - [ ] **Step 4: 跑测试，确认通过**
 
@@ -656,7 +681,6 @@ git commit -m "fix(gui): 登录成功即刻广播账号变更，余额 chip 不�
 - Consumes: 无
 - Produces:
   - `friendly_model_error(model, exc)` 对 `status_code == 402` 返回无额度文案
-  - 错误事件 payload 多 `error_kind: "no_credit"`
   - `_append_notice(kind, text=None, cause=None)`；notice dict 多 `cause`
   - `itemsFromMessages` 产出的 notice item 多 `cause?: string`
 
@@ -686,14 +710,23 @@ def test_402_is_matched_on_the_code_not_on_guessed_body_text():
 
 
 def test_text_fallback_when_the_sdk_swallowed_the_status_code():
-    assert friendly_model_error("qumge:x", Exception("insufficient balance")) is not None
+    from coworker.providers import errors
+
+    # 身份，不是 is not None —— 把 "insufficient balance" 误加进 _NO_QUOTA 而不是
+    # _NO_CREDIT_TEXT 的实现会返回「配额」那句话，is not None 照样绿
+    assert friendly_model_error("qumge:x", Exception("insufficient balance")) is errors.NO_CREDIT
 
 
 def test_404_and_429_are_unaffected():
     class _NotFound(Exception):
         status_code = 404
-    # 一码多义：404 也可能是 base_url 写错，不能当成额度问题
+
+    class _RateLimited(Exception):
+        status_code = 429
+
+    # 一码多义：404 也可能是 base_url 写错，429 也可能只是让你慢点
     assert friendly_model_error("qumge:x", _NotFound("upstream boom")) is None
+    assert friendly_model_error("qumge:x", _RateLimited("slow down")) is None
 ```
 
 - [ ] **Step 2: 跑测试，确认它失败**
@@ -746,16 +779,30 @@ Expected: PASS
 加到 `tests/test_engine.py`：
 
 ```python
-def test_no_credit_notice_keeps_kind_error_and_carries_the_cause():
+def test_no_credit_notice_keeps_kind_error_and_carries_the_cause(tmp_path):
     """按钮要在刷新之后还在，所以原因必须落到持久化的 notice 上；而 kind 必须
     仍然是 "error"，否则 retry() 的「尾部是不是一条 error notice」守卫会失效 ——
     偏偏这条错误是最该能重试的那种（充完值点一下就好）。"""
-    eng = _engine()  # 沿用本文件已有的构造 helper
+    eng, _ = _engine(tmp_path, [AssistantTurn(text="ok")])  # 真实签名 (tmp_path, turns)，返回 (engine, provider)
     eng._append_notice("error", "out of credit", cause="no_credit")
     notice = eng.messages[-1]
     assert notice["role"] == "notice"
     assert notice["kind"] == "error"
     assert notice["cause"] == "no_credit"
+```
+
+**上面那条只验了管道，验不到接线。** 它自己把 `kind="error"` 传进去，所以真正的错误 —— 在调用点写成 `self._append_notice("no_credit", ...)`，把 cause 折进 kind、静默废掉 `retry()` 的守卫（`engine.py:245-254`）—— 照样全绿。再加一条走真实错误分支的，照本文件既有的驱动写法：
+
+```python
+def test_a_402_from_the_provider_lands_as_a_retriable_error_notice(tmp_path):
+    class _Broke(Exception):
+        status_code = 402
+
+    eng, _ = _engine(tmp_path, [_Broke("Payment Required")])
+    # ...按本文件既有写法跑完这一轮...
+    notice = eng.messages[-1]
+    assert notice["kind"] == "error" and notice["cause"] == "no_credit"
+    assert eng._tail_is_retriable_error() is True
 ```
 
 - [ ] **Step 6: 跑测试，确认它失败**
@@ -791,16 +838,23 @@ Expected: FAIL —— `_append_notice() got an unexpected keyword argument 'caus
 
 ```python
                 friendly = friendly_model_error(self.model, exc)
-                # 身份比较，不是文本匹配 —— 见 errors.NO_CREDIT 那一段
-                no_credit = friendly is errors.NO_CREDIT
+                # 身份比较，不是文本匹配 —— 见 NO_CREDIT 那一段。
+                # 【import 必须改】：engine.py:26 现在是
+                # `from .providers.errors import friendly_model_error`，模块里没有
+                # `errors` 这个名字。改成
+                # `from .providers.errors import NO_CREDIT, friendly_model_error`，
+                # 否则第一次模型报错就是 NameError —— 把所有模型错误变成崩溃。
+                #
+                # 【不加 error_kind 到 payload】：全仓没有任何地方读它，后面的
+                # task 也不读——按钮是从持久化 notice 的 cause 来的。零消费者的
+                # 字段就是死代码，这个计划已经栽过一次（onTopUp）。
+                no_credit = friendly is NO_CREDIT
                 payload = {
                     "error": friendly or str(exc),
                     "error_type": type(exc).__name__,
                 }
                 if friendly:
                     payload["raw"] = str(exc)
-                if no_credit:
-                    payload["error_kind"] = "no_credit"
                 self._append_notice(
                     "error", friendly or str(exc), cause="no_credit" if no_credit else None
                 )
@@ -830,7 +884,9 @@ Expected: PASS
 
 `Item` 的 notice 变体加 `cause?: string`。
 
-`Transcript.tsx` 渲染 notice 的地方，在已有的 Retry 旁边加：
+`Transcript.tsx` 渲染 notice 的地方，在已有的 Retry 旁边加。
+
+**两处 brief 没交代的前提：** 这个文件既没 import `openExternal` 也没 import `useQumgeAccount`，两个都要加（`../tauri` / `../useQumgeAccount`）；而且下面这段落在 `items.map(...)` 内的 `switch` 分支里，**hook 不能在那儿调** —— `const { balance } = useQumgeAccount();` 要放在 `export function Transcript(...)` 顶部（`Transcript.tsx:362`），在 map 之上。
 
 ```tsx
         {item.cause === "no_credit" && (
@@ -859,7 +915,9 @@ it("error notice 的 cause 透到 item 上（刷新后按钮还在）", () => {
 });
 ```
 
-Run: `cd surfaces/gui && npx vitest run src/itemsFromMessages.test.ts`
+再加一条组件层的 —— 否则 `notice-topup` 这个按钮全程没有任何测试碰过（Task 9 的 e2e 断的是 `topup-card`，不是它）：`cause: "no_credit"` 的 notice 渲染出 `notice-topup`，没有 cause 的不渲染。
+
+Run: `cd surfaces/gui && npx vitest run src/itemsFromMessages.test.ts src/components/Transcript.test.tsx`
 Expected: PASS
 
 - [ ] **Step 11: 提交**
@@ -908,30 +966,47 @@ git commit -m "feat: 网关 402 变成带充值按钮的人话，且刷新后仍
 
 加到 `surfaces/gui/src/providers/QumgeConnect.test.tsx`：
 
+照本文件既有写法来 —— `beforeEach`（`QumgeConnect.test.tsx:26-40`）装了假定时器**并且** `mockReset()` 了两个设备函数。不自己 `mockResolvedValue` 的话 `startQumgeDevice()` 返回 `undefined`，`QumgeConnect.tsx:111` 的 `clampInterval(undefined.interval)` 直接抛，组件落到 `qumge-failed`，`qumge-waiting` 永远不出现。同理假定时器在场时 `findByTestId` / `waitFor` 会和它打架 —— 用本文件的 `flushClick()` 加同步 `getByTestId`。
+
 ```tsx
 it("waiting 态就把注册说清楚，不等失败之后才解释", async () => {
+  vi.mocked(startQumgeDevice).mockResolvedValue(START);
+  vi.mocked(pollQumgeDevice).mockResolvedValue({ status: "pending" });
   render(<QumgeConnect onConnected={vi.fn()} />);
   fireEvent.click(screen.getByTestId("qumge-connect-start"));
-  await screen.findByTestId("qumge-waiting");
-  expect(screen.getByText(/注册|Sign up/i)).toBeInTheDocument();
+  await flushClick();
+  screen.getByTestId("qumge-waiting");
+  // 本仓库【没有】jest-dom —— package.json 只有 @testing-library/dom 和 react，
+  // 全仓一处 toBeInTheDocument 都没有。用 toBeTruthy。
+  expect(screen.getByText(/注册|Sign up/i)).toBeTruthy();
 });
 
-it("「再试一次」重开同一个 URL，绝不申请新的 code", async () => {
-  const openExternal = vi.mocked(await import("../tauri")).openExternal;
+it("「再试一次」重开同一个 URL，而且屏幕上的码不变", async () => {
+  // openExternal 在非 Tauri 环境走 window.open（tauri.ts:160），本文件已有两处
+  // spyOn(window, "open") 的先例（:57、:92）—— 沿用，别去 mock ../tauri。
+  // 【vi.mocked() 只是类型层的转换，运行时什么都没做】——直接对它断言会报
+  // "received value must be a mock or spy function"。
+  const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+  vi.mocked(startQumgeDevice).mockResolvedValue(START);
+  vi.mocked(pollQumgeDevice).mockResolvedValue({ status: "pending" });
   render(<QumgeConnect onConnected={vi.fn()} />);
   fireEvent.click(screen.getByTestId("qumge-connect-start"));
-  await screen.findByTestId("qumge-waiting");
-  const startCalls = vi.mocked(startQumgeDevice).mock.calls.length;
+  await flushClick();
+
+  // 【关键】让第二次 start() 返回一个【不同】的码。只断言「没有第二次调用」
+  // 是废的：start() 开头就有 `if (phase.kind === "waiting") return;` 的重入守卫
+  // （QumgeConnect.tsx:105），所以即便把 qumge-reopen 直接接到 start() 上，
+  // 调用数也不会涨 —— 那个断言对着错误实现照样绿。屏幕上的码变没变，才是
+  // 真正能分辨两种实现的东西。
+  vi.mocked(startQumgeDevice).mockResolvedValue({ ...START, user_code: "NEWC-0DE1" });
 
   fireEvent.click(screen.getByTestId("qumge-reopen"));
+  await flushClick();
 
-  // 同一个 URL 再开一次
-  expect(openExternal).toHaveBeenLastCalledWith(
-    expect.stringContaining("user_code="),
+  expect(openSpy).toHaveBeenLastCalledWith(
+    START.verification_uri_complete, "_blank", "noopener,noreferrer",
   );
-  // 【关键】没有第二次 start：新 code 会吃掉 qumge.com 每小时 20 次里的一次，
-  // 而且旧 code 还在服务端挂着
-  expect(vi.mocked(startQumgeDevice).mock.calls.length).toBe(startCalls);
+  expect(screen.getByTestId("qumge-user-code").textContent).toBe(START.user_code);
 });
 ```
 
@@ -942,7 +1017,9 @@ Expected: FAIL —— 找不到 `qumge-reopen`
 
 - [ ] **Step 4: 实现**
 
-`QumgeConnect.tsx` 的 waiting 分支，在「打开浏览器」按钮下面加：
+`QumgeConnect.tsx` 的 waiting 分支：**把已有那行 `{t("deviceHint")}`（`QumgeConnect.tsx:149`）替换成下面三个元素**，不是在它下面追加 —— 否则会出现两条一模一样的提示。
+
+（顺序提示：本 task 里 `deviceHint` 还是普通字符串；Task 7 才把它改成函数。先 6 后 7。）
 
 ```tsx
         <p className="text-[11.5px] text-faint">{t("signUpHint")}</p>
@@ -997,21 +1074,32 @@ git commit -m "feat(gui): 设备面板说清注册，并补一个浏览器没打
 
 加到 `surfaces/gui/src/i18n/i18n.test.tsx`：
 
+放在 `i18n.test.tsx` 已有的 `describe` **内部**（外面拿不到那个把 locale 重置成 en 的 `beforeEach`）：
+
 ```tsx
+// 这个文件已经 import 了 setLocale 和 t（i18n.test.tsx:5）。
+// 【没有 makeT 这个东西】——本仓库不存在，别去找。
 it("Windows 上不会告诉用户他有一台 Mac", () => {
   (globalThis as any).__OCW_PLATFORM__ = "windows";
-  const t = makeT("en"); // 沿用本文件已有的取 t 的写法
-  expect(t("onboardLede")).not.toMatch(/Mac/);
-  expect(t("deviceHint")).not.toMatch(/Mac/);
+  act(() => setLocale("en"));
+  const dev = t("thisDevice")();
+  expect(t("onboardLede")(dev)).not.toMatch(/Mac/);
+  expect(t("deviceHint")(dev)).not.toMatch(/Mac/);
   delete (globalThis as any).__OCW_PLATFORM__;
 });
 
 it("macOS 上仍然说 Mac —— 主力平台不降级成「这台电脑」", () => {
   (globalThis as any).__OCW_PLATFORM__ = "macos";
-  expect(makeT("en")("onboardLede")).toMatch(/Mac/);
+  act(() => setLocale("en"));
+  expect(t("onboardLede")(t("thisDevice")())).toMatch(/Mac/);
   delete (globalThis as any).__OCW_PLATFORM__;
 });
 ```
+
+**两个坑，都会让这两条测试变成假的：**
+
+1. `thisDevice` **必须是函数，不能是字符串**。`en` 是模块级对象字面量，import 的那一刻就求值完了 —— 那时测试体还没跑，`__OCW_PLATFORM__` 还没设，`platformOS()` 在 jsdom 下落到 `"linux"`。写成字符串的话：Windows 那条会因为错误的原因通过（一个硬编码「这台电脑」、完全不看平台的实现也能过），macOS 那条则会**对着正确实现报红**。
+2. 改成函数之后 `t("onboardLede")` 返回的是函数，`toMatch` 会抛「received value must be a string」—— 加了 `.not` 也照抛。所以必须先调用再断言。
 
 - [ ] **Step 2: 跑测试，确认它失败**
 
@@ -1022,8 +1110,11 @@ Expected: FAIL —— 文案里有 "Mac"
 
 `en.ts` 加键并改四处（`workingWithTools` 已是函数形式的先例，见 `en.ts:170`）：
 
+两个 catalog 目前都没有（或几乎没有）import，需要新增 `import { platformOS } from "../tauri";` —— 这会让 i18n catalog 第一次依赖 Tauri 桥接层，是个有意的耦合。
+
 ```ts
-  thisDevice: platformOS() === "macos" ? "this Mac" : "this computer",
+  // 惰性求值：catalog 是模块级字面量，写成三元表达式会在 import 时就锁死平台。
+  thisDevice: () => (platformOS() === "macos" ? "this Mac" : "this computer"),
   onboardLede: (dev: string) =>
     `Connect to Qumge to get started — one sign-in, every model, and your key stays on ${dev}.`,
   deviceHint: (dev: string) =>
@@ -1033,14 +1124,26 @@ Expected: FAIL —— 文案里有 "Mac"
 `zh.ts` 同构：
 
 ```ts
-  thisDevice: platformOS() === "macos" ? "这台 Mac" : "这台电脑",
+  thisDevice: () => (platformOS() === "macos" ? "这台 Mac" : "这台电脑"),
   onboardLede: (dev: string) =>
     `连上 Qumge 就能开始 —— 登录一次，所有模型都能用，密钥只存在${dev}上。`,
   deviceHint: (dev: string) =>
     `没有自动打开？上面那个网址已经带上了你的验证码 —— 复制到任何浏览器里打开就行，${dev}或别的设备都可以。`,
 ```
 
-`obSignInBody` 和 `obMoreTools` 同样处理。所有调用点改成 `t("onboardLede")(t("thisDevice"))`。
+`obSignInBody` 和 `obMoreTools` 同样处理。调用点改成 `t("onboardLede")(t("thisDevice")())` —— 注意 `thisDevice` 现在也是函数，两对括号。
+
+**四个调用点，一个都不能漏**（漏掉的那个会把函数当 React 子节点渲染，React 静默丢弃，那段文案直接变空白）：
+
+| 文件 | 键 |
+|---|---|
+| `Onboarding.tsx:172` | `onboardLede` |
+| `Onboarding.tsx:322` | `obSignInBody` |
+| `Onboarding.tsx:391` | `obMoreTools` |
+| `QumgeConnect.tsx:149` | `deviceHint` |
+| **`QumgeSignInModal.tsx:39`** | `onboardLede` ← **写计划时漏掉的第四个消费者** |
+
+最后那个是这个计划第三次栽在「改了共享的键却没查全部消费者」上（前两次：qumg 的 `home.small_print`、以及本仓库 `balance.py` 的字段）。改之前先 `grep -rn 'onboardLede\|deviceHint\|obSignInBody\|obMoreTools' surfaces/gui/src --include=*.tsx`。
 
 - [ ] **Step 4: 跑测试 + i18n 守卫**
 
@@ -1051,7 +1154,8 @@ Expected: 两个都 PASS（守卫输出「基线 0 条，无新增」）
 
 ```bash
 git add surfaces/gui/src/i18n/en.ts surfaces/gui/src/i18n/zh.ts surfaces/gui/src/i18n/i18n.test.tsx \
-        surfaces/gui/src/components/Onboarding.tsx surfaces/gui/src/providers/QumgeConnect.tsx
+        surfaces/gui/src/components/Onboarding.tsx surfaces/gui/src/providers/QumgeConnect.tsx \
+        surfaces/gui/src/components/QumgeSignInModal.tsx
 git commit -m "fix(i18n): 设备名跟着平台走，Windows 用户不再被说成有台 Mac"
 ```
 
@@ -1066,7 +1170,7 @@ git commit -m "fix(i18n): 设备名跟着平台走，Windows 用户不再被说�
 
 - [ ] **Step 1: 删掉 Pre-release 横幅**
 
-删除 `README.md` 第 24-28 行整段引用块（`> **Pre-release** — Marlo has no published build yet. …`）。
+删除 `README.md` 第 24-27 行整段引用块连同紧随其后的空行（`> **Pre-release** — Marlo has no published build yet. …`）。
 
 - [ ] **Step 2: 重写 Download 段**
 
@@ -1082,7 +1186,7 @@ yet, so Windows warns on first run.
 Every release, with checksums and the auto-update manifest:
 [github.com/Qumge/marlo/releases/latest](https://github.com/Qumge/marlo/releases/latest).
 
-Prefer to run from source? See [Development](#development).
+Prefer to run from source? See [Run from source](#run-from-source).
 ```
 
 **不写版本号，不写具体文件名。** 上一版 Download 段之所以能一路错到 v0.7.5，是因为它断言了一件会变的事实。这一段没有可漂移的东西，所以不需要守卫来看着它。
@@ -1096,6 +1200,8 @@ Expected: `HTTP/2 302`（跳到最新 tag）
 
 Run: `.venv/bin/python packaging/check_branding.py`
 Expected: PASS
+
+（它的 `ROOTS` 不含 `README.md`，所以这一步验不到本次改动 —— 留着只是确认没碰坏别的。别把它当成这段文案的验收。）
 
 - [ ] **Step 5: 提交**
 
@@ -1118,9 +1224,13 @@ git commit -m "docs: README 不再说没有可下载的构建"
 
 - [ ] **Step 1: 给 fixture 加一个可切换的余额**
 
-`surfaces/gui/e2e/fixtures.qumge.ts` 里加（沿用该文件既有的 route 写法）：
+`surfaces/gui/e2e/fixtures.qumge.ts` 里加：
+
+**这个文件目前没有任何 import，也没有任何 `page.route`** —— 它的既有写法是纯派发器 `qumgeRoute(p, m, json)`，由 `fixtures.ts` 的中央路由表调用。下面这个 route 覆盖是这个文件的**新**写法，不是沿用；这样写是为了让单条用例能中途改余额。其余 60 多条 spec 仍走派发器那条路，不受影响。
 
 ```ts
+import type { Page } from "@playwright/test";
+
 /** 让单条用例在跑到一半时把余额从 0 改成有钱 —— 模拟用户去浏览器充了值。 */
 export function qumgeAccountRoute(page: Page) {
   let micro = 0;
@@ -1141,42 +1251,59 @@ export function qumgeAccountRoute(page: Page) {
         },
       }),
     );
-  return { install, topUp: (m = 5_000_000) => (micro = m) };
+  return { install, topUp: (m: number) => (micro = m) };
 }
 ```
+
+**`topUp` 故意不给默认值。** 给了默认值，调用方就会写 `account.topUp()`，而任何「一步到位充很多」的默认值都会让 `low` 和 `can_spend` 一起翻转 —— 于是这条 spec 对「闸门读错字段」这件事完全失明（读 `low` 也全绿）。见下一步。
 
 - [ ] **Step 2: 写失败的 e2e**
 
 `surfaces/gui/e2e/credit-gate.spec.ts`：
 
 ```ts
-import { expect, test } from "@playwright/test";
-import { bootSignedIn } from "./fixtures.qumge"; // 沿用该文件已有的启动 helper
+import { expect } from "@playwright/test";
+import { test } from "./fixtures"; // 【必须】从这里拿 test —— 它带 mockApi，裸 Playwright 的 test 没有任何路由
 import { qumgeAccountRoute } from "./fixtures.qumge";
 
 test("零余额 → 拦住 → 充值 → 解锁 → 可发，全程草稿不丢", async ({ page }) => {
+  // 【顺序要紧】：mockApi 在 test fixture 里注册了 `**/v1/**` catch-all。
+  // Playwright 是后注册的路由先匹配，所以这个覆盖必须在【测试体内】装（那时
+  // fixture 已经跑完），且必须在 goto 之前。装在 fixture 之前会被 catch-all
+  // 吃掉，于是拿到默认的 $19.12 余额，症状是「topup-card 不出现」——一个和
+  // 真正原因毫无关系的报错。
   const account = qumgeAccountRoute(page);
   await account.install();
-  await bootSignedIn(page);
+
+  await page.goto("/");
+  await page.getByText("Draft the launch note").first().click(); // 先进一个会话，composer 才可用
+  const box = page.getByPlaceholder(/Ask the coworker/);
 
   const draft = "帮我把这个文件夹里的发票按月分组";
-  await page.getByRole("textbox").fill(draft);
-  await page.getByRole("textbox").press("Enter");
+  await box.fill(draft);
+  await box.press("Enter");
 
   // 拦住了，而且草稿还在
   await expect(page.getByTestId("topup-card")).toBeVisible();
-  await expect(page.getByRole("textbox")).toHaveValue(draft);
+  await expect(box).toHaveValue(draft);
 
-  // 用户去浏览器充了值
-  account.topUp();
+  // 用户去浏览器充了 $0.50 —— 【这个数字是这条 spec 的全部价值所在】。
+  //
+  // 0.5 美元让 low 仍然是 true（阈值是 $1）而 can_spend 翻成 true。两个标志
+  // 在这里【分叉】。如果充成 $5，两个标志一起翻，那么一个读 `low` 而不是
+  // `can_spend` 的闸门照样全绿 —— 这条 spec 就退化成装饰。
+  //
+  // Task 1 的 review 已经在单测层面抓过一模一样的缺陷（见 progress.md）。
+  // 这里是它在 e2e 层面的同一个坑，而这条 spec 恰恰是给其余八个 task 背书的。
+  account.topUp(500_000);
 
   // 卡片自己消失（focus / 5 秒快轮询），不需要用户再点什么
   await expect(page.getByTestId("topup-card")).toBeHidden({ timeout: 15_000 });
-  await expect(page.getByRole("textbox")).toHaveValue(draft);
+  await expect(box).toHaveValue(draft);
 
   // 【不自动发送】—— 由用户自己按回车
-  await page.getByRole("textbox").press("Enter");
-  await expect(page.getByRole("textbox")).toHaveValue("");
+  await box.press("Enter");
+  await expect(box).toHaveValue("");
 });
 ```
 
@@ -1188,6 +1315,8 @@ Expected: FAIL
 - [ ] **Step 4: 补齐 fixture 缺的部分直到通过**
 
 （前 8 个 task 已经把功能做完了；这一步只补 fixture/选择器的落差，不写新功能。）
+
+**不要为了变绿而放宽断言。** 尤其是 `topUp(500_000)` 那个数字和「卡片消失后不自动发送」那两条 —— 它们是这条 spec 存在的理由。跑不通就是有真问题，改断言只会把问题藏起来。要是你判断某条断言本身写错了，停下来告诉我，不要自己改。
 
 Run: 同上
 Expected: PASS
