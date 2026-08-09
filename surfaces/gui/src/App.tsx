@@ -48,6 +48,8 @@ import { Icon } from "./components/Icon";
 import { Sidebar } from "./components/Sidebar";
 import { ThinkingBlock, Transcript } from "./components/Transcript";
 import { Composer } from "./components/Composer";
+import { TopUpCard } from "./components/TopUpCard";
+import { useQumgeAccount } from "./useQumgeAccount";
 import { Markdown } from "./components/Markdown";
 import { SearchModal } from "./components/SearchModal";
 import { SessionIntro } from "./components/SessionIntro";
@@ -157,6 +159,7 @@ function fallbackWorkspace(current: string | null, projects: RecentWorkspace[]):
 
 export function App() {
   const t = useT();
+  const qumgeAccount = useQumgeAccount();
   const [workspace, setWorkspace] = useState<string | null>(null);
   const [branch, setBranch] = useState<string | null>(null);
   const [showGate, setShowGate] = useState(false);
@@ -1632,6 +1635,14 @@ export function App() {
               running={running}
               connected={connected}
               modelReady={modelReady}
+              canSpend={
+                model.startsWith("qumge:") ? qumgeAccount.balance?.can_spend : undefined
+              }
+              topUpSlot={
+                qumgeAccount.balance ? (
+                  <TopUpCard balance={qumgeAccount.balance} onUseOwnKey={openModelSetup} />
+                ) : undefined
+              }
               onConnectModel={openModelSetup}
               onConfigureVoiceInput={() => openSettings("voice")}
               onSend={send}

@@ -633,6 +633,10 @@ export const zh: Strings = {
   codeExpired: "这个验证码还没用就过期了。",
   connectFailed: "连接 Qumge 时出了点问题。",
   tryAgain: "重试",
+  creditNeededTitle: "充值后就能跑这一单",
+  creditNeededBody: "按用量扣费，不订阅。",
+  addCredit2: "去充值",
+  useOwnKeyShort: "用我自己的 key",
 
   workingNow: "正在干活",
   sleeping: "休眠中（到点会自己醒）",

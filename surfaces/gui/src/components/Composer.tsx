@@ -61,6 +61,14 @@ interface Props {
   // banner and routes sends to setup (preserving the draft) instead of dropping them.
   modelReady?: boolean;
   onConnectModel?: () => void;
+  // False when the active Qumge model's account has zero credit — keeps the draft
+  // and shows the top-up card instead of sending. Undefined = not applicable or not
+  // known (BYO-key provider, offline, older sidecar) and never gates.
+  canSpend?: boolean;
+  onTopUp?: () => void;
+  // Rendered above the input when canSpend === false. Passed in rather than built
+  // here so Composer stays ignorant of Qumge — it only knows "gated / not gated".
+  topUpSlot?: ReactNode;
   onConfigureVoiceInput?: () => void;
   onSend: (text: string, attachments?: Attachment[], skill?: string) => void;
   // Feeds the "/" force-run popup (SKILLS-SPEC §4.1 #3): the popup lists this session's
@@ -98,6 +106,18 @@ export function Composer(props: Props) {
   const t = useT();
   const [text, setText] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  // Whether the top-up card is currently interposed in front of the send. Flipped true
+  // only by the gate below (an Enter press while canSpend === false) — never derived
+  // straight from canSpend, or a zero balance alone would pop the card the moment the
+  // user opened the session, which is exactly the standing-banner behaviour §credit
+  // gate rejected (the sidebar chip already carries that notice).
+  const [gated, setGated] = useState(false);
+
+  // 充值回来（canSpend 不再是 false）或者草稿被清空（发出去了/换会话了），
+  // 这张卡片就没有理由继续占着位置。
+  useEffect(() => {
+    if (props.canSpend !== false || !text.trim()) setGated(false);
+  }, [props.canSpend, text]);
   // "/" force-run (SKILLS-SPEC §4.1 #3). The popup derives from the draft: it is open while
   // the text is a bare "/query" (no whitespace yet) and no skill is picked. Selecting a row
   // inserts "/name " INLINE in the box (Claude-Code style — the slash text IS the state);
@@ -332,6 +352,20 @@ export function Composer(props: Props) {
       props.onConnectModel?.();
       return;
     }
+    // Credit gate. AFTER needsModel on purpose: with no model connected, talking
+    // about money answers a question the user has not reached yet.
+    //
+    // Flipping `gated` here — rather than deriving the card's visibility from
+    // canSpend alone — is what makes this an interception instead of a banner.
+    // A zero balance is not itself a reason to interrupt someone who has not
+    // asked for anything yet; the sidebar chip already carries that standing
+    // notice. The card earns its interruption at the moment the user commits
+    // to a request, with the request still on screen.
+    if (props.canSpend === false) {
+      setGated(true);
+      props.onTopUp?.();
+      return;
+    }
     props.onSend(t, attachments, skill);
     setText("");
     setAttachments([]);
@@ -466,6 +500,10 @@ export function Composer(props: Props) {
           ))}
         </div>
       )}
+
+      {/* Credit gate card — only interposed after an Enter press while canSpend === false
+          (see `gated`), never a standing banner off canSpend alone. */}
+      {gated && <div className="max-w-3xl mx-auto">{props.topUpSlot}</div>}
 
       <div
         className={
