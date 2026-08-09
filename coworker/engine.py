@@ -23,7 +23,7 @@ from . import compaction as _compaction
 from .events import Event, EventType
 from .permissions import Mode, PermissionEngine
 from .providers import AssistantTurn, ProviderClient, ToolCall
-from .providers.errors import friendly_model_error
+from .providers.errors import NO_CREDIT, friendly_model_error, no_credit_topup_url
 from .tools import ToolRegistry
 
 
@@ -253,13 +253,33 @@ class TurnEngine:
             return message.get("kind") == "error"
         return False
 
-    def _append_notice(self, kind: str, text: Optional[str] = None) -> None:
+    def _append_notice(
+        self,
+        kind: str,
+        text: Optional[str] = None,
+        cause: Optional[str] = None,
+        topup_url: Optional[str] = None,
+    ) -> None:
         """Persist a turn-ending marker (error/interrupted) as a display-only `notice`
         message: it survives reload like the transcript does, but `_outbound_messages`
-        drops the role so no provider ever sees it."""
+        drops the role so no provider ever sees it.
+
+        `cause` narrows an error WITHOUT changing `kind`. The GUI uses it to offer a
+        targeted action (a top-up button on a no-credit failure); `retry()` guards on
+        the tail being an error notice, so folding the cause into `kind` would silently
+        disable retry on exactly the errors most worth retrying.
+
+        `topup_url` rides alongside `cause` — the button's own authoritative link,
+        straight from the 402 body, so it still works after a reload even when the
+        balance endpoint that would otherwise supply it is unavailable. Omitted
+        (never `null`/empty) when there is no URL, same as `cause`."""
         notice: dict[str, Any] = {"role": "notice", "kind": kind, "ts": time.time()}
         if text:
             notice["text"] = text
+        if cause:
+            notice["cause"] = cause
+        if topup_url:
+            notice["topup_url"] = topup_url
         self.messages.append(notice)
 
     async def retry(self) -> AsyncIterator[Event]:
@@ -385,13 +405,28 @@ class TurnEngine:
                 if streamed or streamed_reasoning:
                     self.messages.append(_assistant_message(_partial_turn()))
                 friendly = friendly_model_error(self.model, exc)
+                # Identity comparison, not text matching — see the NO_CREDIT block.
+                no_credit = friendly is NO_CREDIT
                 payload = {
                     "error": friendly or str(exc),
                     "error_type": type(exc).__name__,
                 }
                 if friendly:
                     payload["raw"] = str(exc)
-                self._append_notice("error", friendly or str(exc))
+                # Same field name as the persisted notice's `cause` — carried on the live
+                # ERROR event too, so the top-up button appears immediately, not only after
+                # a reload replays the notice. Two names for one concept is how they drift.
+                topup_url = no_credit_topup_url(exc) if no_credit else None
+                if no_credit:
+                    payload["cause"] = "no_credit"
+                if topup_url:
+                    payload["topup_url"] = topup_url
+                self._append_notice(
+                    "error",
+                    friendly or str(exc),
+                    cause="no_credit" if no_credit else None,
+                    topup_url=topup_url,
+                )
                 yield Event(EventType.ERROR, payload)
                 return
             if self._cancel.is_set() and turn is None:

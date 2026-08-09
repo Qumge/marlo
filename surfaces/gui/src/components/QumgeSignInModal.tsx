@@ -36,7 +36,7 @@ export function QumgeSignInModal(props: { onClose: () => void; onConnected: () =
       >
         <div>
           <div className="text-[15px] font-semibold text-ink">{t("signInToQumge")}</div>
-          <p className="text-[12.5px] text-muted mt-1">{t("onboardLede")}</p>
+          <p className="text-[12.5px] text-muted mt-1">{t("onboardLede")(t("thisDevice")())}</p>
         </div>
 
         <QumgeConnect

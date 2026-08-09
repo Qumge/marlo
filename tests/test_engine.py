@@ -472,3 +472,174 @@ def test_outbound_replaces_images_for_non_vision_models(tmp_path):
     assert all(p["type"] != "image_url" for p in parts)
     assert "not viewable" in parts[-1]["text"]
     assert engine.messages[-1]["content"][1]["type"] == "image_url"  # history untouched
+
+
+def test_no_credit_notice_keeps_kind_error_and_carries_the_cause(tmp_path):
+    """按钮要在刷新之后还在，所以原因必须落到持久化的 notice 上；而 kind 必须
+    仍然是 "error"，否则 retry() 的「尾部是不是一条 error notice」守卫会失效 ——
+    偏偏这条错误是最该能重试的那种（充完值点一下就好）。"""
+    eng, _ = _engine(tmp_path, [_text_turn("ok")])  # 真实签名 (tmp_path, turns)，返回 (engine, provider)
+    eng._append_notice("error", "out of credit", cause="no_credit")
+    notice = eng.messages[-1]
+    assert notice["role"] == "notice"
+    assert notice["kind"] == "error"
+    assert notice["cause"] == "no_credit"
+
+
+def test_a_402_from_the_provider_lands_as_a_retriable_error_notice(tmp_path):
+    class _Broke(Exception):
+        status_code = 402
+
+    class BrokenProvider(ProviderClient):
+        def complete(self, **kwargs):
+            raise _Broke("Payment Required")
+
+        def capabilities(self, model):
+            return ModelCapabilities()
+
+    registry = ToolRegistry()
+    permissions = PermissionEngine(workspace_root=tmp_path)
+    eng = TurnEngine(
+        provider=BrokenProvider(),
+        registry=registry,
+        permissions=permissions,
+        model="qumge:deepseek/deepseek-v4-flash",
+    )
+    _collect(eng, "hi")
+    notice = eng.messages[-1]
+    assert notice["kind"] == "error" and notice["cause"] == "no_credit"
+    assert eng._tail_is_retriable_error() is True
+
+
+def test_402_cause_rides_both_the_live_event_and_the_persisted_notice(tmp_path):
+    """The live ERROR event and the persisted notice both need cause="no_credit" under
+    the SAME field name — otherwise the top-up button would appear on only one of "live"
+    and "after a reload" (the two paths this task's title promises: 刷新后【仍】可点,
+    which presupposes it worked live first)."""
+
+    class _Broke(Exception):
+        status_code = 402
+
+    class BrokenProvider(ProviderClient):
+        def complete(self, **kwargs):
+            raise _Broke("Payment Required")
+
+        def capabilities(self, model):
+            return ModelCapabilities()
+
+    registry = ToolRegistry()
+    permissions = PermissionEngine(workspace_root=tmp_path)
+    eng = TurnEngine(
+        provider=BrokenProvider(),
+        registry=registry,
+        permissions=permissions,
+        model="qumge:deepseek/deepseek-v4-flash",
+    )
+    events = _collect(eng, "hi")
+    error_event = next(e for e in events if e.type == EventType.ERROR)
+    assert error_event.data["cause"] == "no_credit"
+    assert eng.messages[-1]["cause"] == "no_credit"
+
+
+def test_a_generic_error_carries_no_cause_on_either_channel(tmp_path):
+    """An implementation that sets cause="no_credit" unconditionally would still pass
+    every no-credit test above; this is the negative case that catches it. A 500 (or a
+    timeout, or anything short of the 402/text no-credit signature) must not grow a
+    top-up button — live or persisted."""
+
+    class _ServerBroke(Exception):
+        status_code = 500
+
+    class BrokenProvider(ProviderClient):
+        def complete(self, **kwargs):
+            raise _ServerBroke("upstream exploded")
+
+        def capabilities(self, model):
+            return ModelCapabilities()
+
+    registry = ToolRegistry()
+    permissions = PermissionEngine(workspace_root=tmp_path)
+    eng = TurnEngine(
+        provider=BrokenProvider(),
+        registry=registry,
+        permissions=permissions,
+        model="qumge:deepseek/deepseek-v4-flash",
+    )
+    events = _collect(eng, "hi")
+    error_event = next(e for e in events if e.type == EventType.ERROR)
+    assert "cause" not in error_event.data
+    assert "cause" not in eng.messages[-1]
+    assert "topup_url" not in error_event.data
+    assert "topup_url" not in eng.messages[-1]
+
+
+def test_402_topup_url_rides_both_the_live_event_and_the_persisted_notice(tmp_path):
+    """The 402 body itself carries the top-up link (`{"topup_url": "..."}` alongside
+    `error`) — an authoritative source, available precisely when the account/balance
+    endpoint that would otherwise supply it is null. The engine must extract it and
+    carry it on the SAME field name on both channels, exactly like `cause`."""
+    import httpx
+
+    class _Broke(Exception):
+        status_code = 402
+        response = httpx.Response(
+            402,
+            json={
+                "error": {"code": "insufficient_balance", "message": "Wallet balance insufficient"},
+                "topup_url": "https://qumge.com/en/gateway/topup/new",
+                "docs_url": "https://qumge.com/en/docs/gateway",
+            },
+        )
+
+    class BrokenProvider(ProviderClient):
+        def complete(self, **kwargs):
+            raise _Broke("Payment Required")
+
+        def capabilities(self, model):
+            return ModelCapabilities()
+
+    registry = ToolRegistry()
+    permissions = PermissionEngine(workspace_root=tmp_path)
+    eng = TurnEngine(
+        provider=BrokenProvider(),
+        registry=registry,
+        permissions=permissions,
+        model="qumge:deepseek/deepseek-v4-flash",
+    )
+    events = _collect(eng, "hi")
+    error_event = next(e for e in events if e.type == EventType.ERROR)
+    assert error_event.data["topup_url"] == "https://qumge.com/en/gateway/topup/new"
+    assert eng.messages[-1]["topup_url"] == "https://qumge.com/en/gateway/topup/new"
+
+
+def test_402_without_a_parseable_topup_url_omits_the_field_rather_than_emitting_null(tmp_path):
+    """A 402 whose body has no usable `topup_url` (e.g. no `.response` at all — an
+    older gateway, or the SDK trap of `.body` being the unwrapped `error` object)
+    must still set `cause`, but must NOT put `topup_url: null`/`""` on either
+    channel — the GUI's fallback to `balance?.topup_url` only works if the key is
+    simply absent."""
+
+    class _Broke(Exception):
+        status_code = 402  # no `.response` attribute at all
+
+    class BrokenProvider(ProviderClient):
+        def complete(self, **kwargs):
+            raise _Broke("Payment Required")
+
+        def capabilities(self, model):
+            return ModelCapabilities()
+
+    registry = ToolRegistry()
+    permissions = PermissionEngine(workspace_root=tmp_path)
+    eng = TurnEngine(
+        provider=BrokenProvider(),
+        registry=registry,
+        permissions=permissions,
+        model="qumge:deepseek/deepseek-v4-flash",
+    )
+    events = _collect(eng, "hi")
+    error_event = next(e for e in events if e.type == EventType.ERROR)
+    assert error_event.data["cause"] == "no_credit"
+    assert "topup_url" not in error_event.data
+    assert eng.messages[-1]["cause"] == "no_credit"
+    assert "topup_url" not in eng.messages[-1]

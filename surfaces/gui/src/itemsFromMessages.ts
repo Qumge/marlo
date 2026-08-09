@@ -78,12 +78,31 @@ export function itemsFromMessages(messages: ConversationMessage[]): Item[] {
             : m.kind === "compacted"
               ? // The subtle "compacted here" divider (OPE-27) — the transcript itself is intact.
                 { kind: "notice", tone: "info", text: m.text || "Context compacted" }
-              : { kind: "notice", tone: "warn", text: "Error: " + (m.text || "unknown"), retriable: true },
+              : errorNoticeItem(m.text, m.cause as string | undefined, m.topup_url as string | undefined),
       );
     }
     // system messages are omitted; tool-result messages are folded into the tool row above
   }
   return items;
+}
+
+// Shared by the persisted-replay path above and the live SSE "error" handler (App.tsx) so
+// the two can't drift into two different notice shapes for the same failure — the button
+// must appear on both the live event AND after a reload replays the same notice, and a
+// hand-built object at each call site is how one of them quietly loses a field (e.g. `cause`).
+export function errorNoticeItem(
+  text: string | undefined,
+  cause?: string,
+  topup_url?: string,
+): Extract<Item, { kind: "notice" }> {
+  return {
+    kind: "notice",
+    tone: "warn",
+    text: "Error: " + (text || "unknown"),
+    retriable: true,
+    ...(cause ? { cause } : {}),
+    ...(topup_url ? { topup_url } : {}),
+  };
 }
 
 export function userItemFromContent(content: any): Extract<Item, { kind: "user" }> {

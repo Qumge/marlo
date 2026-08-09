@@ -51,6 +51,10 @@ export interface QumgeBalance {
   currency: string;
   topup_url: string;
   low: boolean;
+  // Whether a request is worth attempting. Server-side judgement (balance.py) —
+  // the GUI never recomputes it from the number beside it. ABSENT on an older
+  // sidecar, which is why every consumer must treat `undefined` as "don't gate".
+  can_spend?: boolean;
 }
 
 export async function getQumgeBalance(): Promise<QumgeBalance | null> {

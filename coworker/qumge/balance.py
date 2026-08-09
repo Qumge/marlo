@@ -91,4 +91,9 @@ def fetch(secrets: SecretStore) -> Optional[dict[str, Any]]:
         # is based on cannot drift apart. A dollar is roughly a handful of turns
         # on a good model — enough warning to act, not so much that it nags.
         "low": micro < 1_000_000,
+        # Whether a request is worth attempting at all. Separate from `low` on
+        # purpose: `low` warns without blocking, this one gates. Kept server-side
+        # for the same reason the threshold is — so a future "gate below one
+        # turn's estimated cost" changes one line here and nothing in the GUI.
+        "can_spend": micro > 0,
     }

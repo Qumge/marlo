@@ -11,6 +11,7 @@ import {
   getConnectors,
   getCloudStatus,
   setOnboarded,
+  CLOUD_CHANGED,
   type ProviderInfo,
 } from "../api";
 import { startQumgeDevice, pollQumgeDevice, type QumgeDeviceStart } from "../api.qumge";
@@ -28,6 +29,8 @@ vi.mock("../api", () => ({
   getRecentChannels: vi.fn(),
   waitForCloudSignIn: vi.fn(),
   setOnboarded: vi.fn(),
+  CLOUD_CHANGED: "coworker:cloud-changed",
+  announceCloudChanged: () => window.dispatchEvent(new CustomEvent("coworker:cloud-changed")),
 }));
 
 // 设备码那两个搬到了 api.qumge —— 整模块 mock，否则真模块会去被 mock 掉的
@@ -37,7 +40,13 @@ vi.mock("../api.qumge", () => ({
   pollQumgeDevice: vi.fn(),
 }));
 
-vi.mock("../tauri", () => ({ openExternal: vi.fn() }));
+// 这个 onboarding 屏幕现在会调用 thisDevice() → platformOS()（Task 7：设备名跟着平台走），
+// 所以不能再整模块替换成只有 openExternal —— 那样 platformOS 在这个 mock 上不存在，一渲染就炸。
+// importOriginal 保留真实的 platformOS，只替身 openExternal 这一个有副作用的调用。
+vi.mock("../tauri", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../tauri")>();
+  return { ...actual, openExternal: vi.fn() };
+});
 
 const field = (key: string) => ({
   key,
@@ -204,6 +213,30 @@ describe("Onboarding — step 0 (Task 4: connect to Qumge, not the gallery)", ()
     await act(() => vi.advanceTimersByTimeAsync(5000)); // second poll: connected
     expect(continueBtn().disabled).toBe(false);
     expect(screen.queryByTestId("ob-provider-gallery")).toBeNull();
+  });
+
+  it("登录成功立刻广播 CLOUD_CHANGED —— 否则余额 chip 要等满一轮轮询", async () => {
+    vi.useFakeTimers();
+    vi.mocked(startQumgeDevice).mockResolvedValue(QUMGE_START);
+    vi.mocked(pollQumgeDevice).mockResolvedValue({ status: "connected" });
+    const seen = vi.fn();
+    window.addEventListener(CLOUD_CHANGED, seen);
+
+    render(<Onboarding onDone={vi.fn()} />);
+    await act(async () => { await Promise.resolve(); });
+
+    // 【关键】渲染之后、点击之前必须没广播过。少了这一条，一个在
+    // useEffect(() => ..., []) 里无脑广播的实现照样全绿 —— 而那是一种很可能
+    // 被写出来的错误实现（它也「让 chip 更早出现」）。
+    expect(seen).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId("qumge-connect-start"));
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    await act(() => vi.advanceTimersByTimeAsync(5000)); // connected 要等轮询那一跳
+
+    expect(screen.getByTestId("ob-qumge-connected")).toBeTruthy();
+    expect(seen).toHaveBeenCalled();
+    window.removeEventListener(CLOUD_CHANGED, seen);
   });
 
   // Next used to land on "Connect your everyday tools", whose sign-in button

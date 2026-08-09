@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { LanguagePicker } from "./LanguagePicker";
 import { useT } from "../i18n";
 import {
+  announceCloudChanged,
   cloudLogin,
   connectManaged,
   getCloudStatus,
@@ -75,6 +76,11 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
   const handleQumgeConnected = () => {
     setQumgeConnected(true);
     void ps.refreshProviders();
+    // 账号那一侧不在 refreshProviders 的路径上，而它 60 秒才轮询一次 —— 不广播
+    // 的话，刚登录完的用户最长一分钟看不到自己的余额，而那一分钟正是他准备打
+    // 第一句话的时候。第二层闸门（$0.00 + 去充值）能不能赶在他打字之前出现，
+    // 就靠这一行。
+    announceCloudChanged();
   };
 
   // Step 1 ("Connect your everyday tools") is hidden in Marlo.
@@ -169,7 +175,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
             {/* Persistent header — stays put while the region below swaps (§39). */}
             <h1 className="text-[19px] font-semibold">{t("welcomeTo")}<span className="beta-tag">{t("beta")}</span></h1>
             <p className="text-[13px] text-muted mt-0.5 mb-4">
-              {t("onboardLede")}
+              {t("onboardLede")(t("thisDevice")())}
             </p>
 
             {!useOwnKey ? (
@@ -319,7 +325,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
                   <span className="block text-[13px] font-semibold text-ink mb-0.5">
                     {t("obSignInTitle")}
                   </span>
-                  {t("obSignInBody")}
+                  {t("obSignInBody")(t("thisDevice")())}
                 </span>
                 {signinPhase ? (
                   <span className="inline-flex items-center gap-2 text-[12.5px] text-muted shrink-0">
@@ -388,7 +394,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
               )}
             </div>
             <p className="text-[11px] text-faint mt-3">
-              {t("obMoreTools")}
+              {t("obMoreTools")(t("thisDevice")())}
             </p>
           </section>
         )}

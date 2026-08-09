@@ -150,4 +150,7 @@ export type Item =
       multi?: boolean;
       resolved?: string;
     }
-  | { kind: "notice"; tone: "info" | "warn"; text: string; retriable?: boolean };
+  // `topup_url`: the 402 body's own top-up link (engine `_append_notice`/live ERROR
+  // payload) — an authoritative source available even when the account/balance
+  // endpoint that would otherwise supply it is null (older sidecar, failing route).
+  | { kind: "notice"; tone: "info" | "warn"; text: string; retriable?: boolean; cause?: string; topup_url?: string };

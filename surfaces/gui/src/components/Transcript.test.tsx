@@ -4,7 +4,27 @@ import { Transcript } from "./Transcript";
 import { humanizeTool } from "../humanize";
 import type { Item } from "../types";
 
-afterEach(cleanup);
+// Transcript reads the account balance for the no-credit notice's top-up button
+// (Task 5) — the same store the sidebar row and composer gate already poll.
+let mockBalance: { topup_url: string } | null = { topup_url: "https://qumge.example/topup" };
+vi.mock("../useQumgeAccount", () => ({
+  useQumgeAccount: () => ({ signed_in: true, email: "a@b.c", balance: mockBalance }),
+}));
+const openExternalMock = vi.fn();
+// 整模块替换会把 platformOS 也一起替没了 —— 它现在被 i18n catalog 用来做 thisDevice()
+// (Task 7)，这个文件虽然今天没渲染任何用得到它的文案，但下一个改到那四个键的人，或者
+// 下一个往 Transcript 里加一段 onboarding 文案的人，会在这里被一个看似无关的 mock 炸到。
+// importOriginal 保留真实的 platformOS，只替身 openExternal 这一个有副作用的调用。
+vi.mock("../tauri", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../tauri")>();
+  return { ...actual, openExternal: (url: string) => openExternalMock(url) };
+});
+
+afterEach(() => {
+  cleanup();
+  openExternalMock.mockClear();
+  mockBalance = { topup_url: "https://qumge.example/topup" };
+});
 
 // §33 TurnGroup: the user-message → final-answer span is ONE disclosure; interior assistant
 // text is narration INSIDE it, the trailing assistant text is the answer OUTSIDE it; steps
@@ -178,6 +198,74 @@ describe("bubble hover affordances (FB-005)", () => {
     expect(stamps[0].textContent).toBe(when.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
     expect(stamps[0].getAttribute("title")).toBe(when.toLocaleString());
   });
+});
+
+describe("no-credit notice top-up button (Task 5)", () => {
+  it("renders the top-up button when the notice carries cause: no_credit, and wires it to balance.topup_url", () => {
+    const items: Item[] = [
+      { kind: "notice", tone: "warn", text: "Error: out of credit", retriable: true, cause: "no_credit" },
+    ];
+    render(<Transcript items={items} onApprove={vi.fn()} />);
+    const button = screen.getByTestId("notice-topup");
+    expect(button).toBeTruthy();
+    fireEvent.click(button);
+    expect(openExternalMock).toHaveBeenCalledWith("https://qumge.example/topup");
+  });
+
+  it("does not render the top-up button for a notice without cause: no_credit", () => {
+    const items: Item[] = [
+      { kind: "notice", tone: "warn", text: "Error: model down", retriable: true },
+    ];
+    render(<Transcript items={items} onApprove={vi.fn()} />);
+    expect(screen.queryByTestId("notice-topup")).toBeNull();
+  });
+
+  it("does not render the top-up button when balance is unknown (signed out / offline / older sidecar) — a dead button is exactly the failure this feature exists to prevent", () => {
+    mockBalance = null;
+    const items: Item[] = [
+      { kind: "notice", tone: "warn", text: "Error: out of credit", retriable: true, cause: "no_credit" },
+    ];
+    render(<Transcript items={items} onApprove={vi.fn()} />);
+    expect(screen.queryByTestId("notice-topup")).toBeNull();
+  });
+
+  it("renders the button from the notice's own topup_url when balance is null — the 402 body is authoritative precisely when the account/balance endpoint is not", () => {
+    mockBalance = null;
+    const items: Item[] = [
+      {
+        kind: "notice",
+        tone: "warn",
+        text: "Error: out of credit",
+        retriable: true,
+        cause: "no_credit",
+        topup_url: "https://qumge.com/en/gateway/topup/new",
+      },
+    ];
+    render(<Transcript items={items} onApprove={vi.fn()} />);
+    const button = screen.getByTestId("notice-topup");
+    expect(button).toBeTruthy();
+    fireEvent.click(button);
+    expect(openExternalMock).toHaveBeenCalledWith("https://qumge.com/en/gateway/topup/new");
+  });
+
+  it("prefers the notice's own topup_url over balance.topup_url when both are present", () => {
+    mockBalance = { topup_url: "https://qumge.example/topup" };
+    const items: Item[] = [
+      {
+        kind: "notice",
+        tone: "warn",
+        text: "Error: out of credit",
+        retriable: true,
+        cause: "no_credit",
+        topup_url: "https://qumge.com/en/gateway/topup/new",
+      },
+    ];
+    render(<Transcript items={items} onApprove={vi.fn()} />);
+    fireEvent.click(screen.getByTestId("notice-topup"));
+    expect(openExternalMock).toHaveBeenCalledWith("https://qumge.com/en/gateway/topup/new");
+  });
+  // "renders nothing when neither source has a URL" is already covered above by
+  // "does not render the top-up button when balance is unknown ...".
 });
 
 describe("humanizeTool", () => {

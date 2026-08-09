@@ -6,6 +6,8 @@ import { humanizeAsk, humanizeTool, type HumanLine } from "../humanize";
 import { Markdown } from "./Markdown";
 import { ConnectorMessageCard } from "./ConnectorMessageCard";
 import { Icon } from "./Icon";
+import { openExternal } from "../tauri";
+import { useQumgeAccount } from "../useQumgeAccount";
 
 // Long user pastes swallow the transcript (owner ask 2026-07-30): clamp past a generous
 // threshold with a more…/less… toggle. Normal typed messages never see the control; the
@@ -361,6 +363,10 @@ export function retryAnchor(items: Item[]): number {
 
 export function Transcript({ items, running, streamingText, onRetry }: Props) {
   const t = useT();
+  // Hook must live at the component top, not inside the items.map(...) switch below —
+  // conditionally calling a hook per-item would violate the rules of hooks. `balance`
+  // is the same data source the sidebar account row and composer gate already read.
+  const { balance } = useQumgeAccount();
   // §33 grouping: a turn = the maximal run of assistant/tool/resolved-approval items between
   // breakers (user, connector, notices, plan/dir requests…). Trailing assistant texts are the
   // ANSWER and render as bubbles after the group; interior assistant texts are narration and
@@ -487,6 +493,23 @@ export function Transcript({ items, running, streamingText, onRetry }: Props) {
                     {t("uiRetry")}
                   </button>
                 )}
+                {item.cause === "no_credit" &&
+                  (item.topup_url || balance?.topup_url) && (
+                    <button
+                      className="ml-2 underline"
+                      data-testid="notice-topup"
+                      onClick={() => {
+                        // Notice-first: the 402 body's own link is authoritative and
+                        // available even when `balance` is null (older sidecar, or the
+                        // account/balance endpoint failing) — exactly the state this
+                        // button used to silently vanish in.
+                        const url = item.topup_url || balance?.topup_url;
+                        if (url) openExternal(url);
+                      }}
+                    >
+                      {t("addCredit2")}
+                    </button>
+                  )}
               </div>
             );
           default:

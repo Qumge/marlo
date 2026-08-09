@@ -39,7 +39,7 @@ import type {
 } from "./types";
 import { isProjectScoped } from "./personaScope";
 import { baseName } from "./paths";
-import { itemsFromMessages } from "./itemsFromMessages";
+import { errorNoticeItem, itemsFromMessages } from "./itemsFromMessages";
 import { addTurnUsage, emptyUsage, usageFromMessages } from "./usage";
 import { streamMode } from "./streamGate";
 import { InboxItemCard } from "./components/InboxItemCard";
@@ -48,6 +48,8 @@ import { Icon } from "./components/Icon";
 import { Sidebar } from "./components/Sidebar";
 import { ThinkingBlock, Transcript } from "./components/Transcript";
 import { Composer } from "./components/Composer";
+import { TopUpCard } from "./components/TopUpCard";
+import { isQumgeModel, refreshQumgeAccount, useQumgeAccount } from "./useQumgeAccount";
 import { Markdown } from "./components/Markdown";
 import { SearchModal } from "./components/SearchModal";
 import { SessionIntro } from "./components/SessionIntro";
@@ -157,6 +159,7 @@ function fallbackWorkspace(current: string | null, projects: RecentWorkspace[]):
 
 export function App() {
   const t = useT();
+  const qumgeAccount = useQumgeAccount();
   const [workspace, setWorkspace] = useState<string | null>(null);
   const [branch, setBranch] = useState<string | null>(null);
   const [showGate, setShowGate] = useState(false);
@@ -762,10 +765,10 @@ export function App() {
           break;
         case "error":
           flushPartialStream();
-          setItems((p) => [
-            ...p,
-            { kind: "notice", tone: "warn", text: "Error: " + (d.error || "unknown"), retriable: true },
-          ]);
+          // Same builder the persisted-replay path uses (itemsFromMessages.ts) — so the
+          // live event and the post-reload replay of the same failure can't drift apart
+          // (e.g. one carrying `cause`, the other not).
+          setItems((p) => [...p, errorNoticeItem(d.error, d.cause, d.topup_url)]);
           break;
         case "input_rejected":
           setItems((p) => [
@@ -1632,6 +1635,15 @@ export function App() {
               running={running}
               connected={connected}
               modelReady={modelReady}
+              canSpend={
+                isQumgeModel(model) ? qumgeAccount.balance?.can_spend : undefined
+              }
+              topUpSlot={
+                qumgeAccount.balance ? (
+                  <TopUpCard balance={qumgeAccount.balance} />
+                ) : undefined
+              }
+              onTopUp={refreshQumgeAccount}
               onConnectModel={openModelSetup}
               onConfigureVoiceInput={() => openSettings("voice")}
               onSend={send}
