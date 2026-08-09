@@ -173,3 +173,136 @@ def test_402_status_wins_over_quota_body_text_ordering():
 
     exc = _AmbiguousBody("credit balance is too low")
     assert friendly_model_error("qumge:x", exc) is errors.NO_CREDIT
+
+
+# -- 402 top-up URL extraction ------------------------------------------------------------
+# THE TRAP: the OpenAI SDK unwraps the response body's `error` sub-object into
+# `.body`, so the gateway's sibling `topup_url` key is NOT there — only
+# `exc.response.json()` has the full body. A hand-built exception can't reproduce
+# that SDK behavior, so the realistic test below drives the real `openai` SDK
+# against a local stub HTTP server serving the actual gateway 402 shape.
+import http.server
+import json as _json
+import threading
+
+import pytest
+
+
+class _Gateway402Handler(http.server.BaseHTTPRequestHandler):
+    BODY = _json.dumps(
+        {
+            "error": {"code": "insufficient_balance", "message": "Wallet balance insufficient"},
+            "topup_url": "https://qumge.com/en/gateway/topup/new",
+            "docs_url": "https://qumge.com/en/docs/gateway",
+        }
+    ).encode()
+
+    def do_POST(self):
+        self.send_response(402)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(self.BODY)))
+        self.end_headers()
+        self.wfile.write(self.BODY)
+
+    def log_message(self, *args):  # keep test output quiet
+        pass
+
+
+@pytest.fixture
+def qumge_402_base_url():
+    server = http.server.HTTPServer(("127.0.0.1", 0), _Gateway402Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{server.server_port}/v1"
+    finally:
+        server.shutdown()
+        thread.join()
+
+
+def _real_402_exception(base_url: str) -> Exception:
+    from openai import OpenAI
+
+    client = OpenAI(api_key="x", base_url=base_url, max_retries=0)
+    try:
+        client.chat.completions.create(model="m", messages=[{"role": "user", "content": "hi"}])
+    except Exception as exc:  # this IS the thing under test
+        return exc
+    raise AssertionError("expected the stub 402 to raise")
+
+
+def test_no_credit_topup_url_reads_the_real_402_body(qumge_402_base_url):
+    from coworker.providers.errors import no_credit_topup_url
+
+    exc = _real_402_exception(qumge_402_base_url)
+    # The trap, made falsifiable: if the SDK ever starts putting `topup_url` on
+    # `.body`, this goes red first and `no_credit_topup_url` needs a rewrite.
+    assert "topup_url" not in (exc.body or {})
+    assert no_credit_topup_url(exc) == "https://qumge.com/en/gateway/topup/new"
+
+
+def test_no_credit_topup_url_missing_response_is_none():
+    from coworker.providers.errors import no_credit_topup_url
+
+    class _NoResponse(Exception):
+        pass
+
+    assert no_credit_topup_url(_NoResponse("boom")) is None
+
+
+class _WithResponse(Exception):
+    """Carries a real httpx.Response, exercising the same `.response.json()` path
+    as the real SDK exception without needing a server for every edge case."""
+
+    def __init__(self, response):
+        super().__init__("boom")
+        self.response = response
+
+
+def test_no_credit_topup_url_non_json_body_is_none():
+    import httpx
+
+    from coworker.providers.errors import no_credit_topup_url
+
+    exc = _WithResponse(httpx.Response(402, text="not json"))
+    assert no_credit_topup_url(exc) is None
+
+
+def test_no_credit_topup_url_missing_key_is_none():
+    import httpx
+
+    from coworker.providers.errors import no_credit_topup_url
+
+    body = _json.dumps({"error": {"code": "insufficient_balance", "message": "x"}})
+    exc = _WithResponse(httpx.Response(402, text=body))
+    assert no_credit_topup_url(exc) is None
+
+
+@pytest.mark.parametrize(
+    "bad_url",
+    [
+        "javascript:alert(1)",
+        "not a url",
+        "ftp://qumge.com/topup",
+        "",
+        "/relative/path",
+    ],
+)
+def test_no_credit_topup_url_rejects_non_http_values(bad_url):
+    import httpx
+
+    from coworker.providers.errors import no_credit_topup_url
+
+    body = _json.dumps({"error": {}, "topup_url": bad_url})
+    exc = _WithResponse(httpx.Response(402, text=body))
+    assert no_credit_topup_url(exc) is None
+
+
+def test_no_credit_topup_url_not_gated_on_the_model():
+    """Unlike friendly_model_error, this extractor takes no `model` argument at
+    all — the caller already knows it's a Qumge 402 before it asks for the link."""
+    import inspect
+
+    from coworker.providers import errors
+
+    assert list(inspect.signature(errors.no_credit_topup_url).parameters) == ["exc"]

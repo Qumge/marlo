@@ -74,6 +74,24 @@ describe("itemsFromMessages notices", () => {
     ]);
     expect(items[0]).toMatchObject({ kind: "notice", retriable: true, cause: "no_credit" });
   });
+
+  it("error notice 的 topup_url 也透到 item 上 — 402 body 自带的链接，即便 balance 端点挂了也在", () => {
+    const items = itemsFromMessages([
+      {
+        role: "notice",
+        kind: "error",
+        text: "out of credit",
+        cause: "no_credit",
+        topup_url: "https://qumge.com/en/gateway/topup/new",
+      } as any,
+    ]);
+    expect(items[0]).toMatchObject({
+      kind: "notice",
+      retriable: true,
+      cause: "no_credit",
+      topup_url: "https://qumge.com/en/gateway/topup/new",
+    });
+  });
 });
 
 describe("errorNoticeItem (shared by persisted-replay AND the live SSE 'error' handler)", () => {
@@ -98,6 +116,29 @@ describe("errorNoticeItem (shared by persisted-replay AND the live SSE 'error' h
       tone: "warn",
       text: "Error: boom",
       retriable: true,
+    });
+  });
+
+  it("carries topup_url through when present — the 402 body's own authoritative link", () => {
+    expect(
+      errorNoticeItem("out of credit", "no_credit", "https://qumge.com/en/gateway/topup/new"),
+    ).toEqual({
+      kind: "notice",
+      tone: "warn",
+      text: "Error: out of credit",
+      retriable: true,
+      cause: "no_credit",
+      topup_url: "https://qumge.com/en/gateway/topup/new",
+    });
+  });
+
+  it("omits topup_url when absent — no null/empty-string leaking onto the item", () => {
+    expect(errorNoticeItem("out of credit", "no_credit")).toEqual({
+      kind: "notice",
+      tone: "warn",
+      text: "Error: out of credit",
+      retriable: true,
+      cause: "no_credit",
     });
   });
 });

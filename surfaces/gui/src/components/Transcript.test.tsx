@@ -228,6 +228,44 @@ describe("no-credit notice top-up button (Task 5)", () => {
     render(<Transcript items={items} onApprove={vi.fn()} />);
     expect(screen.queryByTestId("notice-topup")).toBeNull();
   });
+
+  it("renders the button from the notice's own topup_url when balance is null — the 402 body is authoritative precisely when the account/balance endpoint is not", () => {
+    mockBalance = null;
+    const items: Item[] = [
+      {
+        kind: "notice",
+        tone: "warn",
+        text: "Error: out of credit",
+        retriable: true,
+        cause: "no_credit",
+        topup_url: "https://qumge.com/en/gateway/topup/new",
+      },
+    ];
+    render(<Transcript items={items} onApprove={vi.fn()} />);
+    const button = screen.getByTestId("notice-topup");
+    expect(button).toBeTruthy();
+    fireEvent.click(button);
+    expect(openExternalMock).toHaveBeenCalledWith("https://qumge.com/en/gateway/topup/new");
+  });
+
+  it("prefers the notice's own topup_url over balance.topup_url when both are present", () => {
+    mockBalance = { topup_url: "https://qumge.example/topup" };
+    const items: Item[] = [
+      {
+        kind: "notice",
+        tone: "warn",
+        text: "Error: out of credit",
+        retriable: true,
+        cause: "no_credit",
+        topup_url: "https://qumge.com/en/gateway/topup/new",
+      },
+    ];
+    render(<Transcript items={items} onApprove={vi.fn()} />);
+    fireEvent.click(screen.getByTestId("notice-topup"));
+    expect(openExternalMock).toHaveBeenCalledWith("https://qumge.com/en/gateway/topup/new");
+  });
+  // "renders nothing when neither source has a URL" is already covered above by
+  // "does not render the top-up button when balance is unknown ...".
 });
 
 describe("humanizeTool", () => {

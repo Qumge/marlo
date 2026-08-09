@@ -768,7 +768,7 @@ export function App() {
           // Same builder the persisted-replay path uses (itemsFromMessages.ts) — so the
           // live event and the post-reload replay of the same failure can't drift apart
           // (e.g. one carrying `cause`, the other not).
-          setItems((p) => [...p, errorNoticeItem(d.error, d.cause)]);
+          setItems((p) => [...p, errorNoticeItem(d.error, d.cause, d.topup_url)]);
           break;
         case "input_rejected":
           setItems((p) => [

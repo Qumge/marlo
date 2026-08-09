@@ -493,15 +493,23 @@ export function Transcript({ items, running, streamingText, onRetry }: Props) {
                     {t("uiRetry")}
                   </button>
                 )}
-                {item.cause === "no_credit" && balance?.topup_url && (
-                  <button
-                    className="ml-2 underline"
-                    data-testid="notice-topup"
-                    onClick={() => balance?.topup_url && openExternal(balance.topup_url)}
-                  >
-                    {t("addCredit2")}
-                  </button>
-                )}
+                {item.cause === "no_credit" &&
+                  (item.topup_url || balance?.topup_url) && (
+                    <button
+                      className="ml-2 underline"
+                      data-testid="notice-topup"
+                      onClick={() => {
+                        // Notice-first: the 402 body's own link is authoritative and
+                        // available even when `balance` is null (older sidecar, or the
+                        // account/balance endpoint failing) — exactly the state this
+                        // button used to silently vanish in.
+                        const url = item.topup_url || balance?.topup_url;
+                        if (url) openExternal(url);
+                      }}
+                    >
+                      {t("addCredit2")}
+                    </button>
+                  )}
               </div>
             );
           default:
