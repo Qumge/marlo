@@ -7,6 +7,8 @@
 // `seedCloudSignedIn` 【不】在这里：它操作的是上游的 CLOUD_STATE，搬过来就得
 // 反向 import fixtures.ts，形成循环。七行留在原处比一个循环依赖便宜。
 
+import type { Page } from "@playwright/test";
+
 /** 侧栏底部那个账号行背后的状态：谁登录了、还剩多少。
  *
  * `signed_in` 在真实 sidecar 里来自磁盘上的 key，所以这里即使 balance 是
@@ -55,4 +57,27 @@ export function qumgeRoute(
     return json({ ok: true });
   }
   return null;
+}
+
+/** 让单条用例在跑到一半时把余额从 0 改成有钱 —— 模拟用户去浏览器充了值。 */
+export function qumgeAccountRoute(page: Page) {
+  let micro = 0;
+  const install = () =>
+    page.route("**/v1/qumge/account", (r) =>
+      r.fulfill({
+        json: {
+          signed_in: true,
+          email: "new@user.test",
+          balance: {
+            balance_micro_usd: micro,
+            balance: micro / 1_000_000,
+            currency: "USD",
+            topup_url: "https://qumge.com/en/gateway/topup/new",
+            low: micro < 1_000_000,
+            can_spend: micro > 0,
+          },
+        },
+      }),
+    );
+  return { install, topUp: (m: number) => (micro = m) };
 }
