@@ -509,3 +509,63 @@ def test_a_402_from_the_provider_lands_as_a_retriable_error_notice(tmp_path):
     notice = eng.messages[-1]
     assert notice["kind"] == "error" and notice["cause"] == "no_credit"
     assert eng._tail_is_retriable_error() is True
+
+
+def test_402_cause_rides_both_the_live_event_and_the_persisted_notice(tmp_path):
+    """The live ERROR event and the persisted notice both need cause="no_credit" under
+    the SAME field name — otherwise the top-up button would appear on only one of "live"
+    and "after a reload" (the two paths this task's title promises: 刷新后【仍】可点,
+    which presupposes it worked live first)."""
+
+    class _Broke(Exception):
+        status_code = 402
+
+    class BrokenProvider(ProviderClient):
+        def complete(self, **kwargs):
+            raise _Broke("Payment Required")
+
+        def capabilities(self, model):
+            return ModelCapabilities()
+
+    registry = ToolRegistry()
+    permissions = PermissionEngine(workspace_root=tmp_path)
+    eng = TurnEngine(
+        provider=BrokenProvider(),
+        registry=registry,
+        permissions=permissions,
+        model="qumge:deepseek/deepseek-v4-flash",
+    )
+    events = _collect(eng, "hi")
+    error_event = next(e for e in events if e.type == EventType.ERROR)
+    assert error_event.data["cause"] == "no_credit"
+    assert eng.messages[-1]["cause"] == "no_credit"
+
+
+def test_a_generic_error_carries_no_cause_on_either_channel(tmp_path):
+    """An implementation that sets cause="no_credit" unconditionally would still pass
+    every no-credit test above; this is the negative case that catches it. A 500 (or a
+    timeout, or anything short of the 402/text no-credit signature) must not grow a
+    top-up button — live or persisted."""
+
+    class _ServerBroke(Exception):
+        status_code = 500
+
+    class BrokenProvider(ProviderClient):
+        def complete(self, **kwargs):
+            raise _ServerBroke("upstream exploded")
+
+        def capabilities(self, model):
+            return ModelCapabilities()
+
+    registry = ToolRegistry()
+    permissions = PermissionEngine(workspace_root=tmp_path)
+    eng = TurnEngine(
+        provider=BrokenProvider(),
+        registry=registry,
+        permissions=permissions,
+        model="qumge:deepseek/deepseek-v4-flash",
+    )
+    events = _collect(eng, "hi")
+    error_event = next(e for e in events if e.type == EventType.ERROR)
+    assert "cause" not in error_event.data
+    assert "cause" not in eng.messages[-1]

@@ -138,3 +138,38 @@ def test_404_and_429_are_unaffected():
     # 一码多义：404 也可能是 base_url 写错，429 也可能只是让你慢点
     assert friendly_model_error("qumge:x", _NotFound("upstream boom")) is None
     assert friendly_model_error("qumge:x", _RateLimited("slow down")) is None
+
+
+def test_402_is_gated_on_qumge_models_only():
+    """NO_CREDIT names Qumge by name and points at Qumge's sidebar account row. A BYO-key
+    user behind a corporate proxy or metered relay that answers 402 must NOT be told their
+    *Qumge* balance is empty and sent to a row that (being signed out) shows them nothing."""
+    from coworker.providers import errors
+
+    assert friendly_model_error("gpt-5.6-sol", _Status402("Payment Required")) is None
+    assert friendly_model_error("anthropic:claude-fable-5", _Status402("Payment Required")) is None
+    assert (
+        friendly_model_error("qumge:deepseek/deepseek-v4-flash", _Status402("Payment Required"))
+        is errors.NO_CREDIT
+    )
+
+
+def test_text_fallback_is_also_gated_on_qumge_models_only():
+    """Same gate as the status-code branch — a non-Qumge model saying "insufficient
+    balance" for whatever reason of its own must not be dressed up as a Qumge failure."""
+    assert friendly_model_error("gpt-5.6-sol", Exception("insufficient balance")) is None
+
+
+def test_402_status_wins_over_quota_body_text_ordering():
+    """A gateway 402 whose body happens to read like a quota message ("credit balance is
+    too low" is also one of _NO_QUOTA's markers) must still resolve through the
+    identity-checked NO_CREDIT, not the interpolated quota sentence — otherwise
+    `friendly is NO_CREDIT` goes false and the top-up button silently vanishes exactly
+    when the wording collides."""
+    from coworker.providers import errors
+
+    class _AmbiguousBody(Exception):
+        status_code = 402
+
+    exc = _AmbiguousBody("credit balance is too low")
+    assert friendly_model_error("qumge:x", exc) is errors.NO_CREDIT

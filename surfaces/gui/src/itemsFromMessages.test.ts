@@ -2,7 +2,7 @@
 // counts) must surface on the replayed tool item — and only there; the
 // agent-visible content string carries no trace.
 import { describe, expect, it } from "vitest";
-import { itemsFromMessages } from "./itemsFromMessages";
+import { errorNoticeItem, itemsFromMessages } from "./itemsFromMessages";
 
 describe("itemsFromMessages _display sidecar", () => {
   it("attaches hidden counts to the matching tool item", () => {
@@ -73,6 +73,32 @@ describe("itemsFromMessages notices", () => {
       { role: "notice", kind: "error", text: "out of credit", cause: "no_credit" } as any,
     ]);
     expect(items[0]).toMatchObject({ kind: "notice", retriable: true, cause: "no_credit" });
+  });
+});
+
+describe("errorNoticeItem (shared by persisted-replay AND the live SSE 'error' handler)", () => {
+  // App.tsx's live "error" case and itemsFromMessages' persisted-replay branch above both
+  // call this one builder — a fix-round finding was that App.tsx used to build the notice
+  // object by hand with no `cause`, so the top-up button only ever appeared after a reload.
+  // Testing the shared builder directly is what would catch either call site drifting away
+  // from it (e.g. back to a hand-rolled object that drops `cause`).
+  it("carries cause through when present", () => {
+    expect(errorNoticeItem("out of credit", "no_credit")).toEqual({
+      kind: "notice",
+      tone: "warn",
+      text: "Error: out of credit",
+      retriable: true,
+      cause: "no_credit",
+    });
+  });
+
+  it("omits cause when absent — a plain error must not grow a top-up button", () => {
+    expect(errorNoticeItem("boom")).toEqual({
+      kind: "notice",
+      tone: "warn",
+      text: "Error: boom",
+      retriable: true,
+    });
   });
 });
 

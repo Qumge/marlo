@@ -39,7 +39,7 @@ import type {
 } from "./types";
 import { isProjectScoped } from "./personaScope";
 import { baseName } from "./paths";
-import { itemsFromMessages } from "./itemsFromMessages";
+import { errorNoticeItem, itemsFromMessages } from "./itemsFromMessages";
 import { addTurnUsage, emptyUsage, usageFromMessages } from "./usage";
 import { streamMode } from "./streamGate";
 import { InboxItemCard } from "./components/InboxItemCard";
@@ -765,10 +765,10 @@ export function App() {
           break;
         case "error":
           flushPartialStream();
-          setItems((p) => [
-            ...p,
-            { kind: "notice", tone: "warn", text: "Error: " + (d.error || "unknown"), retriable: true },
-          ]);
+          // Same builder the persisted-replay path uses (itemsFromMessages.ts) — so the
+          // live event and the post-reload replay of the same failure can't drift apart
+          // (e.g. one carrying `cause`, the other not).
+          setItems((p) => [...p, errorNoticeItem(d.error, d.cause)]);
           break;
         case "input_rejected":
           setItems((p) => [

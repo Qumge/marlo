@@ -402,6 +402,11 @@ class TurnEngine:
                 }
                 if friendly:
                     payload["raw"] = str(exc)
+                # Same field name as the persisted notice's `cause` — carried on the live
+                # ERROR event too, so the top-up button appears immediately, not only after
+                # a reload replays the notice. Two names for one concept is how they drift.
+                if no_credit:
+                    payload["cause"] = "no_credit"
                 self._append_notice(
                     "error", friendly or str(exc), cause="no_credit" if no_credit else None
                 )

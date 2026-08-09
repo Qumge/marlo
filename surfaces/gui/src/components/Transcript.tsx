@@ -493,7 +493,7 @@ export function Transcript({ items, running, streamingText, onRetry }: Props) {
                     {t("uiRetry")}
                   </button>
                 )}
-                {item.cause === "no_credit" && (
+                {item.cause === "no_credit" && balance?.topup_url && (
                   <button
                     className="ml-2 underline"
                     data-testid="notice-topup"

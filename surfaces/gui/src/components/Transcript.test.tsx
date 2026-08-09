@@ -214,6 +214,15 @@ describe("no-credit notice top-up button (Task 5)", () => {
     render(<Transcript items={items} onApprove={vi.fn()} />);
     expect(screen.queryByTestId("notice-topup")).toBeNull();
   });
+
+  it("does not render the top-up button when balance is unknown (signed out / offline / older sidecar) — a dead button is exactly the failure this feature exists to prevent", () => {
+    mockBalance = null;
+    const items: Item[] = [
+      { kind: "notice", tone: "warn", text: "Error: out of credit", retriable: true, cause: "no_credit" },
+    ];
+    render(<Transcript items={items} onApprove={vi.fn()} />);
+    expect(screen.queryByTestId("notice-topup")).toBeNull();
+  });
 });
 
 describe("humanizeTool", () => {

@@ -55,6 +55,17 @@ NO_CREDIT = (
 )
 
 
+def _is_qumge_model(model: str) -> bool:
+    """Mirrors the GUI's `isQumgeModel` (useQumgeAccount.ts): a prefix test, not a
+    substring or provider-list lookup — this router's convention is that a bare id
+    ("gpt-5.6-sol") belongs to OpenAI and every Qumge-routed id carries the "qumge:"
+    prefix. NO_CREDIT names Qumge by name and points at Qumge's sidebar account row,
+    so a 402 from a BYO-key provider (corporate proxy, metered relay) must NOT be
+    read through it — that would tell the user their Qumge balance is empty and send
+    them to a sidebar row that, being signed out, shows them nothing."""
+    return model.startswith("qumge:")
+
+
 def friendly_model_error(model: str, exc: Exception) -> Optional[str]:
     """One actionable sentence for "your account can't use this model" failures, or None."""
     text = str(exc).lower()
@@ -63,10 +74,11 @@ def friendly_model_error(model: str, exc: Exception) -> Optional[str]:
         "gradually or require a plan upgrade. Pick a different model, or check "
         "the provider's console for availability."
     )
-    if getattr(exc, "status_code", None) == _NO_CREDIT_STATUS:
-        return NO_CREDIT
-    if any(marker in text for marker in _NO_CREDIT_TEXT):
-        return NO_CREDIT
+    if _is_qumge_model(model):
+        if getattr(exc, "status_code", None) == _NO_CREDIT_STATUS:
+            return NO_CREDIT
+        if any(marker in text for marker in _NO_CREDIT_TEXT):
+            return NO_CREDIT
     if any(marker in text for marker in _NO_QUOTA):
         return (
             f"Your account is out of quota for {model} — add credits or raise the limit "
