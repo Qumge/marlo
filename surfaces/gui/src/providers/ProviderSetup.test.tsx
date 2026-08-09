@@ -5,7 +5,13 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ProviderForm, type ProviderSetupState } from "./ProviderSetup";
 import type { ProviderInfo } from "../api";
 
-vi.mock("../tauri", () => ({ openExternal: vi.fn() }));
+// 同 Onboarding.test.tsx / Transcript.test.tsx（Task 7 fix round 1）：整模块替换会把
+// platformOS 也一起替没了，ProviderForm 今天没渲染任何调用 thisDevice() 的文案，但这个
+// mock 跟前两个是一模一样的坑形状，留着不补等于埋同一颗雷的第三份拷贝。
+vi.mock("../tauri", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../tauri")>();
+  return { ...actual, openExternal: vi.fn() };
+});
 
 afterEach(cleanup);
 

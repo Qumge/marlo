@@ -11,9 +11,14 @@ vi.mock("../useQumgeAccount", () => ({
   useQumgeAccount: () => ({ signed_in: true, email: "a@b.c", balance: mockBalance }),
 }));
 const openExternalMock = vi.fn();
-vi.mock("../tauri", () => ({
-  openExternal: (url: string) => openExternalMock(url),
-}));
+// 整模块替换会把 platformOS 也一起替没了 —— 它现在被 i18n catalog 用来做 thisDevice()
+// (Task 7)，这个文件虽然今天没渲染任何用得到它的文案，但下一个改到那四个键的人，或者
+// 下一个往 Transcript 里加一段 onboarding 文案的人，会在这里被一个看似无关的 mock 炸到。
+// importOriginal 保留真实的 platformOS，只替身 openExternal 这一个有副作用的调用。
+vi.mock("../tauri", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../tauri")>();
+  return { ...actual, openExternal: (url: string) => openExternalMock(url) };
+});
 
 afterEach(() => {
   cleanup();
