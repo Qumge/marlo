@@ -9,6 +9,13 @@ import { openExternal } from "../tauri";
 // The API key is NEVER handled here: the server exchanges it and writes it straight to the
 // SecretStore (poll_qumge_device's "connected" response carries no token at all), so there
 // is nothing for this component to store or display even by mistake.
+//
+// 「再试一次」只是把同一个 verification_uri_complete 再开一次浏览器 —— 它不
+// 重启流程。重启会换一个新 user_code，白白吃掉 qumge.com 每小时 20 次里的一次
+// （manager_mixin.py:40-45 专门为这个限额写过错误分支），而且旧 code 还在服务端
+// 挂着。它覆盖的是浏览器压根没打开、开到了错的浏览器、标签页被关掉这三类故障。
+// 注册回跳【不在其中】——那条路是通的：注册或登录完会回到带 code 的审批页
+// （站点侧已验证并有测试覆盖）。
 type Phase =
   | { kind: "idle" }
   | { kind: "starting" }
@@ -145,6 +152,14 @@ export function QumgeConnect({ onConnected }: { onConnected: () => void }) {
           onClick={() => openExternal(verification_uri_complete)}
         >
           {t("openBrowser")}
+        </button>
+        <p className="text-[11.5px] text-faint">{t("signUpHint")}</p>
+        <button
+          className="text-[11.5px] text-faint underline hover:text-muted"
+          data-testid="qumge-reopen"
+          onClick={() => openExternal(verification_uri_complete)}
+        >
+          {t("reopenBrowser")}
         </button>
         <p className="text-[11.5px] text-faint">{t("deviceHint")}</p>
       </div>

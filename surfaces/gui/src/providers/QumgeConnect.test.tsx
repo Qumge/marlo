@@ -287,6 +287,46 @@ describe("QumgeConnect", () => {
     expect(pollQumgeDevice).toHaveBeenCalledTimes(1);
   });
 
+  it("waiting 态就把注册说清楚，不等失败之后才解释", async () => {
+    vi.mocked(startQumgeDevice).mockResolvedValue(START);
+    vi.mocked(pollQumgeDevice).mockResolvedValue({ status: "pending" });
+    render(<QumgeConnect onConnected={vi.fn()} />);
+    fireEvent.click(screen.getByTestId("qumge-connect-start"));
+    await flushClick();
+    screen.getByTestId("qumge-waiting");
+    // 本仓库【没有】jest-dom —— package.json 只有 @testing-library/dom 和 react，
+    // 全仓一处 toBeInTheDocument 都没有。用 toBeTruthy。
+    expect(screen.getByText(/注册|Sign up/i)).toBeTruthy();
+  });
+
+  it("「再试一次」重开同一个 URL，而且屏幕上的码不变", async () => {
+    // openExternal 在非 Tauri 环境走 window.open（tauri.ts:160），本文件已有两处
+    // spyOn(window, "open") 的先例（:57、:92）—— 沿用，别去 mock ../tauri。
+    // 【vi.mocked() 只是类型层的转换，运行时什么都没做】——直接对它断言会报
+    // "received value must be a mock or spy function"。
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    vi.mocked(startQumgeDevice).mockResolvedValue(START);
+    vi.mocked(pollQumgeDevice).mockResolvedValue({ status: "pending" });
+    render(<QumgeConnect onConnected={vi.fn()} />);
+    fireEvent.click(screen.getByTestId("qumge-connect-start"));
+    await flushClick();
+
+    // 【关键】让第二次 start() 返回一个【不同】的码。只断言「没有第二次调用」
+    // 是废的：start() 开头就有 `if (phase.kind === "waiting") return;` 的重入守卫
+    // （QumgeConnect.tsx:105），所以即便把 qumge-reopen 直接接到 start() 上，
+    // 调用数也不会涨 —— 那个断言对着错误实现照样绿。屏幕上的码变没变，才是
+    // 真正能分辨两种实现的东西。
+    vi.mocked(startQumgeDevice).mockResolvedValue({ ...START, user_code: "NEWC-0DE1" });
+
+    fireEvent.click(screen.getByTestId("qumge-reopen"));
+    await flushClick();
+
+    expect(openSpy).toHaveBeenLastCalledWith(
+      START.verification_uri_complete, "_blank", "noopener,noreferrer",
+    );
+    expect(screen.getByTestId("qumge-user-code").textContent).toBe(START.user_code);
+  });
+
   it("clears the polling timer on unmount — no request loop survives the component", async () => {
     vi.mocked(startQumgeDevice).mockResolvedValue(START);
     vi.mocked(pollQumgeDevice).mockResolvedValue({ status: "pending" });
