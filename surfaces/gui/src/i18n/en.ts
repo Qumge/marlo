@@ -9,6 +9,8 @@
 // a closed set the catalog owns — this is a lookup, not a growing chore. An
 // unknown slug falls through to itself: a new category showing up as
 // "video-editing" reads worse than English, but far better than blank.
+import { platformOS } from "../tauri";
+
 const EN_CATEGORY: Record<string, string> = {
   "automation-workflow": "Automation & workflow",
   "data-analytics": "Data & analytics",
@@ -173,8 +175,14 @@ export const en = {
 
   // -- onboarding -----------------------------------------------------------
   welcomeTo: "Welcome to Marlo",
-  onboardLede:
-    "Connect to Qumge to get started — one sign-in, every model, and your key stays on this Mac.",
+  // Lazy evaluation: the catalog is a module-level literal, so a ternary computed
+  // here would freeze the platform at import time, long before any override lands.
+  // Explicit `: string` return type — without it, TS infers the narrow literal union
+  // "this Mac" | "this computer" from the two branches, and zh.ts's Chinese strings
+  // (which must satisfy the exact same inferred type via `Strings`) fail to typecheck.
+  thisDevice: (): string => (platformOS() === "macos" ? "this Mac" : "this computer"),
+  onboardLede: (dev: string) =>
+    `Connect to Qumge to get started — one sign-in, every model, and your key stays on ${dev}.`,
   connectToQumge: "Connect to Qumge",
   useOwnKey: "Use your own API key instead",
   skipSetup: "Skip setup",
@@ -184,7 +192,8 @@ export const en = {
   obToolsLede: "Chat can only advise. Connected, your coworker does the actual work:",
   obGoogleGated: "Coming soon — pending Google&rsquo;s app verification.",
   obSignInTitle: "Sign in for one-click connections",
-  obSignInBody: "OpenWorker handles the OAuth for 20+ tools — no dev consoles, no pasted keys. Tokens stay on this Mac.",
+  obSignInBody: (dev: string) =>
+    `OpenWorker handles the OAuth for 20+ tools — no dev consoles, no pasted keys. Tokens stay on ${dev}.`,
   obOpeningBrowser: "Opening browser…",
   mtAddServer: "Add a server",
   mtAllowDeliver: "Allow & deliver",
@@ -646,7 +655,8 @@ export const en = {
   obSignedIn: "You&rsquo;re signed in",
   obSignedInBody: "Connect a tool above with one click — or add them anytime later from the Connectors page.",
   obContinueNoSignIn: "Continue without sign-in",
-  obMoreTools: "30+ more tools on the Connectors page — add or remove anytime. Tokens stay on this Mac.",
+  obMoreTools: (dev: string) =>
+    `30+ more tools on the Connectors page — add or remove anytime. Tokens stay on ${dev}.`,
   obDone: "You're set up",
   obDoneLede: "Two good ways to start:",
   obCtaAutomation: "A weekly digest, a morning brief — pick a template, running in two minutes.",
@@ -655,8 +665,8 @@ export const en = {
 
   // -- qumge device flow ----------------------------------------------------
   openBrowser: "Open browser",
-  deviceHint:
-    "Didn't open? The address above already carries your code — paste it into any browser, on this Mac or another device.",
+  deviceHint: (dev: string) =>
+    `Didn't open? The address above already carries your code — paste it into any browser, on ${dev} or another device.`,
   signUpHint: "No Qumge account yet? Sign up on the page that opens — you'll come straight back to this step.",
   reopenBrowser: "Open the page again",
   connectedToQumge: "Connected to Qumge",

@@ -57,4 +57,20 @@ describe("i18n", () => {
     act(() => setLocale("en"));
     expect(document.documentElement.lang).toBe("en");
   });
+
+  it("Windows 上不会告诉用户他有一台 Mac", () => {
+    (globalThis as any).__OCW_PLATFORM__ = "windows";
+    act(() => setLocale("en"));
+    const dev = t("thisDevice")();
+    expect(t("onboardLede")(dev)).not.toMatch(/Mac/);
+    expect(t("deviceHint")(dev)).not.toMatch(/Mac/);
+    delete (globalThis as any).__OCW_PLATFORM__;
+  });
+
+  it("macOS 上仍然说 Mac —— 主力平台不降级成「这台电脑」", () => {
+    (globalThis as any).__OCW_PLATFORM__ = "macos";
+    act(() => setLocale("en"));
+    expect(t("onboardLede")(t("thisDevice")())).toMatch(/Mac/);
+    delete (globalThis as any).__OCW_PLATFORM__;
+  });
 });

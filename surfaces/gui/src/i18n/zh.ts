@@ -1,4 +1,5 @@
 import type { Strings } from "./en";
+import { platformOS } from "../tauri";
 
 // 目录的分类。slug（marketing-growth 这种）是 qumge 内部的写法，中文界面上直接
 // 显示它等于把实现细节摊给用户看。译名按【用户想干的事】说，不按开发术语说：
@@ -77,7 +78,8 @@ export const zh: Strings = {
   nToolCallsSoFar: (n) => `已经用了 ${n} 次工具。`,
 
   welcomeTo: "欢迎使用 Marlo",
-  onboardLede: "连上 Qumge 就能开始 —— 登录一次，所有模型都能用，密钥只存在这台 Mac 上。",
+  thisDevice: () => (platformOS() === "macos" ? "这台 Mac" : "这台电脑"),
+  onboardLede: (dev) => `连上 Qumge 就能开始 —— 登录一次，所有模型都能用，密钥只存在${dev}上。`,
   connectToQumge: "连接 Qumge",
   useOwnKey: "改用我自己的 API key",
   skipSetup: "先跳过",
@@ -87,7 +89,7 @@ export const zh: Strings = {
   obToolsLede: "光聊天只能给建议。连上之后，你的同事才真的动手做事：",
   obGoogleGated: "即将开放 —— 等 Google 的应用审核。",
   obSignInTitle: "登录后，连接工具只要一下",
-  obSignInBody: "20 多个工具的 OAuth 由 OpenWorker 代办 —— 不用开发者后台，不用粘密钥。令牌只留在这台 Mac 上。",
+  obSignInBody: (dev) => `20 多个工具的 OAuth 由 OpenWorker 代办 —— 不用开发者后台，不用粘密钥。令牌只留在${dev}上。`,
   obOpeningBrowser: "正在打开浏览器…",
   mtAddServer: "添加服务器",
   mtAllowDeliver: "允许并送达",
@@ -617,15 +619,15 @@ export const zh: Strings = {
   obSignedIn: "已登录",
   obSignedInBody: "上面任选一个工具点一下就能连 —— 也可以之后随时在「连接」页里加。",
   obContinueNoSignIn: "先不登录，继续",
-  obMoreTools: "「连接」页里还有 30 多个工具，随时可加可删。令牌只留在这台 Mac 上。",
+  obMoreTools: (dev) => `「连接」页里还有 30 多个工具，随时可加可删。令牌只留在${dev}上。`,
   obDone: "配置完成",
   obDoneLede: "两个不错的起点：",
   obCtaAutomation: "每周简报、每日晨报 —— 挑个模板，两分钟就能跑起来。",
   obCtaWork: "开一个会话直接说 —— 分析文件、起草、查资料、动手做。",
   obReplay: "想重看这套引导：设置 ▸ 外观 ▸ 重新运行设置。",
   openBrowser: "打开浏览器",
-  deviceHint:
-    "没有自动打开？上面那个网址已经带上了你的验证码 —— 复制到任何浏览器里打开就行，这台 Mac 或别的设备都可以。",
+  deviceHint: (dev) =>
+    `没有自动打开？上面那个网址已经带上了你的验证码 —— 复制到任何浏览器里打开就行，${dev}或别的设备都可以。`,
   signUpHint: "还没有 Qumge 账号？在打开的页面上注册一个 —— 注册完会自动回到这一步。",
   reopenBrowser: "再打开一次",
   connectedToQumge: "已连接 Qumge",

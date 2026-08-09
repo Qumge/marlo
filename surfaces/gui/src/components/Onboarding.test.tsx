@@ -40,7 +40,13 @@ vi.mock("../api.qumge", () => ({
   pollQumgeDevice: vi.fn(),
 }));
 
-vi.mock("../tauri", () => ({ openExternal: vi.fn() }));
+// 这个 onboarding 屏幕现在会调用 thisDevice() → platformOS()（Task 7：设备名跟着平台走），
+// 所以不能再整模块替换成只有 openExternal —— 那样 platformOS 在这个 mock 上不存在，一渲染就炸。
+// importOriginal 保留真实的 platformOS，只替身 openExternal 这一个有副作用的调用。
+vi.mock("../tauri", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../tauri")>();
+  return { ...actual, openExternal: vi.fn() };
+});
 
 const field = (key: string) => ({
   key,

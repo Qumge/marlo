@@ -161,7 +161,7 @@ export function QumgeConnect({ onConnected }: { onConnected: () => void }) {
         >
           {t("reopenBrowser")}
         </button>
-        <p className="text-[11.5px] text-faint">{t("deviceHint")}</p>
+        <p className="text-[11.5px] text-faint">{t("deviceHint")(t("thisDevice")())}</p>
       </div>
     );
   }

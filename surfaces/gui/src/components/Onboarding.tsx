@@ -175,7 +175,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
             {/* Persistent header — stays put while the region below swaps (§39). */}
             <h1 className="text-[19px] font-semibold">{t("welcomeTo")}<span className="beta-tag">{t("beta")}</span></h1>
             <p className="text-[13px] text-muted mt-0.5 mb-4">
-              {t("onboardLede")}
+              {t("onboardLede")(t("thisDevice")())}
             </p>
 
             {!useOwnKey ? (
@@ -325,7 +325,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
                   <span className="block text-[13px] font-semibold text-ink mb-0.5">
                     {t("obSignInTitle")}
                   </span>
-                  {t("obSignInBody")}
+                  {t("obSignInBody")(t("thisDevice")())}
                 </span>
                 {signinPhase ? (
                   <span className="inline-flex items-center gap-2 text-[12.5px] text-muted shrink-0">
@@ -394,7 +394,7 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
               )}
             </div>
             <p className="text-[11px] text-faint mt-3">
-              {t("obMoreTools")}
+              {t("obMoreTools")(t("thisDevice")())}
             </p>
           </section>
         )}
