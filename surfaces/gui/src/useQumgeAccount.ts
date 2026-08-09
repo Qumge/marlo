@@ -26,6 +26,17 @@ export function __accountPollMs(): number {
   return fast ? FAST_MS : SLOW_MS;
 }
 
+// Whether `model` belongs to Qumge, and therefore whether Qumge's balance/can_spend
+// has anything to do with it at all. A prefix test, not a substring or provider-list
+// lookup: this router's convention is that a bare id ("gpt-5.6-sol") belongs to
+// OpenAI and every Qumge-routed id carries the "qumge:" prefix, so "starts with" is
+// exact here, not an approximation of some fuzzier rule. Getting this wrong in either
+// direction is bad — false-positive gates a BYO-key user on a balance that isn't
+// theirs; false-negative lets a real zero-balance Qumge request through.
+export function isQumgeModel(model: string): boolean {
+  return model.startsWith("qumge:");
+}
+
 export function refreshQumgeAccount(): void {
   void getQumgeAccount()
     .then((a) => {

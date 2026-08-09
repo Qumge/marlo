@@ -49,7 +49,7 @@ import { Sidebar } from "./components/Sidebar";
 import { ThinkingBlock, Transcript } from "./components/Transcript";
 import { Composer } from "./components/Composer";
 import { TopUpCard } from "./components/TopUpCard";
-import { useQumgeAccount } from "./useQumgeAccount";
+import { isQumgeModel, refreshQumgeAccount, useQumgeAccount } from "./useQumgeAccount";
 import { Markdown } from "./components/Markdown";
 import { SearchModal } from "./components/SearchModal";
 import { SessionIntro } from "./components/SessionIntro";
@@ -1636,13 +1636,14 @@ export function App() {
               connected={connected}
               modelReady={modelReady}
               canSpend={
-                model.startsWith("qumge:") ? qumgeAccount.balance?.can_spend : undefined
+                isQumgeModel(model) ? qumgeAccount.balance?.can_spend : undefined
               }
               topUpSlot={
                 qumgeAccount.balance ? (
                   <TopUpCard balance={qumgeAccount.balance} onUseOwnKey={openModelSetup} />
                 ) : undefined
               }
+              onTopUp={refreshQumgeAccount}
               onConnectModel={openModelSetup}
               onConfigureVoiceInput={() => openSettings("voice")}
               onSend={send}

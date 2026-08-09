@@ -10,6 +10,7 @@ import {
   __resetAccountStore,
   setAccountPollFast,
   __accountPollMs,
+  isQumgeModel,
   useQumgeAccount,
 } from "./useQumgeAccount";
 
@@ -44,5 +45,23 @@ describe("useQumgeAccount store", () => {
     expect(__accountPollMs()).toBe(5_000);
     setAccountPollFast(false);
     expect(__accountPollMs()).toBe(60_000);
+  });
+});
+
+describe("isQumgeModel", () => {
+  it("qumge: 前缀 → true", () => {
+    expect(isQumgeModel("qumge:deepseek/deepseek-v4-flash")).toBe(true);
+  });
+
+  it("裸 id（按这个路由的约定属于 OpenAI）→ false", () => {
+    expect(isQumgeModel("gpt-5.6-sol")).toBe(false);
+  });
+
+  it("其它带前缀的 provider → false", () => {
+    expect(isQumgeModel("anthropic:claude-fable-5")).toBe(false);
+  });
+
+  it("空字符串 → false", () => {
+    expect(isQumgeModel("")).toBe(false);
   });
 });

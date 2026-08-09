@@ -56,15 +56,21 @@ describe("composer 余额闸门", () => {
     expect(screen.getByTestId("card")).toBeTruthy();
   });
 
-  it("充值回来后卡片自己消失，草稿还在", () => {
+  it("充值回来后卡片自己消失，草稿还在，且从没自动发送过", () => {
+    const onSend = vi.fn();
     const { rerender } = render(
-      <Composer {...base} canSpend={false} topUpSlot={<div data-testid="card" />} />,
+      <Composer {...base} onSend={onSend} canSpend={false} topUpSlot={<div data-testid="card" />} />,
     );
     type("充值前打的字");
     expect(screen.getByTestId("card")).toBeTruthy();
-    rerender(<Composer {...base} canSpend={true} topUpSlot={<div data-testid="card" />} />);
+    rerender(
+      <Composer {...base} onSend={onSend} canSpend={true} topUpSlot={<div data-testid="card" />} />,
+    );
     expect(screen.queryByTestId("card")).toBeNull();
     expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe("充值前打的字");
+    // 这是这张卡片存在的全部意义：credit 自己回来了，绝不能替用户按下回车 ——
+    // 那是在替他花钱。恢复之后只应该是"可以发了"，从来不是"已经发了"。
+    expect(onSend).not.toHaveBeenCalled();
   });
 
   it("没连模型时先谈模型，不谈余额", () => {
