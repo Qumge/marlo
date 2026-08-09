@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { LanguagePicker } from "./LanguagePicker";
 import { useT } from "../i18n";
 import {
+  announceCloudChanged,
   cloudLogin,
   connectManaged,
   getCloudStatus,
@@ -75,6 +76,11 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
   const handleQumgeConnected = () => {
     setQumgeConnected(true);
     void ps.refreshProviders();
+    // 账号那一侧不在 refreshProviders 的路径上，而它 60 秒才轮询一次 —— 不广播
+    // 的话，刚登录完的用户最长一分钟看不到自己的余额，而那一分钟正是他准备打
+    // 第一句话的时候。第二层闸门（$0.00 + 去充值）能不能赶在他打字之前出现，
+    // 就靠这一行。
+    announceCloudChanged();
   };
 
   // Step 1 ("Connect your everyday tools") is hidden in Marlo.
