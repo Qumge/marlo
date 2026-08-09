@@ -21,11 +21,6 @@
 
 **[qumge.com](https://qumge.com)** · [Download](#download) · [Issues](https://github.com/Qumge/marlo/issues)
 
-> **Pre-release** — Marlo has no published build yet. Everything below describes what it does
-> today from source; the download links appear here when the first signed build ships.
-> Bugs in Marlo go to [our issues](https://github.com/Qumge/marlo/issues); bugs in the
-> underlying engine are usually [upstream's](https://github.com/andrewyng/openworker/issues).
-
 **AI that gets your everyday tasks done.** OpenWorker is an open-source AI coworker that lives on your desktop and delivers **finished work**, not just chat: a polished document, a Slack reply with the numbers, an updated calendar, a triaged inbox.
 
 It runs on your machine and doesn't lock you into any model: bring your own API key for OpenAI, Anthropic, Google, or an open-weight provider, or run fully local with Ollama. Your data leaves your machine only through the model and integrations *you* choose.
@@ -34,14 +29,14 @@ It runs on your machine and doesn't lock you into any model: bring your own API 
 
 ## Download
 
-**Not yet.** Marlo has no released build. The links that used to sit here pointed at
-OpenWorker's binaries — downloading those would have given you the upstream app, not this
-one, so they are gone rather than left as a convenience.
+**[qumge.com](https://qumge.com)** — signed and notarised for macOS, so it opens on the
+first double-click. There is a Windows build too; it carries no Authenticode signature
+yet, so Windows warns on first run.
 
-Until the first signed build ships, run from source: [Development](#development) below.
+Every release, with checksums and the auto-update manifest:
+[github.com/Qumge/marlo/releases/latest](https://github.com/Qumge/marlo/releases/latest).
 
-If you want a finished app today, [OpenWorker](https://github.com/andrewyng/openworker) is
-the project Marlo derives from and it ships signed builds.
+Prefer to run from source? See [Run from source](#run-from-source).
 
 ## How it works
 
