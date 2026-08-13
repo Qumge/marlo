@@ -152,6 +152,22 @@ def test_start_sends_device_name_when_given():
     assert fake.requests[0][1] == {"device_name": "my-mac"}
 
 
+def test_start_sends_the_locale_when_the_window_offers_one():
+    """The approval page qumge.com hands back is locale-scoped, and only the webview knows
+    which language this window is in. Without this, a 中文 Marlo sent its user to /en."""
+    fake = FakeClient([_start_payload()])
+    device_flow.start("my-mac", locale="zh", client=fake)
+    assert fake.requests[0][1] == {"device_name": "my-mac", "locale": "zh"}
+
+
+def test_start_omits_locale_entirely_when_there_is_none():
+    """Absent, not empty: the server picks its default on a missing key, and sending
+    `locale: null`/`""` would be a value it has to have an opinion about."""
+    fake = FakeClient([_start_payload()])
+    device_flow.start("my-mac", client=fake)
+    assert "locale" not in fake.requests[0][1]
+
+
 def test_start_defaults_device_name_to_hostname_when_not_given(monkeypatch):
     """The webview has no way to name "this machine" — it never sees the OS. Only the
     server can, so start() fills it in itself rather than shipping every device
@@ -422,6 +438,41 @@ def test_start_qumge_device_network_failure_is_a_typed_error_not_a_crash(tmp_pat
     assert result["status"] == "error"
     assert result["kind"] == "unreachable"
     assert mgr._qumge_flow is None
+
+
+def test_start_qumge_device_reports_the_status_code_separately_from_the_message(
+    tmp_path, monkeypatch
+):
+    """`kind` alone cannot tell "no network" from "the server answered 502" — both are
+    `unreachable`. The panel needs the number to phrase them apart, and it must arrive as
+    a field, not buried in an English sentence: that sentence was being rendered verbatim
+    inside a Chinese window."""
+    _patch_client(monkeypatch, [FakeResponse(502, {})])
+    result = _manager(tmp_path).start_qumge_device()
+
+    assert result["kind"] == "unreachable"
+    assert result["status_code"] == 502
+
+    _patch_client(monkeypatch, [httpx.ConnectError("boom")])
+    offline = _manager(tmp_path).start_qumge_device()
+    assert offline["kind"] == "unreachable"
+    assert offline.get("status_code") is None
+
+
+def test_start_qumge_device_passes_the_locale_through_to_the_flow(tmp_path, monkeypatch):
+    """The locale starts at the webview and has to survive two hops (route → manager →
+    device_flow) to reach the URL. Each hop is a place it has silently been dropped."""
+    seen = {}
+
+    def fake_start(device_name=None, *, locale=None, client=None):
+        seen["device_name"] = device_name
+        seen["locale"] = locale
+        raise httpx.ConnectError("stop here — the call is what's under test")
+
+    monkeypatch.setattr(device_flow, "start", fake_start)
+    _manager(tmp_path).start_qumge_device("my-mac", "zh")
+
+    assert seen == {"device_name": "my-mac", "locale": "zh"}
 
 
 def test_start_qumge_device_rate_limited_and_network_errors_read_differently(

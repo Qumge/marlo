@@ -124,11 +124,34 @@ export interface QumgeDevicePoll {
 // through `res.json()` untouched, leaving `data.interval` `undefined` and feeding a
 // `setTimeout(..., NaN)` retry loop. Both helpers must reject on a non-OK response so the
 // ONE try/catch in QumgeConnect is where a failure becomes a message.
-export async function startQumgeDevice(deviceName?: string): Promise<QumgeDeviceStart> {
+/** A sign-in failure the sidecar could name. `kind` is what the panel phrases in the
+ * user's language — the sidecar's `message` is English (it has no locale) and is kept
+ * only as the last-resort text for failures nothing classified. */
+export class QumgeSignInError extends Error {
+  readonly kind?: "rate_limited" | "unreachable";
+  readonly statusCode?: number;
+
+  constructor(message: string, kind?: "rate_limited" | "unreachable", statusCode?: number) {
+    super(message);
+    this.name = "QumgeSignInError";
+    this.kind = kind;
+    this.statusCode = statusCode;
+  }
+}
+
+export async function startQumgeDevice(
+  deviceName?: string,
+  locale?: string,
+): Promise<QumgeDeviceStart> {
   const res = await authedFetch(`${httpBase()}/v1/qumge/device/start`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(deviceName ? { device_name: deviceName } : {}),
+    // The server hands back a locale-scoped approval URL and cannot guess which language
+    // this window is in, so the window says so.
+    body: JSON.stringify({
+      ...(deviceName ? { device_name: deviceName } : {}),
+      ...(locale ? { locale } : {}),
+    }),
   });
   const data = await res.json();
   // Two distinct failure shapes here: a non-OK HTTP response, and a 200 that is ITSELF a
@@ -136,7 +159,11 @@ export async function startQumgeDevice(deviceName?: string): Promise<QumgeDevice
   // `{status: "error", ...}`). A real success body never carries a `status` field, so this
   // check can't misfire on one.
   if (!res.ok || data?.status === "error") {
-    throw new Error(data?.error || `Qumge sign-in request failed (HTTP ${res.status}).`);
+    throw new QumgeSignInError(
+      data?.error || `Qumge sign-in request failed (HTTP ${res.status}).`,
+      data?.kind,
+      typeof data?.status_code === "number" ? data.status_code : undefined,
+    );
   }
   return data;
 }

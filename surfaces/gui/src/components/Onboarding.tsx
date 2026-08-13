@@ -182,7 +182,13 @@ export function Onboarding({ onDone }: { onDone: (next?: "work" | "gallery" | "a
               /* ---- Task 4: CONNECT TO QUMGE, the default path — one sign-in, nothing to
                   paste, no gallery to parse first. ---- */
               <div className="flex-1 min-h-0 flex flex-col" data-testid="ob-qumge-connect">
-                <div className="flex-1 min-h-0 flex flex-col items-start justify-center gap-4">
+                {/* Top-anchored, not centred. The modal's height is fixed on purpose (see
+                    above), and this panel is usually ONE button — centring it in that box
+                    left ~250px of nothing above the only thing to click, which reads as a
+                    screen that failed to load rather than as a dialog. Reported from a
+                    first-run walkthrough. The empty space is still there; it is now below
+                    the content, where whitespace normally lives. */}
+                <div className="flex-1 min-h-0 flex flex-col items-start justify-start gap-4">
                   {qumgeConnected ? (
                     <span className="text-[13px] text-ok font-medium" data-testid="ob-qumge-connected">
                       ✓ {t("connectedToQumge")}

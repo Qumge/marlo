@@ -52,6 +52,33 @@ describe("startQumgeDevice", () => {
     });
     await expect(startQumgeDevice()).rejects.toThrow(/too many sign-in attempts/i);
   });
+
+  // The sidecar has no language. Its classification has to reach the panel as fields, or
+  // the panel has nothing to phrase and falls back to printing English at the user.
+  it("carries the sidecar's kind and status code onto the thrown error", async () => {
+    stubFetch(200, {
+      status: "error",
+      kind: "unreachable",
+      status_code: 502,
+      error: "Qumge returned an unexpected error (HTTP 502).",
+    });
+    await expect(startQumgeDevice()).rejects.toMatchObject({
+      kind: "unreachable",
+      statusCode: 502,
+    });
+  });
+
+  it("sends the window's locale, and omits the key when there is none", async () => {
+    stubFetch(200, { user_code: "A", verification_uri: "u", verification_uri_complete: "u", interval: 5, expires_in: 900 });
+    await startQumgeDevice(undefined, "zh");
+    const withLocale = JSON.parse((fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    expect(withLocale).toEqual({ locale: "zh" });
+
+    stubFetch(200, { user_code: "A", verification_uri: "u", verification_uri_complete: "u", interval: 5, expires_in: 900 });
+    await startQumgeDevice("my-mac");
+    const without = JSON.parse((fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    expect(without).toEqual({ device_name: "my-mac" });
+  });
 });
 
 describe("pollQumgeDevice", () => {

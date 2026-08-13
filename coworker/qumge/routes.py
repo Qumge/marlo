@@ -42,7 +42,11 @@ def qumge_router(manager: Any) -> APIRouter:
     # -- Qumge device sign-in (RFC 8628) ----------------------------------------
     @router.post("/v1/qumge/device/start")
     def qumge_device_start(body: dict | None = None) -> dict[str, Any]:
-        return manager.start_qumge_device((body or {}).get("device_name"))
+        # `locale` is the webview's own language: the approval page it is about to send
+        # the user to is locale-scoped, and this process has no way to know which
+        # language the window is in.
+        body = body or {}
+        return manager.start_qumge_device(body.get("device_name"), body.get("locale"))
 
     @router.get("/v1/qumge/device/poll")
     def qumge_device_poll() -> dict[str, Any]:

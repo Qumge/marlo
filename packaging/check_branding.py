@@ -209,6 +209,10 @@ def main() -> int:
 #   2. 每一处会调 tauri build/dev 的地方都带上了这个 overlay
 _BRAND_KEYS = {
     "productName": "Marlo",
+    # 没有它，Contents/MacOS 里的可执行文件叫 cargo 那个 crate 名 openworker-desktop——
+    # 活动监视器、崩溃报告、"强制退出"列表里露出来的都是上游的名字。.app 叫 Marlo 而
+    # 进程叫别的，这一条靠肉眼永远发现不了（是一次新用户走查里看见的）。
+    "mainBinaryName": "Marlo",
     "identifier": "com.qumge.marlo",
 }
 

@@ -24,7 +24,9 @@ class QumgeManagerMixin:
     # they are looking at is the one that should win.
     _qumge_flow: Optional["qumge_device.Flow"] = None
 
-    def start_qumge_device(self, device_name: Optional[str] = None) -> dict[str, Any]:
+    def start_qumge_device(
+        self, device_name: Optional[str] = None, locale: Optional[str] = None
+    ) -> dict[str, Any]:
         from ..qumge import device_flow as qumge_device
         import httpx
 
@@ -35,7 +37,7 @@ class QumgeManagerMixin:
         # differently; retrying ("Try again") asks for a fresh code every time, so an
         # impatient user runs straight into the rate limit if it isn't called out.
         try:
-            flow = qumge_device.start(device_name)
+            flow = qumge_device.start(device_name, locale=locale)
         except httpx.HTTPStatusError as exc:
             if exc.response is not None and exc.response.status_code == 429:
                 return {
@@ -43,11 +45,16 @@ class QumgeManagerMixin:
                     "kind": "rate_limited",
                     "error": "Too many sign-in attempts — qumge.com allows a few per hour. Wait a bit and try again.",
                 }
-            code = exc.response.status_code if exc.response is not None else "unknown"
+            code = exc.response.status_code if exc.response is not None else None
+            # `status_code` travels separately from `error` because the panel renders it
+            # in the user's language and this process has none: `error` is English, and
+            # for a while it was shown verbatim inside a Chinese window. Keep sending it
+            # anyway — it is what the logs and any older GUI have to go on.
             return {
                 "status": "error",
                 "kind": "unreachable",
-                "error": f"Qumge returned an unexpected error (HTTP {code}).",
+                "status_code": code,
+                "error": f"Qumge returned an unexpected error (HTTP {code or 'unknown'}).",
             }
         except httpx.HTTPError:
             return {
