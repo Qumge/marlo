@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { QumgeConnect } from "./QumgeConnect";
 import { pollQumgeDevice, startQumgeDevice } from "../api.qumge";
+import { setLocale } from "../i18n";
 
 vi.mock("../api.qumge", () => ({
   startQumgeDevice: vi.fn(),
@@ -35,6 +36,9 @@ const advance = (ms: number) => act(() => vi.advanceTimersByTimeAsync(ms));
 
 beforeEach(() => {
   vi.useFakeTimers();
+  // The locale is module-global, so the zh cases below would otherwise leak forward into
+  // every English assertion that happens to run after them.
+  setLocale("en");
   vi.mocked(startQumgeDevice).mockReset();
   vi.mocked(pollQumgeDevice).mockReset();
 });
@@ -252,6 +256,65 @@ describe("QumgeConnect", () => {
     expect(screen.getByTestId("qumge-error-message").textContent).toBe(
       "Too many sign-in attempts — wait a bit and try again.",
     );
+  });
+
+  // The panel, not the sidecar, does the talking. The sidecar has no locale, so anything it
+  // phrases arrives in English — and for a while that English went straight onto the screen
+  // of a 中文 window, as the FIRST thing a blocked new user saw. These assert the wrong-language
+  // sentence is GONE, not merely that some message showed up.
+  it("phrases a classified failure in the window's language, not the sidecar's English", async () => {
+    const sidecarEnglish = "Qumge returned an unexpected error (HTTP 502).";
+    vi.mocked(startQumgeDevice).mockRejectedValue(
+      Object.assign(new Error(sidecarEnglish), { kind: "unreachable", statusCode: 502 }),
+    );
+    setLocale("zh");
+
+    render(<QumgeConnect onConnected={vi.fn()} />);
+    fireEvent.click(screen.getByTestId("qumge-connect-start"));
+    await flushClick();
+
+    const shown = screen.getByTestId("qumge-error-message").textContent;
+    expect(shown).toBe("Qumge 出错了（HTTP 502）。");
+    expect(shown).not.toBe(sidecarEnglish);
+  });
+
+  it("distinguishes rate-limited and offline, which share one kind but not one message", async () => {
+    setLocale("zh");
+    vi.mocked(startQumgeDevice).mockRejectedValue(
+      Object.assign(new Error("Too many sign-in attempts."), { kind: "rate_limited" }),
+    );
+    render(<QumgeConnect onConnected={vi.fn()} />);
+    fireEvent.click(screen.getByTestId("qumge-connect-start"));
+    await flushClick();
+    const limited = screen.getByTestId("qumge-error-message").textContent!;
+
+    cleanup();
+    // Same `kind` as the 502 above, but no status code — this is "the network is dead",
+    // and quoting an HTTP number at someone who never reached a server would be a lie.
+    vi.mocked(startQumgeDevice).mockRejectedValue(
+      Object.assign(new Error("Couldn't reach qumge.com."), { kind: "unreachable" }),
+    );
+    render(<QumgeConnect onConnected={vi.fn()} />);
+    fireEvent.click(screen.getByTestId("qumge-connect-start"));
+    await flushClick();
+    const offline = screen.getByTestId("qumge-error-message").textContent!;
+
+    expect(offline).not.toBe(limited);
+    expect(offline).not.toMatch(/HTTP/);
+    expect(limited).not.toBe("Too many sign-in attempts.");
+    expect(offline).not.toBe("Couldn't reach qumge.com.");
+  });
+
+  it("passes the window's language to the server, which decides the approval page's locale", async () => {
+    setLocale("zh");
+    vi.mocked(startQumgeDevice).mockResolvedValue(START);
+    vi.mocked(pollQumgeDevice).mockResolvedValue({ status: "pending" });
+
+    render(<QumgeConnect onConnected={vi.fn()} />);
+    fireEvent.click(screen.getByTestId("qumge-connect-start"));
+    await flushClick();
+
+    expect(startQumgeDevice).toHaveBeenCalledWith(undefined, "zh");
   });
 
   it("clamps a missing/invalid interval instead of scheduling a near-0ms poll loop", async () => {

@@ -38,17 +38,29 @@ class Flow:
     expires_at: float
 
 
-def start(device_name: Optional[str] = None, *, client: Optional[httpx.Client] = None) -> Flow:
+def start(
+    device_name: Optional[str] = None,
+    *,
+    locale: Optional[str] = None,
+    client: Optional[httpx.Client] = None,
+) -> Flow:
     # The webview never sees the OS, so it has nothing worth sending here — only the
     # server can name "this machine". Fall back to the hostname rather than shipping
     # every device nameless (an explicit name, when the caller has one, still wins).
     device_name = device_name or socket.gethostname()
+    # The opposite direction for `locale`: only the webview knows which language the
+    # window is in, and the approval page it sends the user to is locale-scoped. Omit the
+    # key entirely when we have nothing — the server then picks its default, which is
+    # what every build before this one got.
+    payload: dict[str, str] = {"device_name": device_name}
+    if locale:
+        payload["locale"] = locale
     owns = client is None
     client = client or httpx.Client(timeout=TIMEOUT)
     try:
         r = client.post(
             f"{base_url()}/device/code",
-            json={"device_name": device_name},
+            json=payload,
         )
         r.raise_for_status()
         d = r.json()

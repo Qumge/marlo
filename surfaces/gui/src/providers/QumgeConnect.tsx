@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { useT } from "../i18n";
-import { pollQumgeDevice, startQumgeDevice, type QumgeDeviceStart, type QumgeDevicePoll } from "../api.qumge";
+import { getLocale, useT } from "../i18n";
+import {
+  pollQumgeDevice,
+  startQumgeDevice,
+  type QumgeDeviceStart,
+  type QumgeDevicePoll,
+} from "../api.qumge";
 import { openExternal } from "../tauri";
 
 // Marlo's "sign in to Qumge" panel — replaces Marlo's thirteen-provider-picker first
@@ -37,6 +42,28 @@ function clampInterval(seconds: unknown): number {
   const n = Number(seconds);
   if (!Number.isFinite(n) || n <= 0) return DEFAULT_POLL_INTERVAL_S;
   return Math.min(MAX_POLL_INTERVAL_S, Math.max(MIN_POLL_INTERVAL_S, n));
+}
+
+// The sidecar names the failure (`kind`); the phrasing belongs HERE, which is the only
+// side with a language. Before this, the sidecar's English `error` was rendered verbatim
+// — which is how "Qumge returned an unexpected error (HTTP 502)." turned up inside a
+// Chinese window, as the first thing a new user hit. Anything it could not classify still
+// falls back to that string: a sentence in the wrong language beats a blank panel.
+// Read the classification off the value rather than testing `instanceof QumgeSignInError`:
+// the sidecar's `kind` is DATA, and identity checks against an imported class quietly stop
+// working the moment that module is mocked or the value crosses a serialisation boundary
+// (the first version of this failed exactly that way in QumgeConnect.test.tsx).
+function signInErrorMessage(err: unknown, t: ReturnType<typeof useT>): string | undefined {
+  const { kind, statusCode } = (err ?? {}) as { kind?: string; statusCode?: number };
+  if (kind === "rate_limited") return t("qcTooManyAttempts");
+  // One `kind` covers both "no network" and "the server answered, badly" — the status code
+  // is what separates them, and only one of the two has a number worth showing.
+  if (kind === "unreachable") {
+    return statusCode === undefined
+      ? t("qcCantReachQumge")
+      : t("tplQumgeHttpError")(String(statusCode));
+  }
+  return err instanceof Error ? err.message : undefined;
 }
 
 export function QumgeConnect({ onConnected }: { onConnected: () => void }) {
@@ -113,17 +140,15 @@ export function QumgeConnect({ onConnected }: { onConnected: () => void }) {
     const seq = ++startSeqRef.current;
     setPhase({ kind: "starting" });
     try {
-      const data = await startQumgeDevice();
+      // The window's own language: it decides which locale the approval page opens in.
+      const data = await startQumgeDevice(undefined, getLocale());
       if (stoppedRef.current || seq !== startSeqRef.current) return; // superseded by a newer start()
       intervalRef.current = clampInterval(data.interval);
       setPhase({ kind: "waiting", data });
       schedulePoll();
     } catch (err) {
       if (stoppedRef.current || seq !== startSeqRef.current) return;
-      setPhase({
-        kind: "error",
-        message: err instanceof Error ? err.message : undefined,
-      });
+      setPhase({ kind: "error", message: signInErrorMessage(err, t) });
     }
   };
 
