@@ -42,6 +42,7 @@ import { downloadHint } from "../voiceProxyHint";
 import { Icon } from "./Icon";
 import { PanelHead } from "./IntegrationsView";
 import { ModelsTab } from "./ManageTabs";
+import { MemorySection } from "./MemorySection";
 import { GalleryModal } from "./GalleryModal";
 import { PersonasTab } from "./PersonasTab";
 import { showPersonas } from "../flags";
@@ -55,7 +56,7 @@ import { showPersonas } from "../flags";
 // rename (UX-021) changed only the label. "files" folded into General as a card.
 // 「技能」曾经是这里的一个 tab。2026-08-02 它和账号菜单的「能力」合成了一页，
 // 搬去账号菜单 ▸ 技能 —— 设置管的是本机/应用的配置，技能是 Marlo 有什么。
-type SetTab = "appearance" | "models" | "voice" | "personas";
+type SetTab = "appearance" | "models" | "voice" | "memory" | "personas";
 
 const CARD = "rounded-xl2 border border-line bg-panel";
 const FIELD_LABEL = "text-[12.5px] font-medium text-ink";
@@ -68,10 +69,11 @@ const BTN_BORDERED =
 
 // label 存的是 i18n 【键】不是英文 —— 常量保持纯数据，渲染时才 t(key)。
 // 上游这里是英文字面量，我们每次合并都要换回来；这是数据数组，transform 够不到。
-const SET_TABS: { key: SetTab; label: string; icon: "sliders" | "code" | "mic" | "sparkle" }[] = [
+const SET_TABS: { key: SetTab; label: string; icon: "sliders" | "code" | "mic" | "archive" | "sparkle" }[] = [
   { key: "appearance", label: "navGeneral", icon: "sliders" },
   { key: "models", label: "navModels", icon: "code" },
   { key: "voice", label: "navVoiceInput", icon: "mic" },
+  { key: "memory", label: "navMemory", icon: "archive" },
   { key: "personas", label: "navPersonas", icon: "sparkle" },
 ];
 
@@ -135,6 +137,8 @@ export function SettingsView({
             </section>
           ) : tab === "voice" ? (
             <VoiceInputSection />
+          ) : tab === "memory" ? (
+            <MemorySection />
           ) : (
             <PersonasSection onOpenPersona={onOpenPersona} />
           )}
