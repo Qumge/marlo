@@ -346,6 +346,9 @@ interface Props {
   // Re-run the failed turn (no new user message). Offered only on a retriable notice that
   // is the transcript tail of an idle session — anywhere else the error is history.
   onRetry?: () => void;
+  // MEMORY-SPEC §5.1: undo a just-announced write. `previous` (set when the write was
+  // an edit) is the text to restore; without it the memory is deleted.
+  onUndoMemory?: (id: number, previous?: string) => void;
 }
 
 // The transcript index whose notice gets the Retry button: the tail error notice, looking
@@ -361,7 +364,7 @@ export function retryAnchor(items: Item[]): number {
   return -1;
 }
 
-export function Transcript({ items, running, streamingText, onRetry }: Props) {
+export function Transcript({ items, running, streamingText, onRetry, onUndoMemory }: Props) {
   const t = useT();
   // Hook must live at the component top, not inside the items.map(...) switch below —
   // conditionally calling a hook per-item would violate the rules of hooks. `balance`
@@ -510,6 +513,40 @@ export function Transcript({ items, running, streamingText, onRetry }: Props) {
                       {t("addCredit2")}
                     </button>
                   )}
+              </div>
+            );
+          // §5.1 save notice: quiet, inline, and it STAYS — the user reads it in place
+          // and can undo whenever they get to it.
+          case "memory":
+            return (
+              <div
+                className="notice flex items-center gap-2 text-left"
+                data-testid="memory-notice"
+                key={bi}
+              >
+                {item.undone ? (
+                  <span data-testid="memory-notice-undone">
+                    {item.previous ? "Okay — put back the way it was." : "Okay — forgotten."}
+                  </span>
+                ) : (
+                  <>
+                    <span className="min-w-0">
+                      <span className="font-medium">
+                        {item.previous ? "I've updated what I remember" : "I'll remember that"}
+                      </span>
+                      {item.text ? <span className="text-muted"> — {item.text}</span> : null}
+                    </span>
+                    {onUndoMemory && (
+                      <button
+                        className="btn ml-auto shrink-0"
+                        data-testid="memory-notice-undo"
+                        onClick={() => onUndoMemory(item.id, item.previous)}
+                      >
+                        Undo
+                      </button>
+                    )}
+                  </>
+                )}
               </div>
             );
           default:
