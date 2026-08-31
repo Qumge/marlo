@@ -10,7 +10,7 @@ import {
 import { openExternal } from "../tauri";
 import { PROVIDER_LOGOS, providerRank } from "./logos";
 
-import { useT } from "../legacyI18n";
+import { useTranslation } from "react-i18next";
 // The provider gallery ⇄ key form, shared by Onboarding step 1 (§39) and
 // Settings ▸ Models (UX-021) so the two can never drift apart visually. The hook
 // owns the interaction state machine; ProviderCards/ProviderForm own the shared
@@ -96,7 +96,7 @@ export interface ProviderSetupState {
 }
 
 export function useProviderSetup(opts?: { onSaved?: () => void }): ProviderSetupState {
-  const t = useT();
+  const { t } = useTranslation();
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
   // null = the gallery; a provider name = that provider's key form.
   const [sel, setSel] = useState<string | null>(null);
@@ -158,7 +158,7 @@ export function useProviderSetup(opts?: { onSaved?: () => void }): ProviderSetup
     setVerify({ state: "testing" });
     const res = await verifyProvider(sel, fields).catch(() => ({ ok: false, error: "unreachable" }));
     if (!res.ok) {
-      setVerify({ state: "error", msg: res.error || t("prCouldNotVerify") });
+      setVerify({ state: "error", msg: res.error || t("provider.err_couldnt_verify") });
       return false;
     }
     if (dirty || !info?.configured) await setProvider(sel, fields).catch(() => {});
@@ -228,10 +228,10 @@ export function useProviderSetup(opts?: { onSaved?: () => void }): ProviderSetup
     if (!p.needs_key)
       return (
         <span className="block text-[11.5px] text-faint truncate">
-          {keylessOk.has(p.name) ? <span className="text-ok font-medium">✓ Running</span> : t("prNoKeyNeeded")}
+          {keylessOk.has(p.name) ? <span className="text-ok font-medium">✓ Running</span> : t("provider.no_key_needed")}
         </span>
       );
-    return <span className="block text-[11.5px] text-faint truncate">{t("prNotSetUp")}</span>;
+    return <span className="block text-[11.5px] text-faint truncate">{t("provider.not_set_up")}</span>;
   };
 
   return {
@@ -328,7 +328,7 @@ export function ProviderForm({
   tp: string;
   footer?: ReactNode;
 }) {
-  const t = useT();
+  const { t } = useTranslation();
   const { info, sel } = ps;
   const label = "block text-[12px] text-muted mt-3 mb-1";
   const input =
@@ -467,7 +467,7 @@ export function ProviderForm({
               <button
                 className="mt-2.5 inline-flex items-center gap-2 rounded-lg border border-line bg-panel px-2.5 py-1.5 text-[12px] font-mono text-ink hover:border-lineStrong"
                 onClick={() => void navigator.clipboard?.writeText(selected.command || "")}
-                title={t("psCopyCommand")}
+                title={t("provider.copy_command")}
                 data-testid={`${tp}-cmd-copy`}
               >
                 {selected.command}
@@ -478,10 +478,10 @@ export function ProviderForm({
             <div className="mt-3.5 flex items-center justify-between gap-3 border-t border-line pt-3">
               {ps.savedState ? (
                 <span className="text-[11.5px] font-medium text-ok" data-testid={`${tp}-saved-pill`}>
-                  ✓ {t("psTestedAndSaved")}
+                  {t("provider.tested_saved_pill")}
                 </span>
               ) : (
-                <span className="text-[11.5px] text-faint">{t("psRunsOneCheck")}</span>
+                <span className="text-[11.5px] text-faint">{t("provider.test_save_hint")}</span>
               )}
               <button
                 className="shrink-0 rounded-lg border border-accent bg-accent px-4 py-1.5 text-[13px] font-medium text-white hover:brightness-105 disabled:opacity-40"
@@ -503,7 +503,7 @@ export function ProviderForm({
             className="text-muted underline decoration-line underline-offset-2 hover:text-ink"
             onClick={() => openExternal(KEY_HELP[sel].url)}
           >
-            {t("prCreateOneAt")} {KEY_HELP[sel].label} ↗
+            {t("provider.create_key_at", { label: KEY_HELP[sel].label })} ↗
           </button>{" "}
           — takes about a minute.
         </p>
@@ -515,7 +515,7 @@ export function ProviderForm({
             className="text-muted underline decoration-line underline-offset-2 hover:text-ink"
             onClick={() => openExternal("https://ollama.com/download")}
           >
-            {t("prInstallOllama")}
+            {t("provider.install_ollama")} ↗
           </button>
         </p>
       )}
@@ -534,7 +534,7 @@ export function ProviderForm({
               onClick={() => ps.setShowEndpoint(true)}
               data-testid={`${tp}-endpoint-link`}
             >
-              {t("prCustomEndpoint")}
+              {t("provider.custom_endpoint")} ⌄
             </button>
           );
         return (

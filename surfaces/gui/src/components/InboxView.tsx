@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useT } from "../legacyI18n";
+import { useTranslation } from "react-i18next";
 import {
   getConnectors,
   getInbox,
@@ -24,11 +24,14 @@ const ICON_FOR: Record<string, "diamond" | "chat" | "code"> = {
   code: "code",
 };
 
-const KIND_TABS: { key: string; label: string }[] = [
-  { key: "all", label: "filterAll" },
-  { key: "approval", label: "filterApprovals" },
-  { key: "question", label: "filterQuestions" },
-];
+// as const 而不是 : { labelKey: string }[]（上游的写法）—— 我们给键上了类型
+// （i18nTyped.d.ts），裸 string 进不了 t()。字面量联合既能过类型，又保住了
+// "键写错就红"：这是比上游【多】一层保护，不是放宽。
+const KIND_TABS = [
+  { key: "all", labelKey: "inbox.kind_all" },
+  { key: "approval", labelKey: "inbox.kind_approvals" },
+  { key: "question", labelKey: "inbox.kind_questions" },
+] as const;
 
 const CHIP = (active: boolean) =>
   "text-[11.5px] px-2.5 py-1 rounded-full border " +
@@ -57,8 +60,8 @@ export function InboxView({
 }: {
   onOpenSession: (sessionId: string, workspace: string, agent: string) => void;
 }) {
-  const tr = useT();
-  const t = useT();
+  const { t: tr } = useTranslation();
+  const { t } = useTranslation();
   const [tab, setTab] = useState<"pending" | "configure">("pending");
   const [items, setItems] = useState<InboxItem[]>([]);
   const [personas, setPersonas] = useState<Persona[] | null>(null);
@@ -125,7 +128,7 @@ export function InboxView({
     return (
       <button
         className="inbox-session-chip"
-        title={exists ? t("tplOpenLabel")(label) : t("ivSessionUnavailable")}
+        title={exists ? t("inbox.open_session", { label }) : t("inbox.session_unavailable")}
         disabled={!exists}
         onClick={() =>
           exists && onOpenSession(it.session_id, it.session_workspace || "", it.session_agent || "cowork")
@@ -148,8 +151,8 @@ export function InboxView({
       <div className="flex-1 min-w-0 overflow-y-auto hairline-scroll">
         <div className="max-w-4xl mx-auto px-7 py-6">
           <PanelHead
-            title={t("uiInbox")}
-            sub={t("ivLede")}
+            title={t("nav.inbox")}
+            sub={t("inbox.sub")}
           />
 
           <div className="flex gap-5 border-b border-line mb-4">
@@ -199,7 +202,7 @@ export function InboxView({
                     — replies there resolve items here.{" "}
                   </span>
                 ) : slackConnected ? (
-                  <span>{t("uiDeliveredHere")} </span>
+                  <span>{t("inbox.delivered_here_only")} </span>
                 ) : (
                   <span>
                     Delivered here only. Connect Slack (Connectors page) to also get these in a
@@ -211,14 +214,14 @@ export function InboxView({
                   data-testid="inbox-route-configure"
                   onClick={() => setTab("configure")}
                 >
-                  {t("ibConfigure")}
+                  {t("intro.cta_configure")}
                 </button>
               </div>
 
               <div className="flex items-center gap-2 flex-wrap mb-4" data-testid="inbox-filters">
                 {KIND_TABS.map((t) => (
                   <button key={t.key} className={CHIP(kind === t.key)} onClick={() => setKind(t.key)}>
-                    {tr(t.label as any)}
+                    {tr(t.labelKey)}
                   </button>
                 ))}
                 {personasWithItems.length > 1 && (
@@ -228,7 +231,7 @@ export function InboxView({
                       className={CHIP(personaFilter === "all")}
                       onClick={() => setPersonaFilter("all")}
                     >
-                      {t("ibAllCoworkers")}
+                      {t("inbox.all_coworkers")}
                     </button>
                     {personasWithItems.map((p) => (
                       <button
@@ -245,7 +248,7 @@ export function InboxView({
 
               {visible.length === 0 ? (
                 <div className="manage-empty">
-                  {items.length === 0 ? t("ivNonePending") : t("ivNoneForFilter")}
+                  {items.length === 0 ? t("inbox.nothing_pending") : t("inbox.nothing_pending_filter")}
                 </div>
               ) : null}
 

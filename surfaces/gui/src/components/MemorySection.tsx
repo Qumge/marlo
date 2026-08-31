@@ -13,7 +13,7 @@ import {
 import { Icon } from "./Icon";
 import { PanelHead } from "./IntegrationsView";
 import { Toggle } from "./Toggle";
-import { useT } from "../legacyI18n";
+import { useTranslation } from "react-i18next";
 
 // MEMORY-SPEC §5.3: the one memory screen. A plain-language list of remembered facts
 // (edit/delete per row), the on/off toggle, delete-all, and the User Rules textarea —
@@ -26,7 +26,7 @@ const BTN_ACCENT =
   "text-[12.5px] px-3 py-2 rounded-lg bg-accent text-white shrink-0 disabled:opacity-40";
 
 export function MemorySection() {
-  const t = useT();
+  const { t } = useTranslation();
   const [settings, setSettings] = useState<MemorySettings | null>(null);
   const [entries, setEntries] = useState<MemoryEntry[] | null>(null);
   // State-change copy (§5.3): shown under the toggle / list after an action.
@@ -57,18 +57,18 @@ export function MemorySection() {
     setSettings(next);
     setToggleMsg(
       next.enabled
-        ? t("memEnabledMessage")
-        : t("memDisabledMessage"),
+        ? t("memory.on_msg")
+        : t("memory.off_msg"),
     );
   };
 
   const wipeAll = async () => {
     if (
-      !window.confirm(t("memDeleteAllConfirm"))
+      !window.confirm(t("memory.wipe_confirm"))
     )
       return;
     await deleteAllMemory();
-    setListMsg(t("memDeleteAllDone"));
+    setListMsg(t("memory.wiped_msg"));
     refresh();
   };
 
@@ -79,7 +79,7 @@ export function MemorySection() {
     <section>
       <PanelHead
         title="Memory"
-        sub={t("memLede")}
+        sub={t("memory.section_sub")}
       />
 
       {/* On/off — one switch, no other setup (§5.4). */}
@@ -157,7 +157,7 @@ function UserRulesCard({
   settings: MemorySettings;
   onSaved: (s: MemorySettings) => void;
 }) {
-  const t = useT();
+  const { t } = useTranslation();
   const [draft, setDraft] = useState(settings.user_rules);
   const [savedMsg, setSavedMsg] = useState(false);
 
@@ -172,13 +172,13 @@ function UserRulesCard({
     <div className={CARD + " p-4"} data-testid="user-rules-card">
       <div className={FIELD_LABEL}>Your instructions</div>
       <div className={FIELD_HELP}>
-        {t("memRulesLede")}
+        {t("memory.rules_help")}
       </div>
       <textarea
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         rows={4}
-        placeholder={t("memRulesPlaceholder")}
+        placeholder={t("memory.rules_placeholder")}
         data-testid="user-rules-input"
         className="w-full mt-2.5 px-3 py-2.5 rounded-lg border border-line bg-paper text-[13px] text-ink outline-none focus:border-accent resize-y leading-relaxed"
       />
