@@ -531,6 +531,22 @@ git checkout upstream/main -- $F
 
 然后照 Step 1 里"我们改了什么"的那几行，逐条重新加回去。**只加功能改动，不要把 `useT` 加回来** —— 那正是要消掉的东西。
 
+- [ ] **Step 2b: 立刻跑 tsc —— 拖进未合并的上游依赖就退回 Tier 2 做法**
+
+**【2026-08-31 撞到过，这一步不能省】** 分诊的判据是【我们】改了多少非 i18n 的行，
+但 `git checkout upstream/main -- <file>` 带进来的是那个文件的**全部上游演进**。
+`ConnectorsSection.tsx` 就是这样：上游版本 `import { McpServerDetail } from "./CustomMcp"`
+并给 `ConnectorsList` 传了 `mcpServers` —— 两个都还不在我们树上，tsc 当场两条错，
+连 `SkillsView` 的两个测试文件都收集不了。
+
+```bash
+cd surfaces/gui && npx tsc --noEmit && cd ../..
+```
+
+报 `Cannot find module` 或者 prop 类型不匹配 → `git checkout HEAD -- $F` 退回去，
+改用 Task 6 的做法（留我们的文件，只换 i18n 调用）。这类文件迁完之后**仍然会冲突**，
+那是对的 —— 它本来就有真功能冲突，只是被 i18n 盖住了。
+
 - [ ] **Step 3: 顺手核对中文（这一步不能省）**
 
 这个文件用到的每个上游键，去 `surfaces/gui/src/locales/zh.json` 看它的中文值，和我们旧目录里对应的译文比：
@@ -746,9 +762,25 @@ git merge-tree --write-tree --name-only HEAD upstream/main \
   | tail -n +2 | sed '/^$/,$d' | tee /private/tmp/conflicts-after.txt | wc -l
 ```
 
-**验收线：≤ 26 个文件**，且剩下的应该基本就是「文件结构」一节里列的那 23 个。
+**验收线：≤ 30 个文件**，且**每一个剩下的都要能说出功能原因**。
 
-如果还剩 40+，**停下来问 owner**，不要硬着头皮进 Phase B —— Phase A 的全部意义就是这个数字。
+【为什么不是 23 —— 2026-08-31 实测】Phase A 自己会**加回 4 个**冲突，因为它改了
+上游拥有的文件：
+
+```
+surfaces/gui/src/locales/en.json     Task 4 改了 24 行品牌
+surfaces/gui/src/locales/zh.json     Task 4 改了 28 行品牌 + 译文回填
+surfaces/gui/vitest.config.ts        Task 3 加了 setupFiles
+surfaces/gui/package-lock.json       Task 3 装了 i18next / react-i18next
+```
+
+这四个是**便宜的冲突**（locales 是「取我们的，再补上游的新键」，另两个各几行），
+和它们换掉的 49 个 TSX 冲突不是一个量级。另外 49 个里凡是被退回 Tier 2 做法的
+（如 `ConnectorsSection.tsx`）迁完仍会冲突 —— 那是它本来就有的功能冲突。
+
+所以真正的验收不是数字，是**清单**：把剩下的逐个过一遍，每个都要能指出是哪种
+功能冲突。指不出来的那个，就是漏迁了。数字只是让你知道该不该停下来 ——
+还剩 40+ 就**停下来问 owner**。
 
 - [ ] **Step 3: 跑全量验证并提交报告**
 
