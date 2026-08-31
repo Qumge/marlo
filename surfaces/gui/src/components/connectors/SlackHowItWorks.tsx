@@ -13,8 +13,8 @@ import type { SlackWorkspace } from "../../api";
 
 const KEY = "ocw.slack.howitworks.collapsed";
 const DUR = 8000; // per-scene loop, ms
-const TABS = ["hiwMentionToSession", "hiwThreads", "hiwAllowTeammates"];
-const CAPTIONS = ["hiwCap1", "hiwCap2", "hiwTeammatesNote"];
+const TABS = ["slack.hiw_tab_mention", "slack.hiw_tab_threads", "slack.hiw_tab_teammates"];
+const CAPTIONS = ["slack.hiw_cap_mention", "slack.hiw_cap_threads", "slack.hiw_cap_teammates"];
 
 function readCollapsed(): boolean {
   try { return localStorage.getItem(KEY) === "1"; } catch { return false; }

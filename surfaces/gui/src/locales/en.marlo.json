@@ -1,0 +1,58 @@
+{
+  "boot": {
+    "starting": "Starting Marlo…"
+  },
+  "sidebar": {
+    "sign_in": "Sign in to Marlo"
+  },
+  "rail": {
+    "empty_state": "For longer multi-step tasks, progress will appear here while Marlo plans, uses tools, waits for approval, and produces artifacts.",
+    "open_board": "Open the board"
+  },
+  "settings": {
+    "general_sub": "How Marlo looks and behaves on this machine.",
+    "open_at_login_help": "Launch Marlo automatically when you sign in.",
+    "update_downloading": "Downloading — Marlo restarts by itself when it's ready.",
+    "voice_desktop_only": "Voice Input setup is available in the Marlo desktop app.",
+    "scratch_placeholder": "~/Marlo"
+  },
+  "cloud": {
+    "signin_unlocks_default": "Sign-in unlocks one-click connects — or switch to Manual, which works without it."
+  },
+  "update": {
+    "ready": "Marlo v{{version}} is ready to install."
+  },
+  "automations": {
+    "sub": "Recurring tasks Marlo runs on a schedule.",
+    "empty_state": "No scheduled tasks yet — use a template above, click <strong>+ New automation</strong>, or just ask Marlo in a session.",
+    "server_hint": "Runs only while Marlo is open — a missed schedule catches up once when you next open it."
+  },
+  "slack": {
+    "hiw_msg_kp": "Message Marlo…"
+  },
+  "modal": {
+    "mcp_blurb": "Opens {{title}} in your browser — sign in and approve access there. No tokens typed, and no Marlo account needed: the sign-in runs entirely on this computer.",
+    "github_blurb": "Opens GitHub in your browser — approve Marlo there. An existing @ocw-agent App installation links right up; otherwise you'll pick an account and repos. No tokens typed; the agent acts as ocw-agent[bot]."
+  },
+  "gallery": {
+    "filter_brand": "From Marlo"
+  },
+  "manage": {
+    "tools_exposed": "Tools exposed to Marlo"
+  },
+  "onboarding": {
+    "model_intro": "Pick a model provider to get started — Marlo runs on your own key, and your key and your data stay on this computer.",
+    "welcome": "Welcome to Marlo"
+  },
+  "workspace_trust": {
+    "sub": "This project asks Marlo to run the commands below without individual approval. Trust applies to future configuration changes at this exact folder until you revoke it in Settings."
+  },
+  "toolreq": {
+    "installs_with_source": "Marlo installs its own verified copy from {{source}} — or install it yourself and continue.",
+    "installs": "Marlo installs its own verified copy — or install it yourself and continue.",
+    "no_build": "Marlo has no verified build for this machine — install it yourself if you want this check, or continue and the coworker will note the gap."
+  },
+  "skills": {
+    "door_ai": "Create with Marlo"
+  }
+}

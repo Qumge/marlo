@@ -8,8 +8,8 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
-import en from "./locales/en.json";
-import zh from "./locales/zh.json";
+// Marlo：目录经 localeOverlay 叠加我们的措辞；locales/*.json 与上游字节相同。
+import { en, zh } from "./localeOverlay";
 
 const STORAGE_KEY = "openworker.lang";
 

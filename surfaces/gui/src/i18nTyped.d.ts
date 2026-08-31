@@ -8,12 +8,15 @@
 // 英文是事实来源（和上游一致，也和 legacyI18n/en.ts 的分工一致）：类型只从 en.json
 // 取。zh.json 的键要不要齐，由上游 i18n.test.ts 的「locale contracts」那组守。
 import "i18next";
-import type en from "./locales/en.json";
+
+// 合并【之后】的形状：locales/en.json 叠上 en.marlo.json。只取 en.json 的话，
+// overlay 新加的键（我们 fork 自己功能带来的那些）会被 tsc 判成不存在。
+type EN = typeof import("./localeOverlay").en;
 
 declare module "i18next" {
   interface CustomTypeOptions {
     defaultNS: "translation";
-    resources: { translation: typeof en };
+    resources: { translation: EN };
     returnNull: false;
   }
 }

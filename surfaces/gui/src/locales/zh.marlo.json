@@ -1,0 +1,224 @@
+{
+  "boot": {
+    "starting": "正在启动 Marlo…"
+  },
+  "common": {
+    "dismiss": "忽略"
+  },
+  "sidebar": {
+    "sign_in": "登录 Marlo"
+  },
+  "nav": {
+    "connectors": "外部连接"
+  },
+  "transcript": {
+    "mcp_open_connectors": "打开外部连接"
+  },
+  "rail": {
+    "empty_state": "对于较长的多步任务，进度会显示在这里：Marlo 规划、调用工具、等待批准并产出文件。",
+    "open_board": "打开看板"
+  },
+  "settings": {
+    "general_sub": "Marlo 在本机的外观与行为。",
+    "open_at_login_help": "登录时自动启动 Marlo。",
+    "update_downloading": "下载中 —— Marlo 准备好后会自动重启。",
+    "voice_desktop_only": "语音输入设置仅在 Marlo 桌面版中可用。",
+    "scratch_placeholder": "~/Marlo",
+    "gallery_sub": "来自 Marlo 团队的精选角色 —— 安装前了解各自能做什么。"
+  },
+  "cloud": {
+    "check_browser": "去浏览器里完成…",
+    "sign_in_oneclick": "登录 OpenWorker Cloud 就能一键连接 —— 或者在下面填一个令牌",
+    "signin_unlocks_default": "登录后就能一键连接 —— 也可以切到「手动」，不登录也能用。"
+  },
+  "update": {
+    "ready": "Marlo v{{version}} 已准备好安装。"
+  },
+  "automations": {
+    "sub": "Marlo 按计划运行的重复任务。",
+    "empty_state": "还没有定时任务 —— 使用上方模板，点击 <strong>+ 新建自动化</strong>，或在会话里直接让 Marlo 做。",
+    "server_hint": "只在 Marlo 开着的时候跑 —— 错过的那次会在你下次打开时补上一遍。",
+    "when": "什么时候"
+  },
+  "search": {
+    "placeholder": "搜索对话",
+    "no_results": "没有找到对话。",
+    "pinned": "已置顶的对话",
+    "recent": "最近的对话"
+  },
+  "integrations": {
+    "nav_title": "外部连接",
+    "tab_connectors": "外部连接",
+    "connectors_title": "外部连接"
+  },
+  "access": {
+    "add_btn": "加入",
+    "addfolder_path_placeholder": "选一个文件夹，或把路径粘进来…",
+    "choose_location": "选个位置"
+  },
+  "root": {
+    "main": "主",
+    "missing": "已丢失",
+    "read_write": "读写",
+    "primary_always_rw": "主工作区始终是读写的",
+    "toggle_rw": "切换只读 / 读写"
+  },
+  "inbox": {
+    "kind_approvals": "待批",
+    "unattended_approvals": "无人值守时的审批",
+    "dm_desc": "处理发给机器人的私信的会话。不设的话，私信会堆在下面的「未分派」里。",
+    "col_listens_to": "在听",
+    "col_inbox_routes_to": "收件箱转到",
+    "collision_title": "这个频道同时也是你的收件箱转发目标 —— 收和发挤在一个频道里，广播和回复会混在一起。",
+    "unsubscribe": "退订",
+    "no_subscriptions": "还没有订阅频道 —— 在下面添加一个，或者让某个同事去盯一个频道。",
+    "unrouted_empty": "这里没有内容 —— 没有丢失的消息，也没有失败的回合。",
+    "invite_to_listen": "在 Slack 里把 @ocw 拉进这个频道，它才能监听",
+    "channels_this_session": "这个会话在听的频道",
+    "not_subscribed": "还没订阅任何频道。",
+    "add": "加入",
+    "routing_update_failed": "更新收件箱转发失败。",
+    "routing_clear_failed": "清除收件箱转发失败。",
+    "missing_slack_owner": "把审批转到这里之前，先在「集成 → Slack」里指定一位审批负责人。"
+  },
+  "audit": {
+    "title": "操作记录",
+    "placeholder_connector": "连接",
+    "no_events": "还没有活动记录。"
+  },
+  "plan": {
+    "proposed": "它提了一个方案",
+    "feedback_placeholder": "这个方案要改什么？",
+    "request_changes": "要求修改",
+    "approve_ask": "批准 —— 每步都问我",
+    "approve_and_run": "批准并执行"
+  },
+  "dirreq": {
+    "requesting_access": "它想访问一个文件夹",
+    "path_placeholder": "选一个文件夹，或把路径粘进来…",
+    "choose_location": "选个位置",
+    "grant_access": "授予访问权限"
+  },
+  "folder_gate": {
+    "create_sub": "选一个文件夹，或者直接输入路径。路径不存在的话会自动创建。",
+    "choose_sub": "这个同事需要一个工作区来读取、编辑和运行。",
+    "pick_folder": "选个文件夹",
+    "create": "新建"
+  },
+  "connector": {
+    "back_to_connectors": "‹ 外部连接",
+    "waiting": "等待中",
+    "unsubscribe_title": "退订这个会话"
+  },
+  "github": {
+    "relay_live": "在线 · 托管中继",
+    "relay_signin_needed": "需要登录 —— 中继已暂停",
+    "relay_offline": "离线 —— 连不上中继",
+    "relay_reconnecting": "正在重连中继…",
+    "add_installation_title": "添加一个安装",
+    "empty_parked_note": "还没有允许任何人 —— @ocw-agent 收到的 @ 会出现在这里等你确认。",
+    "disconnect_install": "断开这个安装",
+    "disconnect_install_title": "停止把这个安装中继到本机。GitHub 上的 App 仍然保留。",
+    "allow_deliver_title": "允许这位发件人，并立即送达这次 @",
+    "allow_discard_title": "允许这位发件人；这次 @ 丢弃"
+  },
+  "slack": {
+    "names_foot": "名字由 Slack 自动带出，悬停可看 ID。",
+    "disconnect_workspace": "断开工作区",
+    "disconnect_workspace_title": "停止把这个工作区中继到本机。Slack 里的 app 仍然保留。",
+    "add_person": "＋ 添加成员",
+    "pick_from_directory": "从工作区通讯录里选",
+    "type_a_name": "输入名字…",
+    "directory_foot": "来自你的工作区通讯录 —— 只留在这台电脑上。",
+    "allow_deliver_title": "允许这位发件人，并立即送达这条消息",
+    "allow_discard_title": "允许这位发件人；这条消息丢弃",
+    "hiw_show": "看看 @ 是怎么走的",
+    "hiw_collapse": "收起 —— 随时可以再打开",
+    "hiw_how_it_works": "它是怎么工作的",
+    "hiw_title": "Slack 与 OpenWorker 上手",
+    "hiw_on_people_list": "—— 你在「成员」名单里，所以你的 @ 能直接进来。",
+    "hiw_how_mentions": "—— @ 就是这样送到你这儿的。",
+    "choose_owner_warning": "把收件箱的审批转到 Slack 之前，至少要指定一位负责人。",
+    "owner_protected_title": "要先取消这个人的审批负责人身份，才能把他移除。",
+    "owner_set_by_installer": "由安装这个应用的人设定。",
+    "hiw_msg_traction": "发布效果：帖子发出后注册量涨了 3.4 倍…",
+    "hiw_top_countries": "前几名：美国 41% · 印度 22% · 德国 9%…",
+    "hiw_msg_kp": "给 Marlo 发消息…",
+    "hiw_top_countries_full": "主要国家：美国 41%、印度 22%、德国 9% —— 上下文取自整个话题。",
+    "hiw_cap_mention": "在任何邀请过它的频道里 @OpenWorker —— 这边会开一个会话，答案以话题回复的形式回到 Slack。",
+    "hiw_threads": "主题",
+    "hiw_via_slack_now": "来自 Slack · 刚刚",
+    "hiw_tab_mention": "@ 一下就开会话",
+    "hiw_tab_threads": "话题串起来",
+    "hiw_tab_teammates": "允许同事",
+    "hiw_cap_threads": "在话题里再 @ 它一次 —— 对话在同一个会话里继续，上下文不丢。话题就是会话。",
+    "hiw_cap_teammates": "同事不会自动被信任：他第一次 @ 会等你确认，之后就进「成员」名单。"
+  },
+  "gmail": {
+    "add_account": "＋ 添加账号",
+    "add_account_coming_soon": "＋ 添加账号 · 即将开放",
+    "coming_soon_title": "Google 一键登录即将开放",
+    "requires_cloud": "需要先登录云端。",
+    "accounts": "账号",
+    "disconnect_mailbox_title": "断开这个邮箱",
+    "never_show_agents": "永不给 agent 看",
+    "labels_placeholder": "标签名，比如：个人",
+    "filters_foot_inner": "命中的邮件会被静默地排除在助手能读到的内容之外 —— 不留任何可被试探的痕迹。"
+  },
+  "hubspot": {
+    "sandbox": "沙箱",
+    "disconnect_portal_title": "断开这个门户",
+    "hidden_fields": "隐藏的字段",
+    "hidden_fields_placeholder": "字段名，比如：salary",
+    "hidden_fields_foot_inner": "所有门户里、agent 读到的每条记录都会去掉它。"
+  },
+  "calendar": {
+    "disconnect_account_title": "断开这个账号"
+  },
+  "accounts": {
+    "add_an_account": "添加账号"
+  },
+  "available": {
+    "access": "访问权限",
+    "access_foot": "密钥和令牌只存在这台电脑上。随时可以断开。",
+    "hide": "收起",
+    "asks_first": "会先问过你"
+  },
+  "modal": {
+    "mcp_blurb": "在浏览器中打开 {{title}} —— 在那里登录并授权。无需输入令牌，也无需 Marlo 账户：登录完全在本机运行。",
+    "github_blurb": "在浏览器中打开 GitHub —— 在那里授权 Marlo。已有的 @ocw-agent App 安装会直接关联；否则你将选择账户和仓库。无需输入令牌；agent 以 ocw-agent[bot] 身份操作。",
+    "hubspot_readwrite_blurb": "增加：记笔记和任务、更新记录、创建联系人 —— 绝不删除",
+    "hubspot_foot": "支持任意数量的门户 · 令牌只留在这台电脑上",
+    "slack_manual_step2": "打开 Socket Mode、加上 bot 权限、装到你的工作区",
+    "slack_manual_step3": "把两个 token 都粘进来",
+    "bot_token_placeholder": "机器人令牌 · xoxb-…",
+    "app_token_placeholder": "应用令牌 · xapp-…",
+    "slack_manual_pause_note": "一次只能开一种模式 —— 这会暂停所有中继工作区。"
+  },
+  "gallery": {
+    "filter_brand": "来自 Marlo"
+  },
+  "manage": {
+    "tools_exposed": "向 Marlo 提供的工具"
+  },
+  "onboarding": {
+    "model_intro": "选择一个模型 provider 开始 —— Marlo 使用你自己的密钥运行，密钥和数据都保留在本机。",
+    "signin_band_desc": "Marlo 代为处理 20+ 工具的 OAuth —— 无需开发者控制台、无需粘贴密钥。令牌保留在本机。",
+    "welcome": "欢迎使用 Marlo"
+  },
+  "workspace_trust": {
+    "title": "信任这个工作区的命令吗？",
+    "sub": "这个项目要求 Marlo 执行下面这些命令时不再逐条审批。信任对这个文件夹今后的配置变更同样有效，直到你在设置里撤销。",
+    "save_failed": "保存工作区信任失败。",
+    "keep_asking": "继续每次都问",
+    "trust": "信任这个工作区"
+  },
+  "toolreq": {
+    "installs_with_source": "Marlo 会从 {{source}} 安装自己的已验证副本 —— 也可自行安装后继续。",
+    "installs": "Marlo 会安装自己的已验证副本 —— 也可自行安装后继续。",
+    "no_build": "Marlo 没有适用于本机的已验证构建 —— 需要此项检查请自行安装，或直接继续，同事会记录这一缺口。"
+  },
+  "skills": {
+    "door_ai": "用 Marlo 创建"
+  }
+}
