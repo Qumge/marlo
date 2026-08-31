@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useT } from "../legacyI18n";
+import { useTranslation } from "react-i18next";
 import {
   addMcpServer,
   allowUser,
@@ -79,7 +79,7 @@ const EXAMPLE = `{
 // key…" affordance, the global composer-picker card (gallery view), and the
 // per-provider ModelChecklist / read-only model preview (form view).
 export function ModelsTab() {
-  const t = useT();
+  const { t } = useTranslation();
   const [settings, setSettings] = useState<ModelSettings | null>(null);
   const refreshSettings = () => getSettings().then(setSettings).catch(() => setSettings(null));
   const ps = useProviderSetup({ onSaved: refreshSettings });
@@ -112,10 +112,10 @@ export function ModelsTab() {
               className="text-[12.5px] text-danger/80 hover:text-danger hover:underline underline-offset-2"
               data-testid="set-remove-key"
               onClick={() => {
-                if (window.confirm(t("tplRemoveKeyConfirm")(info?.title || ""))) ps.removeKey();
+                if (window.confirm(t("manage.remove_key_confirm", { title: info?.title || "" }))) ps.removeKey();
               }}
             >
-              {t("mtRemoveKey")}
+              {t("manage.remove_key")}
             </button>
           ) : null
         }
@@ -130,7 +130,7 @@ export function ModelsTab() {
 
       {info?.configured ? (
         <div className="mt-6">
-          <div className={SEC_H + " mb-1.5"}>{t("uiModels")}</div>
+          <div className={SEC_H + " mb-1.5"}>{t("settings.tab.models")}</div>
           <p className="text-[12px] text-muted mb-2.5 leading-relaxed">
             Ticked models show in the composer's picker; the black badge marks the default for new
             sessions.
@@ -150,9 +150,9 @@ export function ModelsTab() {
         // key unlocks is part of deciding to get one at all (owner ask, 2026-07-04).
         (info?.suggested_models?.length || 0) > 0 && (
           <div className="mt-6" data-testid="model-preview">
-            <div className={SEC_H + " mb-1.5"}>{t("uiIncludedModels")}</div>
+            <div className={SEC_H + " mb-1.5"}>{t("manage.included_models")}</div>
             <p className="text-[12px] text-muted mb-2.5 leading-relaxed">
-              {t("mtCuratedModels")}
+              {t("manage.included_models_help")}
             </p>
             <div className="space-y-1">
               {(info?.suggested_models || []).map((m) => {
@@ -187,7 +187,7 @@ function ComposerPickerCard({
   providers: ProviderInfo[];
   onChanged: () => void;
 }) {
-  const t = useT();
+  const { t } = useTranslation();
   const names = providers.map((p) => p.name);
   const provOf = (id: string) => {
     const i = id.indexOf(":");
@@ -199,7 +199,7 @@ function ComposerPickerCard({
   };
   return (
     <div className="mt-6" data-testid="composer-picker">
-      <div className={SEC_H + " mb-1.5"}>{t("uiInPicker")}</div>
+      <div className={SEC_H + " mb-1.5"}>{t("manage.composer_picker_title")}</div>
       <p className="text-[12px] text-muted mb-2.5 leading-relaxed">
         The models offered when starting a session; the black badge marks the default. Add more
         from a provider's card above.
@@ -214,7 +214,7 @@ function ComposerPickerCard({
                   type="checkbox"
                   checked
                   disabled={isDefault}
-                  title={isDefault ? t("mtDefaultAlwaysShown") : t("mtRemoveFromPicker")}
+                  title={isDefault ? t("models.default_locked") : t("manage.remove_from_picker")}
                   onChange={() => removeModel(id).then((r) => r.ok && onChanged())}
                 />
                 <span className="mlist-name" title={id}>
@@ -226,7 +226,7 @@ function ComposerPickerCard({
                 <span className="mlist-default">default</span>
               ) : (
                 <button className="mlist-make" onClick={() => setDefaultModel(id).then(() => onChanged())}>
-                  {t("mtMakeDefault")}
+                  {t("connector.make_default")}
                 </button>
               )}
             </div>
@@ -242,14 +242,14 @@ function ComposerPickerCard({
 const MCP_PRESETS: { name: string; label: string; blurb: string; config: Record<string, any> }[] = [
   {
     name: "granola",
-    label: "connGranola",
-    blurb: "connGranolaBlurb",
+    label: "manage.granola_label",
+    blurb: "manage.granola_blurb",
     config: { type: "http", url: "https://mcp.granola.ai/mcp", auth: "oauth" },
   },
 ];
 
 export function McpTab() {
-  const t = useT();
+  const { t } = useTranslation();
   const [servers, setServers] = useState<McpServer[]>([]);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -298,7 +298,7 @@ export function McpTab() {
         <div className={CARD + " p-4 text-[13px] text-muted"}>
           No MCP servers configured.{" "}
           <button className="text-accent font-medium" onClick={() => setAdding(true)}>
-            {t("mtAddServer")}
+            {t("manage.mcp_add_server")}
           </button>
         </div>
       ) : (
@@ -330,7 +330,7 @@ export function McpTab() {
               refresh();
             }}
           >
-            {t("uiConnect")}
+            {t("automations.connect")}
           </button>
         </div>
       ))}
@@ -369,7 +369,7 @@ function McpRow({
   onRemove: () => void;
   onRefresh: () => void;
 }) {
-  const t = useT();
+  const { t } = useTranslation();
   const [tools, setTools] = useState<{ name: string; description: string }[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [toolErr, setToolErr] = useState<string | null>(null);
@@ -401,11 +401,11 @@ function McpRow({
   return (
     <div className={CARD + " p-3.5"}>
       <div className="flex items-center gap-3">
-        <Toggle checked={server.enabled} onChange={onToggle} title={t("uiEnableServer")} />
+        <Toggle checked={server.enabled} onChange={onToggle} title={t("manage.mcp_enable")} />
         <div className="flex-1 min-w-0">
           <div className="text-[14px] font-medium">{server.name}</div>
           <div className="text-[11.5px] text-faint">
-            {server.transport} · {authorizing ? t("mtSigningIn") : server.status.replace("_", " ")}
+            {server.transport} · {authorizing ? t("manage.mcp_signing_in") : server.status.replace("_", " ")}
             {server.tool_count != null ? ` · ${server.tool_count} tools` : ""}
             {server.requires_approval ? " · asks" : ""}
             {isOauth ? " · oauth" : ""}
@@ -414,7 +414,7 @@ function McpRow({
         {isOauth &&
           (server.status === "needs_auth" ? (
             <button className={BTN_ACCENT} onClick={signIn} data-testid={`mcp-signin-${server.name}`}>
-              {t("signIn")}
+              {t("gallery.sign_in")}
             </button>
           ) : authorizing ? (
             <span className="text-[12px] text-muted shrink-0">waiting for browser…</span>
@@ -435,7 +435,7 @@ function McpRow({
           {busy ? "…" : tools ? "hide tools" : "tools"}
         </button>
         <button className={BTN_DANGER} onClick={onRemove}>
-          {t("uiRemoveLower")}
+          {t("common.remove")}
         </button>
       </div>
       {server.last_error && server.status !== "connected" && (
@@ -444,7 +444,7 @@ function McpRow({
       {toolErr && <div className="text-[12.5px] text-danger mt-1.5">{toolErr}</div>}
       {tools && (
         <div className="mt-2.5 pt-2.5 border-t border-line flex flex-wrap gap-1.5">
-          {tools.length === 0 && <div className="text-[12px] text-faint">{t("uiNoTools")}</div>}
+          {tools.length === 0 && <div className="text-[12px] text-faint">{t("manage.mcp_no_tools")}</div>}
           {tools.map((t) => (
             <span
               key={t.name}
@@ -469,7 +469,7 @@ function AddForm({
   onAdded: () => void;
   onError: (e: string | null) => void;
 }) {
-  const t = useT();
+  const { t } = useTranslation();
   const [text, setText] = useState(EXAMPLE);
 
   const save = async () => {
@@ -509,7 +509,7 @@ function AddForm({
       />
       <div className="flex items-center gap-3">
         <button className={BTN_ACCENT} onClick={save}>
-          {t("uiAdd")}
+          {t("access.add_btn")}
         </button>
         <button className="text-[12.5px] text-muted hover:text-ink" onClick={onCancel}>
           cancel
@@ -539,7 +539,7 @@ export function UnauthorizedBlock({
   onChanged: () => void;
   teamId?: string;
 }) {
-  const t = useT();
+  const { t } = useTranslation();
   const items = (c.unauthorized ?? []).filter(
     (m) => teamId === undefined || m.team_id === teamId,
   );
@@ -554,7 +554,7 @@ export function UnauthorizedBlock({
       data-testid={teamId ? `unauthorized-${c.name}-${teamId}` : `unauthorized-${c.name}`}
     >
       <div className={SEC_H + " mb-2"}>
-        {t("mtUnallowedSenders")} · {items.length}
+        {t("manage.parked_title", { n: items.length })}
       </div>
       <div className="space-y-2">
         {items.map((m) => (
@@ -569,26 +569,26 @@ export function UnauthorizedBlock({
               <button
                 className="text-[11.5px] px-2 py-1 rounded-md bg-accent text-white"
                 data-testid={`parked-allow-deliver-${m.id}`}
-                title={t("uiAllowAndDeliver")}
+                title={t("manage.parked_allow_deliver_tip")}
                 onClick={() => act(m.id, "allow_deliver")}
               >
-                {t("mtAllowDeliver")}
+                {t("connector.allow_deliver")}
               </button>
               <button
                 className={BTN_BORDERED}
                 data-testid={`parked-allow-${m.id}`}
-                title={t("uiAllowDiscard")}
+                title={t("manage.parked_allow_tip")}
                 onClick={() => act(m.id, "allow")}
               >
-                {t("mtAllowOnly")}
+                {t("manage.parked_allow_only")}
               </button>
               <button
                 className="text-[11.5px] px-2 py-1 rounded-md text-faint hover:text-danger"
                 data-testid={`parked-dismiss-${m.id}`}
-                title={t("uiDiscardMessage")}
+                title={t("manage.parked_dismiss_tip")}
                 onClick={() => act(m.id, "dismiss")}
               >
-                {t("uiDismiss")}
+                {t("common.dismiss")}
               </button>
             </div>
           </div>
@@ -602,7 +602,7 @@ export function UnauthorizedBlock({
 // Channel-subscriptions table (Integrations ▸ Messaging routing). Subscribing happens from a
 // session's Sources ▸ Channels panel; here the owner can see and revoke.
 export function ListeningSessionsBlock({ c }: { c: Connector }) {
-  const t = useT();
+  const { t } = useTranslation();
   const [subs, setSubs] = useState<Subscription[] | null>(null);
   const load = () => getSubscriptions().then(setSubs).catch(() => setSubs([]));
   useEffect(() => {
@@ -613,10 +613,10 @@ export function ListeningSessionsBlock({ c }: { c: Connector }) {
   const mine = (subs ?? []).filter((s) => platformOf(s.channel) === c.name);
   return (
     <div className="border-t border-line px-3.5 py-3" data-testid={`listening-${c.name}`}>
-      <div className={SEC_H + " mb-2"}>{t("mtListeningSessions")}{c.title} · {mine.length}</div>
+      <div className={SEC_H + " mb-2"}>{t("manage.listening_title", { title: c.title, n: mine.length })}</div>
       {mine.length === 0 ? (
         <div className="text-[12px] text-faint">
-          {t("mtNoSubs")}
+          {t("manage.listening_empty")}
         </div>
       ) : (
         <div className="space-y-1.5">
@@ -631,7 +631,7 @@ export function ListeningSessionsBlock({ c }: { c: Connector }) {
               </span>
               <button
                 className="ml-auto text-faint hover:text-danger shrink-0"
-                title={t("mtUnsubscribe")}
+                title={t("connector.unsubscribe_title")}
                 onClick={async () => {
                   await unsubscribeChannel(s.session_id, s.channel);
                   load();
@@ -664,7 +664,7 @@ export function AllowlistBlock({
   allowed?: string[];
   allowedNames?: Record<string, string | null>;
 }) {
-  const t = useT();
+  const { t } = useTranslation();
   const allowedUsers = allowed ?? c.allowed_users;
   const names = allowedNames ?? c.allowed_user_names;
   const recent = (c.recent ?? []).filter(
@@ -675,7 +675,7 @@ export function AllowlistBlock({
   return (
     <div className="border-t border-line px-3.5 py-3 grid grid-cols-2 gap-5">
       <div>
-        <div className={SEC_H + " mb-2"}>{t("uiAllowedToMessage")}</div>
+        <div className={SEC_H + " mb-2"}>{t("manage.allowed_to_message")}</div>
         <div className="flex flex-wrap gap-1.5">
           {allowedUsers.length === 0 && (
             <span className="text-[12px] text-faint">nobody yet — Allow a recent sender →</span>
@@ -692,7 +692,7 @@ export function AllowlistBlock({
               {names?.[u] || u}
               <button
                 className="w-4 h-4 grid place-items-center text-faint hover:text-danger"
-                title={t("uiRemoveLower")}
+                title={t("common.remove")}
                 onClick={async () => {
                   await disallowUser(c.name, u, teamId);
                   onChanged();
@@ -705,9 +705,9 @@ export function AllowlistBlock({
         </div>
       </div>
       <div>
-        <div className={SEC_H + " mb-2"}>{t("uiRecentSenders")}</div>
+        <div className={SEC_H + " mb-2"}>{t("manage.recent_senders")}</div>
         {unknownRecent.length === 0 ? (
-          <div className="text-[12px] text-faint">{t("uiNoneYetMessageBot")}</div>
+          <div className="text-[12px] text-faint">{t("manage.recent_empty")}</div>
         ) : (
           <div className="space-y-1.5">
             {unknownRecent.map((r) => (
@@ -725,7 +725,7 @@ export function AllowlistBlock({
                     onChanged();
                   }}
                 >
-                  {t("uiAllow")}
+                  {t("approval.allow")}
                 </button>
               </div>
             ))}
@@ -737,7 +737,7 @@ export function AllowlistBlock({
 }
 
 export function ConnectorTools({ c, onChanged }: { c: Connector; onChanged: () => void }) {
-  const t = useT();
+  const { t } = useTranslation();
   const toggle = async (toolName: string, enabled: boolean) => {
     await updateConnectorTools(c.name, { [toolName]: enabled });
     onChanged();
@@ -745,12 +745,12 @@ export function ConnectorTools({ c, onChanged }: { c: Connector; onChanged: () =
   if (!c.tools?.length)
     return (
       <div className="border-t border-line px-3.5 py-3 text-[12.5px] text-muted">
-        {t("mtNoTools")}
+        {t("manage.connector_no_tools")}
       </div>
     );
   return (
     <div className="border-t border-line px-3.5 py-3">
-      <div className={SEC_H + " mb-2"}>{t("uiToolsExposed")}</div>
+      <div className={SEC_H + " mb-2"}>{t("manage.tools_exposed")}</div>
       <div className="space-y-1.5">
         {c.tools.map((tool) => (
           <label
@@ -766,7 +766,7 @@ export function ConnectorTools({ c, onChanged }: { c: Connector; onChanged: () =
             <span className="min-w-0">
               <span className="block text-[13px]">{tool.label}</span>
               <span className="block text-[11.5px] text-faint">
-                {tool.name} · {tool.kind} · {t("mtAsksApproval")}
+                {t("manage.tool_asks_approval", { name: tool.name, kind: tool.kind })}
               </span>
               <span className="block text-[11.5px] text-faint">{tool.description}</span>
             </span>
@@ -854,7 +854,7 @@ export function ConnectSetup({
   // pill, so don't render the managed block again here.
   manualOnly?: boolean;
 }) {
-  const t = useT();
+  const { t } = useTranslation();
   const [values, setValues] = useState<Record<string, string>>({});
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -908,10 +908,10 @@ export function ConnectSetup({
         /* MCP-backed one-click needs no cloud sign-in — the OAuth flow is local. */
         <div className="space-y-2" data-testid="mcp-connect">
           <button className={BTN_ACCENT} onClick={mcpOneClick} disabled={waiting}>
-            {waiting ? t("connCheckBrowser") : t("tplConnectOneClick")(c.title)}
+            {waiting ? t("cloud.check_browser") : t("manage.connect_one_click", { title: c.title })}
           </button>
           {c.fields.length > 0 && (
-            <div className="text-[11.5px] text-faint">{t("connOrManual")}</div>
+            <div className="text-[11.5px] text-faint">{t("manage.or_connect_manually")}</div>
           )}
         </div>
       )}
@@ -924,20 +924,20 @@ export function ConnectSetup({
       {c.device_auth && !c.mcp && !manualOnly && (
         <div className="space-y-2" data-testid="device-connect">
           <button className={BTN_ACCENT} onClick={deviceOneClick} disabled={waiting}>
-            {waiting ? t("connCheckBrowser") : t("tplConnectOneClick")(c.title)}
+            {waiting ? t("cloud.check_browser") : t("manage.connect_one_click", { title: c.title })}
           </button>
           {userCode && (
             /* 核对码。字号放大 + 等宽 + 拉开字距 —— 它是要被【逐字比对】的，
                不是拿来读的。 */
             <div className="text-[12.5px] text-muted">
-              {t("connDeviceCodeHint")}
+              {t("manage.device_code_hint")}
               <span className="ml-1.5 font-mono text-[15px] tracking-[0.18em] text-ink">
                 {userCode}
               </span>
             </div>
           )}
           {c.fields.length > 0 && (
-            <div className="text-[11.5px] text-faint">{t("connOrManual")}</div>
+            <div className="text-[11.5px] text-faint">{t("manage.or_connect_manually")}</div>
           )}
         </div>
       )}
@@ -948,22 +948,22 @@ export function ConnectSetup({
             // a visibly-parked button, and the manual path below stays fully live.
             <>
               <button className={BTN_ACCENT + " opacity-50"} disabled data-testid="managed-coming-soon">
-                {t("tplConnectOneClick")(c.title)}
+                {t("manage.connect_one_click", { title: c.title })}
                 <span className="ml-2 text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-white/25">
-                  {t("uiComingSoon")}
+                  {t("manage.coming_soon")}
                 </span>
               </button>
               <div className="text-[11.5px] text-faint">
-                {t("mtManualForNow")}
+                {t("manage.one_click_coming")}
               </div>
             </>
           ) : cloud?.signed_in ? (
             <button className={BTN_ACCENT} onClick={oneClick} disabled={waiting}>
-              {waiting ? t("connCheckBrowser") : t("tplConnectOneClick")(c.title)}
+              {waiting ? t("cloud.check_browser") : t("manage.connect_one_click", { title: c.title })}
             </button>
           ) : cloud ? (
             <CloudSignInInline
-              blurb={t("tplSignInUnlocks")(c.title)}
+              blurb={t("manage.signin_unlocks", { title: c.title })}
             />
           ) : (
             // Status unknown (fetch pending/failed): never show the sign-in ask to a
@@ -971,7 +971,7 @@ export function ConnectSetup({
             <CloudStatusPending />
           )}
           {!c.managed_paused && cloud?.signed_in && (
-            <div className="text-[11.5px] text-faint">{t("connOrManual")}</div>
+            <div className="text-[11.5px] text-faint">{t("manage.or_connect_manually")}</div>
           )}
         </div>
       )}
@@ -1015,7 +1015,7 @@ export function ConnectSetup({
       )}
       <div>
         <button className={BTN_ACCENT} onClick={submit} disabled={busy}>
-          {busy ? t("validating") : t("connect")}
+          {busy ? t("modal.validating") : t("automations.connect")}
         </button>
       </div>
       {error && <div className="text-[12.5px] text-danger">{error}</div>}

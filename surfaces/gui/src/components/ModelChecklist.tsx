@@ -7,8 +7,8 @@ import {
   setDefaultModel,
   type GatewayModel,
 } from "../api";
-import { useT } from "../legacyI18n";
-import type { Strings } from "../legacyI18n/en";
+import { useTranslation } from "react-i18next";
+import type { ParseKeys } from "i18next";
 
 // Cloud-account providers dispatch by a family segment baked into the model id
 // (`bedrock:claude/…`, `vertex:openweight/…`). The add-model row shows a dropdown so
@@ -16,15 +16,15 @@ import type { Strings } from "../legacyI18n/en";
 // carry theirs.
 // label 存的是 i18n 【键】不是英文：常量因此保持纯数据，不需要在模块作用域调 hook，
 // 渲染时才 t(key)。这是这个代码库里数据数组的既有写法（见 check_i18n.py 的 ALLOWED）。
-const MODEL_FAMILIES: Record<string, { value: string; label: keyof Strings }[]> = {
+const MODEL_FAMILIES: Record<string, { value: string; label: ParseKeys }[]> = {
   bedrock: [
-    { value: "claude", label: "mcClaudeFamily" },
-    { value: "other", label: "mcOtherModels" },
+    { value: "claude", label: "models.family_claude" },
+    { value: "other", label: "models.family_other" },
   ],
   vertex: [
-    { value: "gemini", label: "mcGeminiFamily" },
-    { value: "claude", label: "mcClaudeFamily" },
-    { value: "openweight", label: "mcOpenWeight" },
+    { value: "gemini", label: "models.family_gemini" },
+    { value: "claude", label: "models.family_claude" },
+    { value: "openweight", label: "models.family_openweight" },
   ],
 };
 
@@ -59,7 +59,7 @@ export function ModelChecklist({
   labels?: Record<string, string>; // curated display names (full id → label); raw id when absent
   onChanged: (next: { models: string[]; model: string }) => void;
 }) {
-  const t = useT();
+  const { t } = useTranslation();
   const [draft, setDraft] = useState("");
   const [gq, setGq] = useState("");
   const [gModels, setGModels] = useState<GatewayModel[]>([]);
@@ -163,7 +163,7 @@ export function ModelChecklist({
   const metaOf = (id: string) => {
     const g = gwById.get(id);
     if (!g) return "";
-    return [g.vendor, g.price, g.vision ? t("gatewayVision") : ""].filter(Boolean).join(" · ");
+    return [g.vendor, g.price, g.vision ? t("gateway.vision") : ""].filter(Boolean).join(" · ");
   };
   const matches = (id: string) => {
     const q = gq.trim().toLowerCase();
@@ -212,7 +212,7 @@ export function ModelChecklist({
             type="checkbox"
             checked={checked(id)}
             disabled={isDefault}
-            title={isDefault ? t("mtDefaultAlwaysShown") : undefined}
+            title={isDefault ? t("models.default_locked") : undefined}
             onChange={(e) => tick(id, e.target.checked)}
             data-testid={`mcheck-${id}`}
           />
@@ -227,7 +227,7 @@ export function ModelChecklist({
           <span className="mlist-default">default</span>
         ) : (
           <button className="mlist-make" onClick={() => makeDefault(id)}>
-            {t("mtMakeDefault")}
+            {t("connector.make_default")}
           </button>
         )}
       </div>
@@ -243,7 +243,7 @@ export function ModelChecklist({
             <select
               value={family}
               onChange={(e) => setFamily(e.target.value)}
-              aria-label={t("mcModelFamily")}
+              aria-label={t("models.family_label")}
               data-testid="mlist-family"
             >
               {families.map((f) => (
@@ -256,7 +256,7 @@ export function ModelChecklist({
           {/* 别的 provider 我们问不到模型清单，手打是唯一的路 —— 也是新模型发布
               当天不用等我们发版的那条路。qumge 不需要它：整份清单就在下面。 */}
           <input
-            placeholder={t("uiAddAnotherModel")}
+            placeholder={t("models.add_placeholder")}
             value={draft}
             spellCheck={false}
             autoComplete="off"
@@ -264,7 +264,7 @@ export function ModelChecklist({
             onKeyDown={(e) => e.key === "Enter" && add()}
           />
           <button className="btn-primary sm" onClick={add} disabled={!draft.trim()}>
-            {t("uiAdd")}
+            {t("access.add_btn")}
           </button>
         </div>
       </div>
@@ -310,7 +310,7 @@ export function ModelChecklist({
     <div className="mlist">
       <input
         className="mlist-filter"
-        placeholder={t("gatewaySearch")}
+        placeholder={t("gateway.search")}
         value={gq}
         spellCheck={false}
         autoComplete="off"
@@ -324,7 +324,7 @@ export function ModelChecklist({
       {(!filtering || shownSelected.length > 0) && (
         <>
           <div className="mlist-sec" data-testid="mlist-selected">
-            {t("gatewaySelected")(filtering ? shownSelected.length : selected.length)}
+            {t("gateway.selected", { n: filtering ? shownSelected.length : selected.length })}
           </div>
           {shownSelected.map(row)}
         </>
@@ -332,12 +332,12 @@ export function ModelChecklist({
 
       {/* 离线提示【不能】挂在"其余"那一段里：网关挂了那段就是空的，一旦用户还在
           筛选，整段被隐藏，最该看到的那句话就跟着没了。 */}
-      {gErr && <div className="mlist-note" data-testid="gateway-offline">{t("gatewayOffline")}</div>}
+      {gErr && <div className="mlist-note" data-testid="gateway-offline">{t("gateway.offline")}</div>}
 
       {(!filtering || shownOthers.length > 0) && (
         <>
           <div className="mlist-sec" data-testid="mlist-others">
-            {t("gatewayOthers")(filtering ? shownOthers.length : others.length)}
+            {t("gateway.others", { n: filtering ? shownOthers.length : others.length })}
           </div>
           <div className="mlist-others">{shownOthers.map(row)}</div>
           {/* 【「这只是一部分」在这里说，不在标题里说】标题的职责是"渲染了多少就
@@ -348,7 +348,7 @@ export function ModelChecklist({
               一批"就又错了一次。网关连不上时也不说 —— 那时该看的是 gErr 那句。 */}
           {!filtering && !gErr && (
             <div className="mlist-note" data-testid="gateway-partial">
-              {gTotal ? t("gatewayPartialOf")(gTotal) : t("gatewayPartial")}
+              {gTotal ? t("gateway.partial_of", { total: gTotal }) : t("gateway.partial")}
             </div>
           )}
         </>
@@ -357,11 +357,11 @@ export function ModelChecklist({
       {/* 【正在找的时候不说"没有"】那是还没问出结果的话。防抖那 400ms 也算在
           "正在找"里 —— 否则会先闪一下"没有匹配的模型"再改口。 */}
       {remote && (
-        <div className="mlist-note" data-testid="gateway-searching">{t("gatewaySearching")}</div>
+        <div className="mlist-note" data-testid="gateway-searching">{t("gateway.searching")}</div>
       )}
 
       {filtering && !remote && !shownSelected.length && !shownOthers.length && (
-        <div className="mlist-note" data-testid="gateway-nomatch">{t("gatewayNoMatch")}</div>
+        <div className="mlist-note" data-testid="gateway-nomatch">{t("gateway.no_match")}</div>
       )}
     </div>
   );

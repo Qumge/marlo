@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { t, useT } from "../legacyI18n";
+import { getI18n, useTranslation } from "react-i18next";
+import type { ParseKeys } from "i18next";
 import { LanguagePicker } from "./LanguagePicker";
 import {
   getSettings,
@@ -69,12 +70,15 @@ const BTN_BORDERED =
 
 // label 存的是 i18n 【键】不是英文 —— 常量保持纯数据，渲染时才 t(key)。
 // 上游这里是英文字面量，我们每次合并都要换回来；这是数据数组，transform 够不到。
-const SET_TABS: { key: SetTab; label: string; icon: "sliders" | "code" | "mic" | "archive" | "sparkle" }[] = [
-  { key: "appearance", label: "navGeneral", icon: "sliders" },
-  { key: "models", label: "navModels", icon: "code" },
-  { key: "voice", label: "navVoiceInput", icon: "mic" },
-  { key: "memory", label: "navMemory", icon: "archive" },
-  { key: "personas", label: "navPersonas", icon: "sparkle" },
+// label 是 i18n 的【键】—— 数据数组里的键迁移器和 tsc 都看不见，2026-08-31 已经
+// 在 SlackHowItWorks 的 TABS 和 InboxView 的 KIND_TABS 上各栽过一次。ParseKeys
+// 而不是 string：写错的键编译期就红。
+const SET_TABS: { key: SetTab; label: ParseKeys; icon: "sliders" | "code" | "mic" | "archive" | "sparkle" }[] = [
+  { key: "appearance", label: "settings.tab.general", icon: "sliders" },
+  { key: "models", label: "settings.tab.models", icon: "code" },
+  { key: "voice", label: "settings.tab.voice", icon: "mic" },
+  { key: "memory", label: "settings.tab.memory", icon: "archive" },
+  { key: "personas", label: "settings.tab.personas", icon: "sparkle" },
 ];
 
 export function SettingsView({
@@ -84,8 +88,8 @@ export function SettingsView({
   initialTab?: SetTab;
   onOpenPersona?: (id: string) => void;
 }) {
-  const t = useT();
-  const tr = useT();
+  const { t } = useTranslation();
+  const { t: tr } = useTranslation();
   // Personas is flag-gated (hidden for launch) — filter the tab AND coerce a stale
   // deep-link to it (openSettings("personas") callers) so the page never opens on a
   // section with no nav entry.
@@ -111,7 +115,7 @@ export function SettingsView({
               }
               onClick={() => setTab(t.key)}
             >
-              <Icon name={t.icon} size={15} /> {tr(t.label as any)}
+              <Icon name={t.icon} size={15} /> {tr(t.label)}
             </button>
           );
         })}
@@ -124,8 +128,8 @@ export function SettingsView({
           ) : tab === "models" ? (
             <section>
               <PanelHead
-                title={tr("setModels")}
-                sub={t("setModelsLede")}
+                title={tr("settings.tab.models")}
+                sub={t("settings.models_sub")}
               />
               <ModelsTab />
               {/* Token savings is model-spend behavior, so it lives here (UX-021),
@@ -149,8 +153,12 @@ export function SettingsView({
 }
 
 // -- Voice input: deliberate model provisioning + compatibility + microphone test (§37) --------
-const voiceError = (error: unknown) =>
-  error instanceof Error ? error.message : typeof error === "string" ? error : t("setVoiceActionFailed");
+const voiceError = (error: unknown) => {
+  const t = getI18n().getFixedT(null, "translation");
+  return (
+    error instanceof Error ? error.message : typeof error === "string" ? error : t("settings.voice_action_failed")
+  );
+};
 
 const formatBytes = (bytes: number) => {
   if (!bytes) return "0 MiB";
@@ -158,8 +166,8 @@ const formatBytes = (bytes: number) => {
 };
 
 function VoiceInputSection() {
-  const t = useT();
-  const tr = useT();
+  const { t } = useTranslation();
+  const { t: tr } = useTranslation();
   const [status, setStatus] = useState<DictationStatus | null>(null);
   const [progress, setProgress] = useState<DictationDownloadProgress | null>(null);
   const [phase, setPhase] = useState<"idle" | "downloading" | "verifying" | "testing" | "transcribing">("idle");
@@ -237,7 +245,7 @@ function VoiceInputSection() {
   };
 
   const remove = async () => {
-    if (!window.confirm(t("setDeleteWhisper"))) return;
+    if (!window.confirm(t("settings.voice_delete_confirm"))) return;
     setError(null);
     try {
       publish(await deleteDictationModel());
@@ -256,7 +264,7 @@ function VoiceInputSection() {
         setPhase("transcribing");
         const transcript = (await stopDictation()).trim();
         setTestTranscript(transcript);
-        if (!transcript) throw new Error(t("setNoSpeech"));
+        if (!transcript) throw new Error(t("settings.voice_no_speech"));
         publish(await markDictationTestPassed());
       } else {
         setTestTranscript("");
@@ -280,24 +288,24 @@ function VoiceInputSection() {
   return (
     <section>
       <PanelHead
-        title={tr("setVoiceInput")}
-        sub={t("setVoiceLede")}
+        title={tr("settings.tab.voice")}
+        sub={t("settings.voice_intro")}
       />
 
       {!desktop ? (
-        <div className={CARD + " p-4 text-[13px] text-muted"}>{tr("setVoiceDesktopOnly")}</div>
+        <div className={CARD + " p-4 text-[13px] text-muted"}>{tr("settings.voice_desktop_only")}</div>
       ) : (
         <div className="space-y-4">
           <div className="rounded-xl border border-green-200 bg-green-50/70 px-4 py-3 text-[12.5px] text-green-800">
-            <span className="font-medium">{tr("setPrivateByDesign")}</span> Audio is held in memory only while you record and is transcribed locally.
+            <span className="font-medium">{tr("settings.voice_private_title")}</span> Audio is held in memory only while you record and is transcribed locally.
           </div>
 
           <div className={CARD}>
             <div className="p-4 flex items-start gap-3">
               <Icon name="code" size={18} className="text-accent mt-0.5" />
               <div className="min-w-0 flex-1">
-                <div className="text-[13.5px] font-medium">{tr("setThisDevice")}</div>
-                <div className="text-[12px] text-muted mt-1">{status?.device_summary || t("setCheckingCompat")}</div>
+                <div className="text-[13.5px] font-medium">{tr("settings.voice_device_title")}</div>
+                <div className="text-[12px] text-muted mt-1">{status?.device_summary || t("settings.voice_checking")}</div>
                 {status?.compatibility_reason && <div className="text-[12px] text-red-600 mt-1.5">{status.compatibility_reason}</div>}
               </div>
               {status && (
@@ -307,10 +315,10 @@ function VoiceInputSection() {
               )}
             </div>
             <div className="border-t border-line bg-paper/50 px-4 py-3 grid grid-cols-2 gap-3 text-[12px] text-muted">
-              <div><span className="block text-ink font-medium">{tr("uiMac")}</span>macOS 12+ · Apple Silicon M1+</div>
+              <div><span className="block text-ink font-medium">{tr("settings.voice_mac")}</span>macOS 12+ · Apple Silicon M1+</div>
               <div><span className="block text-ink font-medium">Windows</span>Windows 10 22H2/11 · x64</div>
-              <div><span className="block text-ink font-medium">{tr("setMemory")}</span>8 GB recommended</div>
-              <div><span className="block text-ink font-medium">{tr("setProcessor")}</span>4 CPU cores recommended</div>
+              <div><span className="block text-ink font-medium">{tr("settings.tab.memory")}</span>8 GB recommended</div>
+              <div><span className="block text-ink font-medium">{tr("settings.voice_processor")}</span>4 CPU cores recommended</div>
             </div>
           </div>
 
@@ -320,21 +328,21 @@ function VoiceInputSection() {
               <div className="min-w-0 flex-1">
                 <div className="text-[13.5px] font-medium">Whisper Base · English</div>
                 <div className="text-[12px] text-muted mt-0.5">
-                  {status?.model_verified ? t("tplInstalledVerified")(formatBytes(status.model_bytes)) : t("tplLocalVoiceModel")(formatBytes(status?.model_bytes || 147_964_211))}
+                  {status?.model_verified ? t("settings.voice_installed", { size: formatBytes(status.model_bytes) }) : t("settings.voice_not_installed", { size: formatBytes(status?.model_bytes || 147_964_211) })}
                 </div>
               </div>
               {status?.model_verified ? (
                 <>
-                  <span className="text-[11.5px] px-2 py-1 rounded-full bg-green-50 text-green-700">{tr("setVerified")}</span>
-                  <button className={BTN_BORDERED} onClick={() => void repair()}>{tr("setRepair")}</button>
-                  <button className="text-[12px] text-red-600 px-2 py-2" onClick={() => void remove()}>{tr("delete")}</button>
+                  <span className="text-[11.5px] px-2 py-1 rounded-full bg-green-50 text-green-700">{tr("settings.voice_verified")}</span>
+                  <button className={BTN_BORDERED} onClick={() => void repair()}>{tr("settings.voice_repair")}</button>
+                  <button className="text-[12px] text-red-600 px-2 py-2" onClick={() => void remove()}>{tr("sidebar.delete")}</button>
                 </>
               ) : downloading ? (
-                <button className={BTN_BORDERED} onClick={() => void cancelDownload()}>{tr("cancel")}</button>
+                <button className={BTN_BORDERED} onClick={() => void cancelDownload()}>{tr("access.cancel")}</button>
               ) : phase === "verifying" ? (
                 <span className="text-[12px] text-muted">Verifying…</span>
               ) : (
-                <button className={BTN_ACCENT} disabled={!status?.supported} onClick={() => void download()}>{tr("setDownloadModel")}</button>
+                <button className={BTN_ACCENT} disabled={!status?.supported} onClick={() => void download()}>{tr("settings.voice_download")}</button>
               )}
             </div>
             {downloading && (
@@ -349,14 +357,14 @@ function VoiceInputSection() {
             <div className="p-4 flex items-center gap-3">
               <Icon name="mic" size={18} className={ready ? "text-green-600" : "text-muted"} />
               <div className="min-w-0 flex-1">
-                <div className="text-[13.5px] font-medium">{tr("setMicTest")}</div>
+                <div className="text-[13.5px] font-medium">{tr("settings.voice_mic_test_title")}</div>
                 <div className="text-[12px] text-muted mt-0.5">
-                  {ready ? t("setMicWorks") : t("setRecordPhrase")}
+                  {ready ? t("settings.voice_mic_works") : t("settings.voice_record_phrase")}
                 </div>
               </div>
               {ready && <span className="text-[11.5px] px-2 py-1 rounded-full bg-green-50 text-green-700">● Ready</span>}
               <button className={BTN_BORDERED} disabled={!status?.supported || !status?.model_verified || phase === "transcribing"} onClick={() => void toggleTest()}>
-                {status?.recording ? t("setStopAndCheck") : phase === "transcribing" ? "Transcribing…" : ready ? t("setTestAgain") : t("setTestMic")}
+                {status?.recording ? t("settings.voice_stop_check") : phase === "transcribing" ? "Transcribing…" : ready ? t("settings.voice_test_again") : t("settings.voice_mic_test_ready")}
               </button>
             </div>
             {status?.recording && <div className="border-t border-line px-4 py-3 text-[12px] text-accent" role="status">● Listening… speak a short phrase, then stop.</div>}
@@ -374,16 +382,16 @@ function VoiceInputSection() {
 // entry point to the Persona Gallery (a screen-sized modal — installs finish back
 // here, disabled pending consent; a gallery install re-mounts the list in place).
 function PersonasSection({ onOpenPersona }: { onOpenPersona?: (id: string) => void }) {
-  const t = useT();
-  const tr = useT();
+  const { t } = useTranslation();
+  const { t: tr } = useTranslation();
   const [galleryBump, setGalleryBump] = useState(0);
   const [galleryOpen, setGalleryOpen] = useState(false);
 
   return (
     <section>
       <PanelHead
-        title={tr("setPersonas")}
-        sub={t("setPersonasLede")}
+        title={tr("settings.personas_title")}
+        sub={t("settings.personas_intro")}
       />
       <PersonasTab key={galleryBump} onOpenPersona={onOpenPersona} />
       <button
@@ -393,9 +401,9 @@ function PersonasSection({ onOpenPersona }: { onOpenPersona?: (id: string) => vo
       >
         <Icon name="sparkle" size={16} className="text-accent shrink-0" />
         <span className="min-w-0 flex-1">
-          <span className="block text-[13.5px] font-medium">{tr("setBrowseGallery")}</span>
+          <span className="block text-[13.5px] font-medium">{tr("settings.gallery_open")}</span>
           <span className="block text-[12px] text-muted">
-            {t("setGalleryLede")}
+            {t("settings.gallery_sub")}
           </span>
         </span>
         <span className="text-[12.5px] text-accent shrink-0">Open →</span>
@@ -412,8 +420,8 @@ function PersonasSection({ onOpenPersona }: { onOpenPersona?: (id: string) => vo
 
 // -- Appearance + app behaviour ------------------------------------------------
 function AppearanceSection() {
-  const t = useT();
-  const tr = useT();
+  const { t } = useTranslation();
+  const { t: tr } = useTranslation();
   const [theme, setTheme] = useThemePref();
   const [autostart, setAuto] = useState(false);
   const [keepAwake, setKeep] = useState(false);
@@ -435,7 +443,7 @@ function AppearanceSection() {
 
   return (
     <section>
-      <PanelHead title={tr("setGeneral")} sub={t("setAppearanceLede")} />
+      <PanelHead title={tr("settings.tab.general")} sub={t("settings.general_sub")} />
 
       {/* Language sits at the top of General: it is the setting most likely to be
           wrong for a reader who arrived from a non-English page, and the one that
@@ -445,8 +453,8 @@ function AppearanceSection() {
       </div>
 
       <div className={CARD + " p-4 mb-4"}>
-        <div className={FIELD_LABEL}>{tr("setTheme")}</div>
-        <div className="seg mt-2.5" role="radiogroup" aria-label={tr("setAppearance")}>
+        <div className={FIELD_LABEL}>{tr("settings.theme")}</div>
+        <div className="seg mt-2.5" role="radiogroup" aria-label={tr("settings.appearance_aria")}>
           {(["light", "dark", "auto"] as const).map((p) => (
             <button key={p} className={p === theme ? "active" : ""} onClick={() => setTheme(p)}>
               {p === "light" ? "Light" : p === "dark" ? "Dark" : "Auto"}
@@ -470,15 +478,15 @@ function AppearanceSection() {
           <label className="flex items-start gap-3 py-2">
             <input type="checkbox" className="mt-0.5" checked={autostart} onChange={(e) => toggleAuto(e.target.checked)} />
             <span>
-              <span className="block text-[13px] text-ink">{tr("setOpenAtLogin")}</span>
-              <span className="block text-[12px] text-muted">{tr("setOpenAtLoginSub")}</span>
+              <span className="block text-[13px] text-ink">{tr("settings.open_at_login")}</span>
+              <span className="block text-[12px] text-muted">{tr("settings.open_at_login_help")}</span>
             </span>
           </label>
           <label className="flex items-start gap-3 py-2">
             <input type="checkbox" className="mt-0.5" checked={keepAwake} onChange={(e) => toggleKeep(e.target.checked)} />
             <span>
-              <span className="block text-[13px] text-ink">{tr("setKeepAwake")}</span>
-              <span className="block text-[12px] text-muted">{tr("setKeepAwakeSub")}</span>
+              <span className="block text-[13px] text-ink">{tr("settings.keep_awake")}</span>
+              <span className="block text-[12px] text-muted">{tr("settings.keep_awake_help")}</span>
             </span>
           </label>
         </div>
@@ -491,7 +499,7 @@ function AppearanceSection() {
         <div className={FIELD_LABEL + " mb-2"}>Setup &amp; updates</div>
         <div className="flex items-center gap-2">
           <button className={BTN_BORDERED} onClick={runSetupAgain}>
-            {t("setRunSetupAgain")}
+            {t("settings.run_setup_again")}
           </button>
           {desktop && <UpdateInline />}
         </div>
@@ -502,8 +510,8 @@ function AppearanceSection() {
 }
 
 function TrustedWorkspacesCard() {
-  const t = useT();
-  const tr = useT();
+  const { t } = useTranslation();
+  const { t: tr } = useTranslation();
   const [workspaces, setWorkspaces] = useState<WorkspaceCommandTrust[] | null>(null);
 
   const refresh = () =>
@@ -516,21 +524,21 @@ function TrustedWorkspacesCard() {
   }, []);
 
   const revoke = async (path: string) => {
-    if (!window.confirm(t("tplRevokeTrust")(path))) return;
+    if (!window.confirm(t("settings.trust_revoke_confirm", { path: path }))) return;
     await setWorkspaceTrusted(path, false);
     refresh();
   };
 
   return (
     <div className={CARD + " p-4 mb-4"} data-testid="trusted-workspaces-card">
-      <div className={FIELD_LABEL}>{tr("setTrustedWorkspaces")}</div>
+      <div className={FIELD_LABEL}>{tr("settings.trusted_workspaces")}</div>
       <div className={FIELD_HELP}>
-        {t("setTrustedProjectsNote")}
+        {t("settings.trusted_workspaces_help")}
       </div>
       {workspaces === null ? (
         <div className="text-[12px] text-muted mt-3">Loading…</div>
       ) : workspaces.length === 0 ? (
-        <div className="text-[12px] text-muted mt-3">{tr("setNoTrusted")}</div>
+        <div className="text-[12px] text-muted mt-3">{tr("settings.trust_empty")}</div>
       ) : (
         <div className="mt-3 divide-y divide-line">
           {workspaces.map((workspace) => (
@@ -539,16 +547,16 @@ function TrustedWorkspacesCard() {
                 <div className="text-[12.5px] text-ink break-all">{workspace.workspace}</div>
                 <div className="text-[11.5px] text-muted mt-0.5">
                   {workspace.requested_commands.length
-                    ? t("tplProjectAllowances")(workspace.requested_commands.length)
-                    : t("setNoAllowances")}
-                  {!workspace.exists ? t("setFolderNa") : ""}
+                    ? t("settings.project_allowances", { count: workspace.requested_commands.length })
+                    : t("settings.trust_no_allowances")}
+                  {!workspace.exists ? t("settings.trust_folder_unavailable") : ""}
                 </div>
               </div>
               <button
                 className="text-[12px] text-red-600 px-2 py-1"
                 onClick={() => void revoke(workspace.workspace)}
               >
-                {t("uiRevoke")}
+                {t("settings.trust_revoke")}
               </button>
             </div>
           ))}
@@ -559,7 +567,7 @@ function TrustedWorkspacesCard() {
 }
 
 function UpdateInline() {
-  const t = useT();
+  const { t } = useTranslation();
   const [state, setState] = useState<"idle" | "checking" | "none" | "found" | "installing" | "error">("idle");
   const [version, setVersion] = useState("");
   // 真正的失败原因。原来只留一个 "error" 状态、显示一句"稍后再试"——0.3.3 发出去
@@ -597,7 +605,7 @@ function UpdateInline() {
     <span className="inline-flex items-center gap-2.5">
       {state === "found" ? (
         <button className={BTN_BORDERED} onClick={install} data-testid="settings-update-install">
-          {t("setUpdateAndRestart")(version)}
+          {t("settings.update_install", { version: version })}
         </button>
       ) : (
         <button
@@ -606,16 +614,16 @@ function UpdateInline() {
           disabled={state === "checking" || state === "installing"}
           data-testid="settings-update-check"
         >
-          {state === "checking" ? "Checking…" : t("setCheckUpdates")}
+          {state === "checking" ? "Checking…" : t("settings.check_for_updates")}
         </button>
       )}
       {(state === "none" || state === "error" || state === "installing") && (
         <span className="text-[12px] text-muted">
           {state === "none"
-            ? t("setUpToDate")
+            ? t("settings.update_latest")
             : state === "error"
               ? `Couldn't check: ${err || "unknown error"}`
-              : t("setDownloadingUpdate")}
+              : t("settings.update_downloading")}
         </span>
       )}
     </span>
@@ -632,8 +640,8 @@ function UpdateInline() {
 // without native PDF support. (Long-history spend is handled by auto-compaction —
 // the CompactionCard below, OPE-27.)
 function TokenSavingsCard() {
-  const t = useT();
-  const tr = useT();
+  const { t } = useTranslation();
+  const { t: tr } = useTranslation();
   const [pdf, setPdf] = useState<PdfSettings | null>(null);
 
   useEffect(() => {
@@ -656,25 +664,25 @@ function TokenSavingsCard() {
   if (!pdf) return null;
   return (
     <div className={CARD + " p-4 mb-4"} data-testid="token-savings-card">
-      <div className={FIELD_LABEL}>{tr("setTokenSavings")}</div>
+      <div className={FIELD_LABEL}>{tr("settings.token_savings")}</div>
       <div className={FIELD_HELP}>
         PDF attachments travel with every turn of a conversation, so large documents multiply
         what you spend on tokens.
       </div>
 
-      <div className="mt-3 text-[13px] text-ink">{tr("setPdfFallback")}</div>
+      <div className="mt-3 text-[13px] text-ink">{tr("settings.pdf_fallback_label")}</div>
       <div className="seg mt-2" role="radiogroup" aria-label="PDF fallback" data-testid="pdf-fallback">
         <button
           className={pdf.pdf_fallback === "text" ? "active" : ""}
           onClick={() => save({ pdf_fallback: "text" })}
         >
-          {t("setExtractText")}
+          {t("settings.pdf_extract_text")}
         </button>
         <button
           className={pdf.pdf_fallback === "images" ? "active" : ""}
           onClick={() => save({ pdf_fallback: "images" })}
         >
-          {t("setSendPageImages")}
+          {t("settings.pdf_send_images")}
         </button>
       </div>
       <div className={FIELD_HELP}>
@@ -685,7 +693,7 @@ function TokenSavingsCard() {
 
       <div className="mt-3 flex items-center gap-5">
         <label className="flex items-center gap-2.5">
-          <span className="text-[13px] text-ink">{tr("setMaxPages")}</span>
+          <span className="text-[13px] text-ink">{tr("settings.pdf_max_pages")}</span>
           <input
             type="number"
             min={1}
@@ -697,7 +705,7 @@ function TokenSavingsCard() {
           />
         </label>
         <label className="flex items-center gap-2.5">
-          <span className="text-[13px] text-ink">{tr("setMaxSize")}</span>
+          <span className="text-[13px] text-ink">{tr("settings.pdf_max_size")}</span>
           <input
             type="number"
             min={1}
@@ -723,6 +731,7 @@ function TokenSavingsCard() {
 // limit, so work continues instead of hitting a raw provider error. Two spec'd
 // overrides (trigger % + token cap) and the summarizer-model pin — nothing more.
 function CompactionCard() {
+  const { t } = useTranslation();
   const [cfg, setCfg] = useState<CompactionSettings | null>(null);
   const [models, setModels] = useState<string[]>([]);
   const [labels, setLabels] = useState<Record<string, string>>({});
@@ -756,12 +765,12 @@ function CompactionCard() {
   const modelLabel = (id: string) => labels[id]?.split(" · ")[0] || id;
   return (
     <div className={CARD + " p-4 mb-4"} data-testid="compaction-card">
-      <div className={FIELD_LABEL}>{t("setCompaction")}</div>
-      <div className={FIELD_HELP}>{t("setCompactionHelp")}</div>
+      <div className={FIELD_LABEL}>{t("settings.compaction_title")}</div>
+      <div className={FIELD_HELP}>{t("settings.compaction_help")}</div>
 
       <div className="mt-3 flex items-center gap-5 flex-wrap">
         <label className="flex items-center gap-2.5">
-          <span className="text-[13px] text-ink">{t("setCompactAt")}</span>
+          <span className="text-[13px] text-ink">{t("settings.compact_at")}</span>
           <input
             type="number"
             min={10}
@@ -776,10 +785,10 @@ function CompactionCard() {
               })
             }
           />
-          <span className="text-[12.5px] text-muted">{t("setPctOfWindow")}</span>
+          <span className="text-[12.5px] text-muted">{t("settings.compact_pct_suffix")}</span>
         </label>
         <label className="flex items-center gap-2.5">
-          <span className="text-[13px] text-ink">{t("setOrAt")}</span>
+          <span className="text-[13px] text-ink">{t("settings.compact_or_at")}</span>
           <input
             type="number"
             min={10_000}
@@ -797,20 +806,20 @@ function CompactionCard() {
               })
             }
           />
-          <span className="text-[12.5px] text-muted">{t("setTokensWhicheverSmaller")}</span>
+          <span className="text-[12.5px] text-muted">{t("settings.compact_tokens_suffix")}</span>
         </label>
       </div>
-      <div className={FIELD_HELP}>{t("setCompactionCapHelp")}</div>
+      <div className={FIELD_HELP}>{t("settings.compaction_cap_help")}</div>
 
       <div className="mt-3 flex items-center gap-2.5">
-        <span className="text-[13px] text-ink">{t("setSummarizerModel")}</span>
+        <span className="text-[13px] text-ink">{t("settings.summarizer_model")}</span>
         <select
           value={cfg.compaction_model}
           data-testid="compaction-model"
           className="px-2 py-1.5 rounded-lg border border-line bg-paper text-[13px] text-ink outline-none focus:border-accent"
           onChange={(e) => save({ compaction_model: e.target.value })}
         >
-          <option value="">{t("setSessionOwnModel")}</option>
+          <option value="">{t("settings.summarizer_default")}</option>
           {models.map((m) => (
             <option key={m} value={m}>
               {modelLabel(m)}
@@ -818,7 +827,7 @@ function CompactionCard() {
           ))}
         </select>
       </div>
-      <div className={FIELD_HELP}>{t("setSummarizerHelp")}</div>
+      <div className={FIELD_HELP}>{t("settings.summarizer_help")}</div>
     </div>
   );
 }
@@ -827,7 +836,7 @@ function CompactionCard() {
 // The chip's bar is context-window occupancy; the session total (unbounded) lives in
 // the popover. Some people would rather not watch a meter at all, hence the toggle.
 function ContextBarCard() {
-  const t = useT();
+  const { t } = useTranslation();
   const [shown, setShown] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -844,7 +853,7 @@ function ContextBarCard() {
   if (shown === null) return null;
   return (
     <div className={CARD + " p-4 mb-4"} data-testid="context-bar-card">
-      <div className={FIELD_LABEL}>{t("setComposer")}</div>
+      <div className={FIELD_LABEL}>{t("settings.composer_section")}</div>
       <label className="flex items-start gap-3 py-2">
         <input
           type="checkbox"
@@ -854,8 +863,8 @@ function ContextBarCard() {
           onChange={(e) => save(e.target.checked)}
         />
         <span>
-          <span className="block text-[13px] text-ink">{t("setShowContextBar")}</span>
-          <span className="block text-[12px] text-muted">{t("setShowContextBarHelp")}</span>
+          <span className="block text-[13px] text-ink">{t("settings.context_bar_title")}</span>
+          <span className="block text-[12px] text-muted">{t("settings.context_bar_desc")}</span>
         </span>
       </label>
     </div>
@@ -863,8 +872,8 @@ function ContextBarCard() {
 }
 
 function SidebarCard() {
-  const t = useT();
-  const tr = useT();
+  const { t } = useTranslation();
+  const { t: tr } = useTranslation();
   const [peek, setPeek] = useState<number | null>(null);
 
   useEffect(() => {
@@ -882,9 +891,9 @@ function SidebarCard() {
   if (peek === null) return null;
   return (
     <div className={CARD + " p-4 mb-4"}>
-      <div className={FIELD_LABEL}>{tr("setSidebar")}</div>
+      <div className={FIELD_LABEL}>{tr("settings.sidebar_title")}</div>
       <label className="flex items-center gap-3 mt-2.5">
-        <span className="text-[13px] text-ink">{tr("setConvPerCoworker")}</span>
+        <span className="text-[13px] text-ink">{tr("settings.sidebar_per_coworker")}</span>
         <input
           type="number"
           min={1}
@@ -895,7 +904,7 @@ function SidebarCard() {
         />
       </label>
       <div className={FIELD_HELP}>
-        {t("setShowMoreNote")}
+        {t("settings.sidebar_show_more_note")}
       </div>
     </div>
   );
@@ -904,8 +913,8 @@ function SidebarCard() {
 // -- Files (scratch location) — one card inside General (UX-021: a single option
 // doesn't earn its own tab) -----------------------------------------------------
 function FilesCard() {
-  const t = useT();
-  const tr = useT();
+  const { t } = useTranslation();
+  const { t: tr } = useTranslation();
   const [settings, setSettings] = useState<ModelSettings | null>(null);
   const [scratchDraft, setScratchDraft] = useState("");
   const [scratchMsg, setScratchMsg] = useState<string | null>(null);
@@ -926,10 +935,10 @@ function FilesCard() {
     setScratchMsg(null);
     const res = await setScratchBase(scratchDraft.trim());
     if (res.ok) {
-      setScratchMsg(t("setLocationSaved"));
+      setScratchMsg(t("settings.location_saved"));
       refresh();
     } else {
-      setScratchMsg(res.error || t("setBadLocation"));
+      setScratchMsg(res.error || t("settings.location_bad"));
     }
   };
   const browseScratch = async () => {
@@ -941,7 +950,7 @@ function FilesCard() {
 
   return (
     <div className={CARD + " p-4 mb-4"}>
-      <div className={FIELD_LABEL}>{tr("setFiles")}</div>
+      <div className={FIELD_LABEL}>{tr("rail.crumb_files")}</div>
         <div className="flex items-center gap-2 mt-2.5">
           <input
             className={INPUT}
@@ -954,12 +963,12 @@ function FilesCard() {
             onKeyDown={(e) => e.key === "Enter" && saveScratch()}
           />
           {desktop && (
-            <button className={BTN_BORDERED} onClick={browseScratch} title={tr("setPickFolder")}>
-              {t("uiBrowse")}
+            <button className={BTN_BORDERED} onClick={browseScratch} title={tr("settings.files_pick_folder")}>
+              {t("rail.browse")}
             </button>
           )}
           <button className={BTN_ACCENT} onClick={saveScratch} disabled={!scratchDraft.trim()}>
-            {t("uiSave")}
+            {t("settings.files_save")}
           </button>
         </div>
       <div className={FIELD_HELP}>

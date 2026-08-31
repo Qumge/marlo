@@ -15,7 +15,7 @@ import {
   type ProviderInfo,
 } from "../api";
 import { startQumgeDevice, pollQumgeDevice, type QumgeDeviceStart } from "../api.qumge";
-import { setLocale } from "../legacyI18n";
+import { setTestLocale } from "../testLocale";
 
 vi.mock("../api", () => ({
   getProviders: vi.fn(),
@@ -281,7 +281,7 @@ describe("Onboarding — step 0 (Task 4: connect to Qumge, not the gallery)", ()
   // 断言中文【出现】还不够：漏掉一个键时，界面显示的是键名，中文那句照样在。所以
   // 同时断言英文原文【不出现】。
   it("中文界面下第一屏没有英文残留", async () => {
-    setLocale("zh");   // 其余 mock 走全局 beforeEach
+    await setTestLocale("zh");   // 其余 mock 走全局 beforeEach
     render(<Onboarding onDone={() => {}} />);
     await act(async () => {});
 
@@ -302,6 +302,6 @@ describe("Onboarding — step 0 (Task 4: connect to Qumge, not the gallery)", ()
     ]) {
       expect(box).not.toContain(en);
     }
-    setLocale("en");
+    await setTestLocale("en");
   });
 });

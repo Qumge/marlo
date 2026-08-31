@@ -81,6 +81,55 @@ const ADDITIONS = new Set([
   "usage.input",
   "usage.output",
   "usage.n_tokens",
+  // 上手引导里 Qumge 那条路（c692203：首屏是连 Qumge，不是厂商画廊）
+  "onboarding.lede",
+  "onboarding.signin_body",
+  "onboarding.connected_qumge",
+  "onboarding.use_own_key",
+  "onboarding.connect_qumge",
+  "onboarding.signed_in",
+  // 设备称呼跟着平台走（f1d0ea6）
+  "onboarding.this_mac",
+  "onboarding.this_computer",
+  "manage.device_code_hint", // 我们自己的设备码流程
+  // Qumge 网关的模型浏览器（4c3a256 / 1628a10 / 1be6373）—— 上游没有
+  "gateway.vision",
+  "gateway.search",
+  "gateway.selected",
+  "gateway.offline",
+  "gateway.others",
+  "gateway.partial",
+  "gateway.partial_of",
+  "gateway.searching",
+  "gateway.no_match",
+  // 模型家族下拉（Bedrock / Vertex）—— 上游没有
+  "models.family_label",
+  "models.family_claude",
+  "models.family_gemini",
+  "models.family_openweight",
+  "models.family_other",
+  // 上下文压缩的设置面板：上游有这个功能，但没有这一屏的文案
+  "settings.compaction_title",
+  "settings.compaction_help",
+  "settings.compact_at",
+  "settings.compact_pct_suffix",
+  "settings.compact_or_at",
+  "settings.compact_tokens_suffix",
+  "settings.compaction_cap_help",
+  "settings.summarizer_model",
+  "settings.summarizer_default",
+  "settings.summarizer_help",
+  // 侧边栏与会话位置那两段
+  "settings.sidebar_title",
+  "settings.sidebar_show_more_note",
+  "settings.location_saved",
+  "settings.location_bad",
+  "settings.personas_title",
+  "settings.project_allowances",
+  "settings.voice_mic_works",
+  "settings.voice_record_phrase",
+  "manage.granola_label", // Granola 连接器：上游没有
+  "manage.granola_blurb",
 ]);
 
 const flatEnBase = flatten(enBase as Tree);

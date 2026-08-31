@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { t, useT } from "../legacyI18n";
-import type { Strings } from "../legacyI18n/en";
+import { useTranslation, getI18n } from "react-i18next";
+import type { ParseKeys } from "i18next";
 import {
   cloudLogin,
   connectManaged,
@@ -24,16 +24,17 @@ import { SelectMenu } from "./SelectMenu";
 // The `ob-*` testids moved here with the machinery.
 
 // "When" = day choice × free time (owner call 2026-07-11); the cron assembles from the two.
-const DAYS: Record<string, { label: string; dow: string }> = {
-  mon: { label: "freqMon", dow: "1" },
-  tue: { label: "freqTue", dow: "2" },
-  wed: { label: "freqWed", dow: "3" },
-  thu: { label: "freqThu", dow: "4" },
-  fri: { label: "freqFri", dow: "5" },
-  sat: { label: "freqSat", dow: "6" },
-  sun: { label: "freqSun", dow: "0" },
-  weekdays: { label: "freqWeekdays", dow: "1-5" },
-  daily: { label: "freqDaily", dow: "*" },
+// Labels are i18n keys (resolved in the component via t()).
+const DAYS: Record<string, { labelKey: ParseKeys; dow: string }> = {
+  mon: { labelKey: "automations.day_mon", dow: "1" },
+  tue: { labelKey: "automations.day_tue", dow: "2" },
+  wed: { labelKey: "automations.day_wed", dow: "3" },
+  thu: { labelKey: "automations.day_thu", dow: "4" },
+  fri: { labelKey: "automations.day_fri", dow: "5" },
+  sat: { labelKey: "automations.day_sat", dow: "6" },
+  sun: { labelKey: "automations.day_sun", dow: "0" },
+  weekdays: { labelKey: "automations.freq_weekdays", dow: "1-5" },
+  daily: { labelKey: "automations.freq_daily", dow: "*" },
 };
 // §30 connect-state spinner (the app has no other spinner — waits elsewhere are label swaps).
 // Exported for Onboarding page 2's sign-in button (same states, same look).
@@ -46,25 +47,17 @@ const cronFor = (dayKey: string, hhmm: string) => {
   return `${Number(m) || 0} ${Number(h) || 9} * * ${DAYS[dayKey]?.dow ?? "*"}`;
 };
 
-// 【只要值是字符串的那些 key】。keyof Strings 里混着模板函数
-// （tplConnectOneClick 之类是 (title: string) => string），直接用它，
-// tr() 的返回类型就是 "string | 一堆函数"，塞进 JSX 会被 tsc 拒。
-type TextKey = { [K in keyof Strings]: Strings[K] extends string ? K : never }[keyof Strings];
-
 interface QuickTemplate {
   key: string;
-  // title / blurb 同理：也是翻译 key。它们现在填的碰巧都是合法 key，
-  // 但类型是 string + 调用点 as any，同一个坑一直开着 —— 谁哪天填一句
-  // 字面文案进来，卡片上就又是一个 undefined。
-  title: TextKey;
-  blurb: TextKey;
-  // 【必须是翻译 key，不能是字面串】。这里曾经是 string，而调用点写着
-  // tr(t.cadence as any) —— 两道类型防线都被主动关掉了。于是 6 个模板里有 5 个
-  // 填的是字面英文 "Weekly" / "Daily"，tr() 找不到这个 key 就返回 undefined，
-  // 卡片上直接印出 "不需要连接任何账号 · undefined"。
-  // 收紧成 keyof Strings 之后，再填字面串编译期就过不去。
-  cadence: TextKey; // the card's footer label
-  conns: { name: string; why: string }[]; // [] = no connections needed
+  // 【必须是翻译 key，不能是字面串】上游这几个的类型是 string，我们收紧成
+  // ParseKeys。历史：这里曾经是 string，而调用点写着 tr(t.cadence as any) ——
+  // 两道防线都被主动关掉了，于是 6 个模板里有 5 个填的是字面英文 "Weekly"/
+  // "Daily"，查不到 key 就返回 undefined，卡片上直接印出「不需要连接任何账号
+  // · undefined」。收紧之后再填字面串编译期就过不去。这是我们比上游多的一层。
+  titleKey: ParseKeys;
+  blurbKey: ParseKeys;
+  cadenceKey: ParseKeys; // the card's footer label
+  conns: { name: string; whyKey: ParseKeys }[]; // [] = no connections needed
   needsRepo?: boolean;
   needsChannel?: boolean;
   consent?: boolean; // write recipes carry the §25 consent line; reads carry disclosure
@@ -74,93 +67,91 @@ interface QuickTemplate {
   instructions: (ctx: { repo: string; channel: string; deliver: "app" | "slack" }) => string;
 }
 
-// 导出：AutomationQuickstart.keys.test.tsx 要逐条核对这些 key 在两个语种里
-// 都真的有译文 —— 类型只能证明「这是个 key」，证不了「这个 key 有值」。
 export const TEMPLATES: QuickTemplate[] = [
   {
     key: "github",
-    title: "tplGithubDigest",
-    blurb: "tplGithubBlurb",
-    cadence: "freqWeekly",
+    titleKey: "automations.tmpl_github_title",
+    blurbKey: "automations.tmpl_github_blurb",
+    cadenceKey: "automations.cadence_weekly",
     conns: [
-      { name: "slack", why: t("aqDigestWhere") },
-      { name: "github", why: t("aqDigestWhat") },
+      { name: "slack", whyKey: "automations.why_digest_posts" },
+      { name: "github", whyKey: "automations.why_digest_summarizes" },
     ],
     needsRepo: true,
     needsChannel: true,
     consent: true,
     day: "mon",
     time: "09:00",
-    instructions: ({ repo, channel }) =>
-      t("tplDigestPrompt")(repo || "(the connected repository)") +
-      t("tplPostToChannel")(channel),
+    instructions: ({ repo, channel }) => {
+      const gt = getI18n().t;
+      return gt("automations.tmpl_github_instructions", { repo: repo || gt("automations.tmpl_github_repo_default"), channel });
+    },
   },
   {
     key: "pipeline",
-    title: "tplPipelineDigest",
-    blurb: "tplPipelineBlurb",
-    cadence: "freqWeekly",
+    titleKey: "automations.tmpl_pipeline_title",
+    blurbKey: "automations.tmpl_pipeline_blurb",
+    cadenceKey: "automations.cadence_weekly",
     conns: [
-      { name: "slack", why: t("aqDigestWhere") },
-      { name: "hubspot", why: t("aqPipelineActivity") },
+      { name: "slack", whyKey: "automations.why_digest_posts" },
+      { name: "hubspot", whyKey: "automations.why_pipeline_activity" },
     ],
     needsChannel: true,
     consent: true,
     day: "mon",
     time: "09:00",
-    instructions: ({ channel }) =>
-      `Review HubSpot activity since the last digest: deals that changed stage, deals going ` +
-      `quiet, and deals past their close date. Post a short pipeline digest to the Slack ` +
-      t("tplChannelUsing")(channel),
+    instructions: ({ channel }) => {
+      const gt = getI18n().t;
+      return gt("automations.tmpl_pipeline_instructions", { channel });
+    },
   },
   {
     key: "brief",
-    title: "tplMorningBrief",
-    blurb: "tplMorningBlurb",
-    cadence: "freqDaily",
+    titleKey: "automations.tmpl_brief_title",
+    blurbKey: "automations.tmpl_brief_blurb",
+    cadenceKey: "automations.cadence_daily",
     conns: [
-      { name: "google_calendar", why: t("aqTodayMeetings") },
-      { name: "gmail", why: t("aqOvernight") },
+      { name: "google_calendar", whyKey: "automations.why_meetings_gaps" },
+      { name: "gmail", whyKey: "automations.why_overnight_email" },
     ],
     deliver: true,
     day: "daily",
     time: "08:00",
-    instructions: ({ deliver }) =>
-      `Prepare a short morning brief: today's calendar events and gaps, plus email that ` +
-      `arrived since yesterday evening. ` +
-      (deliver === "app" ? t("aqSaveDeliverable") : t("aqSendSlackDm")),
+    instructions: ({ deliver }) => {
+      const gt = getI18n().t;
+      return gt("automations.tmpl_brief_instructions_prefix") +
+        (deliver === "app" ? gt("automations.tmpl_brief_save") : gt("automations.tmpl_brief_slack"));
+    },
   },
   {
     key: "news",
-    title: "tplNewsBriefing",
-    blurb: "tplNewsBlurb",
-    cadence: "freqDaily",
+    titleKey: "automations.tmpl_news_title",
+    blurbKey: "automations.tmpl_news_blurb",
+    cadenceKey: "automations.cadence_daily",
     conns: [],
     day: "daily",
     time: "08:00",
-    instructions: () =>
-      t("aqSearchNewsPrompt") + " " +
-      t("aqBriefingSuffix"),
+    instructions: () => getI18n().t("automations.tmpl_news_instructions"),
   },
   {
     key: "inboxdigest",
-    title: "tplInboxDigest",
-    blurb: "tplInboxBlurb",
-    cadence: "freqWeekdays",
-    conns: [{ name: "gmail", why: t("aqYourUnread") }],
+    titleKey: "automations.tmpl_inbox_title",
+    blurbKey: "automations.tmpl_inbox_blurb",
+    cadenceKey: "automations.cadence_weekdays",
+    conns: [{ name: "gmail", whyKey: "automations.why_unread_email" }],
     day: "weekdays",
     time: "09:00",
-    instructions: () => t("aqSummarizeEmail"),
+    instructions: () => getI18n().t("automations.tmpl_inbox_instructions"),
   },
   {
     key: "cleanup",
-    title: "tplFolderCleanup",
-    blurb: "tplFolderBlurb",
-    cadence: "freqWeekly",
+    titleKey: "automations.tmpl_cleanup_title",
+    blurbKey: "automations.tmpl_cleanup_blurb",
+    cadenceKey: "automations.cadence_weekly",
     conns: [],
     day: "fri",
     time: "17:30",
-    instructions: () => t("aqSortDownloads"),
+    instructions: () => getI18n().t("automations.tmpl_cleanup_instructions"),
   },
 ];
 
@@ -176,10 +167,9 @@ export function AutomationQuickstart({
     permissions?: { tool: string; target: string; access: "read" | "write" }[];
   }) => void;
 }) {
-  const t = useT();
-  const tr = useT();
+  const { t } = useTranslation();
   const [pickedKey, setPickedKey] = useState<string | null>(null);
-  const picked = TEMPLATES.find((t) => t.key === pickedKey) || null;
+  const picked = TEMPLATES.find((tpl) => tpl.key === pickedKey) || null;
 
   const [connectors, setConnectors] = useState<Connector[]>([]);
   const [cloud, setCloud] = useState<CloudStatus | null>(null);
@@ -243,10 +233,10 @@ export function AutomationQuickstart({
     if (pickedKey) cfgRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [pickedKey]);
 
-  const pick = (t: QuickTemplate) => {
-    setPickedKey(t.key);
-    setDay(t.day);
-    setTime(t.time);
+  const pick = (tpl: QuickTemplate) => {
+    setPickedKey(tpl.key);
+    setDay(tpl.day);
+    setTime(tpl.time);
     setConsent(true);
     setConnFlow(null);
   };
@@ -298,8 +288,7 @@ export function AutomationQuickstart({
   const create = () => {
     if (!picked) return;
     onCreate({
-      // 存翻译后的文字，不是键 —— 键会原样显示在任务列表里。
-      title: tr(picked.title),
+      title: t(picked.titleKey),
       instructions: picked.instructions({ repo, channel, deliver }),
       cron: cronFor(day, time),
       permissions:
@@ -310,48 +299,50 @@ export function AutomationQuickstart({
   };
 
   const gateHint = !allConnected
-    ? `Connect ${picked?.conns
-        .filter((c) => !connState(c.name)?.connected)
-        .map((c) => connState(c.name)?.title || c.name)
-        .join(" and ")} to continue`
+    ? t("automations.gate_connect", {
+        names: picked?.conns
+          .filter((c) => !connState(c.name)?.connected)
+          .map((c) => connState(c.name)?.title || c.name)
+          .join(t("automations.gate_join")),
+      })
     : picked?.needsChannel && !channel
-      ? t("aqPickChannel")
+      ? t("automations.gate_pick_channel")
       : "";
 
   const label = "block text-[12px] text-muted mt-3 mb-1";
   const input =
-    "w-full px-3 py-2 rounded-lg border border-line bg-panel text-[13.5px] outline-none focus:border-accent";
+    "w-full px-3 py-2 rounded-lg border border-line bg-panel text-[13px] outline-none focus:border-accent";
 
   return (
     <div className="mb-4">
       <div className="text-[11px] uppercase tracking-[0.05em] text-faint mb-2.5">
-        {t("aqFromTemplate")}
+        {t("automations.start_from_template")}
       </div>
       {/* Equal-height cards (owner ask 2026-07-12): 1fr rows + h-full — <button> grid items
           don't stretch like divs. */}
       <div className="grid grid-cols-3 auto-rows-fr gap-3">
-        {TEMPLATES.map((t) => (
+        {TEMPLATES.map((tpl) => (
           <button
-            key={t.key}
-            data-testid={`qs-template-${t.key}`}
+            key={tpl.key}
+            data-testid={`qs-template-${tpl.key}`}
             className={
               "h-full text-left rounded-xl2 border bg-panel p-4 flex flex-col gap-1.5 " +
-              (pickedKey === t.key
+              (pickedKey === tpl.key
                 ? "border-accent ring-2 ring-accentSoft"
                 : "border-line hover:border-lineStrong")
             }
-            onClick={() => pick(t)}
+            onClick={() => pick(tpl)}
           >
-            <span className="text-[13.5px] font-semibold">{tr(t.title)}</span>
-            <span className="text-[12px] text-muted leading-relaxed flex-1">{tr(t.blurb)}</span>
+            <span className="text-[13px] font-semibold">{t(tpl.titleKey)}</span>
+            <span className="text-[12px] text-muted leading-relaxed flex-1">{t(tpl.blurbKey)}</span>
             <span className="flex items-center gap-1.5 mt-1">
-              {t.conns.map((c) => {
+              {tpl.conns.map((c) => {
                 const cs = connState(c.name);
                 const on = !!cs?.connected;
                 return (
                   <span
                     key={c.name}
-                    title={`${cs?.title || c.name} — ${on ? "connected" : "not connected yet"}`}
+                    title={`${cs?.title || c.name} — ${on ? t("automations.conn_connected") : t("automations.conn_not_connected")}`}
                     style={on ? undefined : { filter: "grayscale(1)", opacity: 0.55 }}
                   >
                     {cs ? (
@@ -363,7 +354,7 @@ export function AutomationQuickstart({
                 );
               })}
               <span className="text-[11px] text-faint ml-0.5">
-                {t.conns.length === 0 ? `${tr("tplNoConnections")} · ${tr(t.cadence)}` : tr(t.cadence)}
+                {tpl.conns.length === 0 ? t("automations.no_conns_with_cadence", { cadence: t(tpl.cadenceKey) }) : t(tpl.cadenceKey)}
               </span>
             </span>
           </button>
@@ -379,15 +370,15 @@ export function AutomationQuickstart({
           {/* §30: the card names its template — without this it starts abruptly after the grid. */}
           <div className="flex items-baseline gap-2 pb-2.5 mb-1 border-b border-line">
             <span className="text-[11px] uppercase tracking-[0.05em] text-accent font-semibold">
-              {t("aqSetUp")}
+              {t("automations.set_up")}
             </span>
-            <span className="text-[14px] font-semibold">{tr(picked.title)}</span>
+            <span className="text-[14px] font-semibold">{t(picked.titleKey)}</span>
             <span className="ml-auto text-[12px] text-faint max-sm:hidden">
-              {picked.conns.length ? t("aqConnDelivery") : t("aqDeliverySchedule")} ·{" "}
-              {tr(picked.cadence as any)}
+              {picked.conns.length ? t("automations.conns_delivery_sched") : t("automations.delivery_sched")} ·{" "}
+              {t(picked.cadenceKey)}
             </span>
           </div>
-          {picked.conns.map(({ name, why }) => {
+          {picked.conns.map(({ name, whyKey }) => {
             const c = connState(name);
             const flow = connFlow?.name === name ? connFlow : null;
             return (
@@ -395,25 +386,25 @@ export function AutomationQuickstart({
                 <div className="flex items-center gap-3 py-2.5">
                   {c && <ConnectorBadge connector={c} size={26} title={c.title} />}
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[13.5px] font-medium">{c?.title || name}</span>
-                    <span className="block text-[11.5px] text-faint">{why}</span>
+                    <span className="block text-[13px] font-medium">{c?.title || name}</span>
+                    <span className="block text-[12px] text-faint">{t(whyKey)}</span>
                   </span>
                   {c?.connected ? (
-                    <span className="text-[12.5px] text-ok">✓ Connected</span>
+                    <span className="text-[13px] text-ok">{t("automations.connected_ok")}</span>
                   ) : flow ? (
                     <span className="inline-flex items-center gap-2 text-[12px] text-muted">
                       <Spinner />
                       {flow.phase === "opening"
-                        ? t("aqOpeningBrowser2")
-                        : t("tplWaitingFor")(c?.title || name)}
+                        ? t("automations.opening_browser")
+                        : t("automations.waiting_for", { name: c?.title || name })}
                     </span>
                   ) : (
                     <button
-                      className="px-3.5 py-1 rounded-full border border-line text-[12.5px] hover:bg-paper"
+                      className="px-3.5 py-1 rounded-full border border-line text-[13px] hover:bg-paper"
                       onClick={() => startConnect(name)}
                       data-testid={`ob-connect-${name}`}
                     >
-                      {t("uiConnect")}
+                      {t("automations.connect")}
                     </button>
                   )}
                 </div>
@@ -427,16 +418,16 @@ export function AutomationQuickstart({
                     <span>↗</span>
                     <span className="flex-1 min-w-0">
                       <b className="text-ink font-medium">
-                        {t("aqFinishInBrowser")(c?.title || name)}
+                        {t("automations.finish_connecting", { name: c?.title || name })}
                       </b>{" "}
-                      Approve it there, then come back — this page updates by itself.
+                      {t("automations.finish_connecting_desc")}
                     </span>
                     <button
                       className="text-faint underline hover:text-muted shrink-0"
                       onClick={() => setConnFlow(null)}
                       data-testid="ob-connect-cancel"
                     >
-                      {t("uiCancel")}
+                      {t("automations.cancel")}
                     </button>
                   </div>
                 )}
@@ -446,40 +437,40 @@ export function AutomationQuickstart({
 
           {pendingConn && !cloud?.signed_in && (
             <div
-              className="bg-accentSoft/50 rounded-xl px-4 py-3 mt-3 text-[12.5px] text-muted"
+              className="bg-accentSoft/50 rounded-xl px-4 py-3 mt-3 text-[13px] text-muted"
               data-testid="ob-cloudpane"
             >
               <span className="block text-[13px] text-ink font-medium">
-                {t("aqOneSignIn")}
+                {t("automations.one_signin_unlocks")}
               </span>
-              Connections are brokered by OpenWorker Cloud — your tokens stay on this computer.
+              {t("automations.cloud_brokered")}
               <div className="flex items-center gap-3 mt-2">
                 {signinPhase ? (
                   <>
                     <span className="inline-flex items-center gap-2 text-[12px]">
                       <Spinner />
-                      {signinPhase === "opening" ? t("aqOpeningBrowser2") : t("aqWaitingSignIn")}
+                      {signinPhase === "opening" ? t("automations.opening_browser") : t("automations.waiting_signin")}
                     </span>
                     {signinPhase === "waiting" && (
-                      <span className="text-[11.5px] text-faint">
-                        Finish signing in in your browser — this page updates by itself.{" "}
+                      <span className="text-[12px] text-faint">
+                        {t("automations.finish_signin_desc")}{" "}
                         <button
                           className="underline hover:text-muted"
                           onClick={cancelSignin}
                           data-testid="ob-signin-cancel"
                         >
-                          {t("uiCancel")}
+                          {t("automations.cancel")}
                         </button>
                       </span>
                     )}
                   </>
                 ) : (
                   <button
-                    className="px-3.5 py-1 rounded-full border border-line text-[12.5px] text-accent hover:bg-panel"
+                    className="px-3.5 py-1 rounded-full border border-line text-[13px] text-accent hover:bg-panel"
                     onClick={signInThenConnect}
                     data-testid="ob-cloud-signin"
                   >
-                    {t("aqSignInCloud")}
+                    {t("automations.sign_in_to_cloud")}
                   </button>
                 )}
               </div>
@@ -490,10 +481,10 @@ export function AutomationQuickstart({
             <div className={picked.conns.length ? "bg-paper rounded-xl px-4 py-3.5 mt-3" : ""} data-testid="ob-recipe">
               {picked.needsRepo && (
                 <>
-                  <label className={label}>{tr("autoRepository")}</label>
+                  <label className={label}>{t("automations.repository")}</label>
                   <input
                     className={input}
-                    placeholder={tr("autoOwnerRepo")}
+                    placeholder={t("automations.repo_placeholder")}
                     value={repo}
                     onChange={(e) => setRepo(e.target.value)}
                     data-testid="ob-repo"
@@ -502,7 +493,7 @@ export function AutomationQuickstart({
               )}
               {picked.needsChannel && (
                 <>
-                  <label className={label}>{tr("autoPostToChannel")}</label>
+                  <label className={label}>{t("automations.post_to_channel")}</label>
                   <div data-testid="ob-channel">
                     <ChannelPicker
                       value={channel}
@@ -514,44 +505,44 @@ export function AutomationQuickstart({
                     />
                   </div>
                   <p className="text-[11px] text-warnInk mt-1">
-                    {t("aqBotMustJoin")}
+                    {t("automations.bot_member_hint")}
                   </p>
                 </>
               )}
-              <label className={label}>{tr("autoWhen")}</label>
+              <label className={label}>{t("automations.when")}</label>
               <div className="flex gap-2">
                 <div className="flex-1 min-w-0">
                   <SelectMenu
-                    ariaLabel="Day"
+                    ariaLabel={t("automations.day_aria")}
                     value={day}
-                    options={Object.entries(DAYS).map(([k, v]) => ({ value: k, label: tr(v.label as any) }))}
+                    options={Object.entries(DAYS).map(([k, v]) => ({ value: k, label: t(v.labelKey) }))}
                     onChange={setDay}
                   />
                 </div>
                 <input
-                  className="w-28 px-3 py-2 rounded-lg border border-line bg-panel text-[13.5px] outline-none focus:border-accent"
+                  className="w-28 px-3 py-2 rounded-lg border border-line bg-panel text-[13px] outline-none focus:border-accent"
                   type="time"
-                  aria-label={tr("autoTime")}
+                  aria-label={t("automations.time_aria")}
                   value={time}
                   onChange={(e) => setTime(e.target.value)}
                 />
               </div>
               {picked.deliver && (
                 <>
-                  <label className={label}>{tr("autoDeliverTo")}</label>
+                  <label className={label}>{t("automations.deliver_to")}</label>
                   <SelectMenu
-                    ariaLabel={t("aqDeliverTo")}
+                    ariaLabel={t("automations.deliver_to")}
                     value={deliver}
                     options={[
-                      { value: "app", label: "deliverInApp" },
-                      { value: "slack", label: t("aqSlackDmLater") },
+                      { value: "app", label: t("automations.deliver_app") },
+                      { value: "slack", label: t("automations.deliver_slack") },
                     ]}
                     onChange={(v) => setDeliver(v as "app" | "slack")}
                   />
                 </>
               )}
               {picked.consent ? (
-                <label className="flex items-start gap-2.5 mt-3.5 text-[12.5px] text-muted select-none">
+                <label className="flex items-start gap-2.5 mt-3.5 text-[13px] text-muted select-none">
                   <input
                     type="checkbox"
                     className="mt-0.5"
@@ -560,18 +551,17 @@ export function AutomationQuickstart({
                     data-testid="ob-consent"
                   />
                   <span>
-                    Allow this automation to post its digest to{" "}
+                    {t("automations.consent_prefix")}{" "}
                     <b className="text-ink" title={channel || undefined}>
-                      {channelLabel || "the channel"}
+                      {channelLabel || t("automations.the_channel")}
                       {channelWorkspace ? ` (${channelWorkspace})` : ""}
                     </b>{" "}
-                    without asking each time. Anything else still asks first.
+                    {t("automations.consent_suffix")}
                   </span>
                 </label>
               ) : picked.conns.length > 0 ? (
-                <p className="text-[12.5px] text-muted mt-3">
-                  This automation only <b className="text-ink">reads</b> on schedule — reading
-                  never needs approval.
+                <p className="text-[13px] text-muted mt-3">
+                  {t("automations.read_only_pref")} <b className="text-ink">{t("automations.reads")}</b> {t("automations.read_only_suff")}
                 </p>
               ) : null}
             </div>
@@ -579,14 +569,14 @@ export function AutomationQuickstart({
 
           <div className="flex items-center gap-3 mt-4">
             <button
-              className="text-[12.5px] text-faint hover:text-muted"
+              className="text-[13px] text-faint hover:text-muted"
               onClick={() => setPickedKey(null)}
             >
-              {t("uiCancel")}
+              {t("automations.cancel")}
             </button>
             {/* A silently-disabled primary reads as a bug — always name the missing piece. */}
             {gateHint && (
-              <span className="ml-auto text-[11.5px] text-faint" data-testid="ob-create-hint">
+              <span className="ml-auto text-[12px] text-faint" data-testid="ob-create-hint">
                 {gateHint}
               </span>
             )}
@@ -599,7 +589,7 @@ export function AutomationQuickstart({
               onClick={create}
               data-testid="ob-create"
             >
-              {busy ? "Creating…" : t("aqCreate")}
+              {busy ? t("automations.creating") : t("automations.create_btn")}
             </button>
           </div>
         </div>
