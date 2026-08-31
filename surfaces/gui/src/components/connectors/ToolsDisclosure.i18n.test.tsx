@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, act, cleanup } from "@testing-library/react";
-import { setLocale } from "../../i18n";
-import { englishRunsIn } from "../../i18n/no-english";
+import { setLocale } from "../../legacyI18n";
+import { englishRunsIn } from "../../legacyI18n/no-english";
 import { ToolsDisclosure } from "./ToolsDisclosure";
 
 // 这条测试量的是【整条链】：i18n-jsx 的判据 → 构建期 transform → tx() 查表 →

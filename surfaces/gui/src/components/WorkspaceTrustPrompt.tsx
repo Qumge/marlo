@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { setWorkspaceTrusted, type WorkspaceCommandTrust } from "../api";
 
-import { useT } from "../i18n";
+import { useT } from "../legacyI18n";
 export function WorkspaceTrustPrompt({
   request,
   onClose,

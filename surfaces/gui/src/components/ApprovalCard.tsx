@@ -3,7 +3,7 @@ import type { ApprovalDecision, Item } from "../types";
 import { humanizeApprovalTitle, type HumanLine } from "../humanize";
 import { Icon } from "./Icon";
 
-import { t, useT } from "../i18n";
+import { t, useT } from "../legacyI18n";
 export function shortArgs(args: any): string {
   if (!args || typeof args !== "object") return "";
   return Object.entries(args)

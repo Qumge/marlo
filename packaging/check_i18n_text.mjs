@@ -34,7 +34,7 @@ function* tsxFiles(dir) {
 
 // zh-text.ts 是生成物，但这里【不 import 它】—— 那要一条 TS 工具链。它的形状是固定的
 // "原文": "译文"，直接读键就够，也顺带证明这个脚本不依赖构建。
-const zhSrc = fs.readFileSync(path.join(SRC, "i18n/zh-text.ts"), "utf8");
+const zhSrc = fs.readFileSync(path.join(SRC, "legacyI18n/zh-text.ts"), "utf8");
 const translated = new Set(
   [...zhSrc.matchAll(/^\s{2}("(?:[^"\\]|\\.)*")\s*:/gm)].map((m) => JSON.parse(m[1])),
 );
@@ -122,7 +122,7 @@ if (missing.length) {
   }
   if (missing.length > 25) console.error(`  …… 另外 ${missing.length - 25} 条`);
   console.error(
-    "\n补进 surfaces/gui/src/i18n/zh-text.ts。" +
+    "\n补进 surfaces/gui/src/legacyI18n/zh-text.ts。" +
       "\n全量清单：node packaging/check_i18n_text.mjs --list",
   );
   process.exit(1);

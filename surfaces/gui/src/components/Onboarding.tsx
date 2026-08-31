@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { LanguagePicker } from "./LanguagePicker";
-import { useT } from "../i18n";
+import { useT } from "../legacyI18n";
 import {
   announceCloudChanged,
   cloudLogin,

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useT } from "../../i18n";
+import { useT } from "../../legacyI18n";
 import {
   connectManaged,
   disconnectAccount,

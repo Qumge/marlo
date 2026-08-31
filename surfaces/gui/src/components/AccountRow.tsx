@@ -5,7 +5,7 @@ import { Icon, type IconName } from "./Icon";
 import { QumgeSignInModal } from "./QumgeSignInModal";
 import { qumgeSignOut } from "../api.qumge";
 import { refreshQumgeAccount, useQumgeAccount } from "../useQumgeAccount";
-import { useT } from "../i18n";
+import { useT } from "../legacyI18n";
 
 // 侧栏底部那一行 —— 账号、余额、以及那个菜单。
 //

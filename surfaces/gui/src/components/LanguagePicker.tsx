@@ -1,4 +1,4 @@
-import { getLocale, setLocale, useT, type Locale } from "../i18n";
+import { getLocale, setLocale, useT, type Locale } from "../legacyI18n";
 
 // Two entry points, deliberately.
 //

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { InstalledSkills } from "./InstalledSkills";
-import { setLocale } from "../../i18n";
+import { setLocale } from "../../legacyI18n";
 
 const ROWS = [
   { name: "weekly-report", description: "周一进度汇报", instructions: "x",

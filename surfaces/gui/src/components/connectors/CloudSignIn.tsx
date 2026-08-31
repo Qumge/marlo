@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { announceCloudChanged, cloudLogin, waitForCloudSignIn } from "../../api";
 
-import { useT } from "../../i18n";
+import { useT } from "../../legacyI18n";
 // The signed-out state of every one-click pane: a REAL sign-in button, not a
 // hint pointing at another page. Sign-in completes in the system browser; this
 // component then polls until the status flips and broadcasts CLOUD_CHANGED, so

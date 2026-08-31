@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("./tauri", () => ({ systemProxy: vi.fn() }));
 
 import { systemProxy } from "./tauri";
-import { setLocale } from "./i18n";
+import { setLocale } from "./legacyI18n";
 import { downloadHint } from "./voiceProxyHint";
 
 // 默认 locale 是英文（ModelChecklist.test.tsx 的断言就是英文串）。这里断言中文，

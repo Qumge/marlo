@@ -15,7 +15,7 @@ import {
   type ProviderInfo,
 } from "../api";
 import { startQumgeDevice, pollQumgeDevice, type QumgeDeviceStart } from "../api.qumge";
-import { setLocale } from "../i18n";
+import { setLocale } from "../legacyI18n";
 
 vi.mock("../api", () => ({
   getProviders: vi.fn(),
@@ -287,7 +287,7 @@ describe("Onboarding — step 0 (Task 4: connect to Qumge, not the gallery)", ()
 
     // 【扫渲染结果，不数守卫的条数】。守卫今天四次报"无新增"而界面是英文 ——
     // 它量源码、这里量用户看到的字符，两把尺子必须都过。
-    const { englishRunsIn } = await import("../i18n/no-english");
+    const { englishRunsIn } = await import("../legacyI18n/no-english");
     expect(englishRunsIn(screen.getByTestId("onboarding") as HTMLElement)).toEqual([]);
 
     const box = screen.getByTestId("onboarding").textContent || "";

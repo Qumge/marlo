@@ -4,7 +4,7 @@
 // 「谷歌邮箱」会让人对不上自己在别处见到的那个东西。分界就是"它是不是专名"。
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getConnectors } from "./api";
-import { setLocale } from "./i18n";
+import { setLocale } from "./legacyI18n";
 
 const CONNECTORS = [
   { name: "browser", title: "Browser", logo: "browser", fields: [] },

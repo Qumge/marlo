@@ -238,7 +238,7 @@ ALLOWED = [
 # 判据是"zh-text.ts 里有没有它"，不是"在哪个文件里"：翻过了就是翻过了，走哪条路
 # 不改变用户看到的东西。
 def _by_text_translated() -> set[str]:
-    p = SRC / "i18n" / "zh-text.ts"
+    p = SRC / "legacyI18n" / "zh-text.ts"
     if not p.is_file():
         return set()
     out = set()

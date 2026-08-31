@@ -5,7 +5,7 @@ import {
   skillDetail,
   type CatalogSkill,
 } from "../../api";
-import { useT } from "../../i18n";
+import { useT } from "../../legacyI18n";
 import {
   bundles as loadBundles,
   installBundle,

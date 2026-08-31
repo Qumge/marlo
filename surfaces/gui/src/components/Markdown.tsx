@@ -2,7 +2,7 @@ import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Icon } from "./Icon";
 
-import { useT } from "../i18n";
+import { useT } from "../legacyI18n";
 // §34 (UX-016): the agent ends a deliverable turn with plain markdown —
 // [Title](artifact:relative/path) — and the renderer turns it into a chip that opens the
 // artifact viewer in place. Plumbing is a window event (the viewer lives in RightRail;

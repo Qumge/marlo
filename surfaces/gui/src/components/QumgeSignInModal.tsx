@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { QumgeConnect } from "../providers/QumgeConnect";
-import { useT } from "../i18n";
+import { useT } from "../legacyI18n";
 
 // Sign in to Qumge from inside the running app.
 //

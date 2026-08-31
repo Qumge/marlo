@@ -1,6 +1,6 @@
 import { type QumgeBalance } from "../api.qumge";
 import { openExternal } from "../tauri";
-import { useT } from "../i18n";
+import { useT } from "../legacyI18n";
 
 // Marlo is pay-as-you-go and used to say nothing about money anywhere. The first
 // thing a user would have learned about their balance was a request failing, and

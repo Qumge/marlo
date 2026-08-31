@@ -9,7 +9,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { SkillsView } from "./SkillsView";
-import { setLocale } from "../../i18n";
+import { setLocale } from "../../legacyI18n";
 
 // 一个按 URL 分发的假后端。只要两个分支：装了什么，和目录搜到什么 —— 这一份里
 // 没有测目录的条目（那是 SkillCatalog.test.tsx 的活），搜索分支只是为了让常驻在
@@ -42,8 +42,8 @@ describe("技能页", () => {
     // 真正看到的字符，两把独立的尺子都得过。
     // 必须【显式】切到中文再扫：测试默认跑在 en 下，不切的话扫到的英文是对的，
     // 而碰巧切过的话又会因为别的测试的副作用而通过 —— 两种都不是在测东西。
-    const { englishRunsIn } = await import("../../i18n/no-english");
-    const { setLocale } = await import("../../i18n");
+    const { englishRunsIn } = await import("../../legacyI18n/no-english");
+    const { setLocale } = await import("../../legacyI18n");
     act(() => setLocale("zh"));
     await act(async () => {});
     const runs = englishRunsIn(document.body);

@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { type QumgeBalance } from "../api.qumge";
 import { setAccountPollFast } from "../useQumgeAccount";
 import { openExternal } from "../tauri";
-import { useT } from "../i18n";
+import { useT } from "../legacyI18n";
 
 // 余额为 0 时挡在 composer 上方的那张卡片。
 //

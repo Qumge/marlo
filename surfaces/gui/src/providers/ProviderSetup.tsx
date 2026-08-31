@@ -10,7 +10,7 @@ import {
 import { openExternal } from "../tauri";
 import { PROVIDER_LOGOS, providerRank } from "./logos";
 
-import { useT } from "../i18n";
+import { useT } from "../legacyI18n";
 // The provider gallery ⇄ key form, shared by Onboarding step 1 (§39) and
 // Settings ▸ Models (UX-021) so the two can never drift apart visually. The hook
 // owns the interaction state machine; ProviderCards/ProviderForm own the shared

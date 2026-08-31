@@ -1,4 +1,4 @@
-import { t } from "./i18n";
+import { t } from "./legacyI18n";
 import { systemProxy } from "./tauri";
 
 /**

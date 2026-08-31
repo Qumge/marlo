@@ -1,5 +1,5 @@
 import type { GroupedQuestion, QuestionOption, SessionInfo, WsEvent } from "./types";
-import { t } from "./i18n";
+import { t } from "./legacyI18n";
 
 declare const __COWORKER_DEV_TOKEN__: string;
 

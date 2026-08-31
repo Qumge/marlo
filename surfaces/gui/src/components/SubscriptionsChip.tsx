@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useT } from "../i18n";
+import { useT } from "../legacyI18n";
 import {
   getConnectors,
   getRecentChannels,

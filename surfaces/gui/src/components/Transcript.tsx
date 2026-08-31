@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { t, useT } from "../i18n";
+import { t, useT } from "../legacyI18n";
 import type { ApprovalDecision, Item } from "../types";
 import { shortArgs } from "./ApprovalCard";
 import { humanizeAsk, humanizeTool, type HumanLine } from "../humanize";

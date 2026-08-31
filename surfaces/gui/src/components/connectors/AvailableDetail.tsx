@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useT } from "../../i18n";
+import { useT } from "../../legacyI18n";
 import { type CloudStatus, type Connector } from "../../api";
 import { ConnectorBadge } from "../../connectors/ConnectorIcon";
 import { AddConnectionModal } from "./AddConnectionModal";

@@ -1,4 +1,4 @@
-import { useT } from "../i18n";
+import { useT } from "../legacyI18n";
 import type { TodoItem } from "../types";
 
 export function TodoPanel({ items }: { items: TodoItem[] }) {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useT } from "../../i18n";
+import { useT } from "../../legacyI18n";
 import type { SlackWorkspace } from "../../api";
 
 // UX-027: the post-connect "how mentions reach you" card. A tabbed carousel of

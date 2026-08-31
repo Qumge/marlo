@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./Icon";
 
-import { useT } from "../i18n";
+import { useT } from "../legacyI18n";
 // A form-styled custom select (the native <select> can't carry status dots or sub-lines and
 // looks like a raw OS control next to the rest of the UI). Rows: label, an optional quiet
 // second line ("Last used 2h ago"), and an optional green status dot on the far right.

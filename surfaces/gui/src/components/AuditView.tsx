@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useT } from "../i18n";
+import { useT } from "../legacyI18n";
 import { getAudit, type AuditEvent } from "../api";
 import { PanelHead } from "./IntegrationsView";
 

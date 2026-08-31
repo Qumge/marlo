@@ -20,7 +20,7 @@ import { HubSpotDetail } from "./HubSpotDetail";
 import { SlackDetail } from "./SlackDetail";
 import { GRP } from "./ui";
 
-import { useT } from "../../i18n";
+import { useT } from "../../legacyI18n";
 // Connectors surface = LIST ⇄ per-connector DETAIL SUBPAGE (UX-DECISIONS §21). The
 // Integrations sub-nav never grows per-connector items; detail pages live behind a
 // `‹ Connectors` breadcrumb. Connectors without a bespoke page get GenericDetail so

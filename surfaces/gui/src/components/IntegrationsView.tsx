@@ -2,7 +2,7 @@ import { useState } from "react";
 import { McpTab } from "./ManageTabs";
 import { ConnectorsSection } from "./connectors/ConnectorsSection";
 import { Icon } from "./Icon";
-import { useT } from "../i18n";
+import { useT } from "../legacyI18n";
 
 // 一个页面，一个列表。
 //

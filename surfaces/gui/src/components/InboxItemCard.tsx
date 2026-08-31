@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { useT } from "../i18n";
+import { useT } from "../legacyI18n";
 import type { InboxItem } from "../api";
 import type { QuestionOption } from "../types";
 import { humanizeApprovalTitle } from "../humanize";

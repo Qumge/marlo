@@ -7,8 +7,8 @@ import {
   setDefaultModel,
   type GatewayModel,
 } from "../api";
-import { useT } from "../i18n";
-import type { Strings } from "../i18n/en";
+import { useT } from "../legacyI18n";
+import type { Strings } from "../legacyI18n/en";
 
 // Cloud-account providers dispatch by a family segment baked into the model id
 // (`bedrock:claude/…`, `vertex:openweight/…`). The add-model row shows a dropdown so

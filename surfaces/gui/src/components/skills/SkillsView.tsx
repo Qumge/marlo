@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { listSkills, stageSkillUpload, type SkillRow, type SkillUploadPreview } from "../../api";
-import { useT } from "../../i18n";
+import { useT } from "../../legacyI18n";
 import { Icon } from "../Icon";
 import { PanelHead } from "../IntegrationsView";
 import { GRP_H } from "../connectors/ui";

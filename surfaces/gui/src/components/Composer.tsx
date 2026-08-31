@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { useT } from "../i18n";
+import { useT } from "../legacyI18n";
 import type { Attachment, SessionUsage } from "../types";
 import { isPdfFile, readFile } from "../attach";
 import { getSettings, inspectPdf, sessionSkills, type SessionSkillRow } from "../api";

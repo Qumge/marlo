@@ -10,7 +10,7 @@
 // to expand it and scroll it into view.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useT } from "../i18n";
+import { useT } from "../legacyI18n";
 import {
   CLOUD_CHANGED,
   getCloudStatus,

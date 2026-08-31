@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { deleteSkill, revealSkill, updateSkill, type SkillRow } from "../../api";
-import { useT } from "../../i18n";
+import { useT } from "../../legacyI18n";
 import { Icon } from "../Icon";
 
 const CARD = "rounded-xl2 border border-line bg-panel";

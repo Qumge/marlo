@@ -72,7 +72,7 @@ import { DirectoryRequestCard } from "./components/DirectoryRequestCard";
 import { ConnectorRequestCard } from "./components/ConnectorRequestCard";
 import { PlanCard } from "./components/PlanCard";
 import { WorkspaceTrustPrompt } from "./components/WorkspaceTrustPrompt";
-import { t as tr, useT } from "./i18n";
+import { t as tr, useT } from "./legacyI18n";
 
 const newId = () =>
   (crypto as any).randomUUID ? crypto.randomUUID().slice(0, 12) : Math.random().toString(36).slice(2, 14);

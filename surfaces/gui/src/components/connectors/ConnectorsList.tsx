@@ -3,7 +3,7 @@ import { type CloudStatus, type Connector, type SlackStatus } from "../../api";
 import { ConnectorBadge } from "../../connectors/ConnectorIcon";
 import { AddConnectionModal } from "./AddConnectionModal";
 import { CHIP_OK, CHIP_OFF, CHIP_WARN, GRP, GRP_H, FOOT, PILL_QUIET, ROW } from "./ui";
-import { t, useT } from "../../i18n";
+import { t, useT } from "../../legacyI18n";
 
 // The Connectors LIST (UX-DECISIONS §21): connected first in their own inset group —
 // rows navigate to the connector's detail subpage; problems surface as a chip in the
@@ -205,4 +205,3 @@ function healthChip(c: Connector, slack: SlackStatus | null) {
   if (c.two_way && c.connected) return <span className={CHIP_OK}>● Live</span>;
   return <span className={CHIP_OK}>● Ready</span>;
 }
-

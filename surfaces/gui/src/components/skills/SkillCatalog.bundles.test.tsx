@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as bundleApi from "../../api.qumge";
-import { setLocale } from "../../i18n";
+import { setLocale } from "../../legacyI18n";
 import { SkillCatalog } from "./SkillCatalog";
 
 const BUNDLES = [{

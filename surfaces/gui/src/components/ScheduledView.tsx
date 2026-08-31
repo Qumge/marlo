@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { t, useT } from "../i18n";
+import { t, useT } from "../legacyI18n";
 import {
   createAutomation,
   deleteAutomation,

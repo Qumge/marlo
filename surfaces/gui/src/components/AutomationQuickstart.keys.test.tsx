@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { en } from "../i18n/en";
-import { zh } from "../i18n/zh";
+import { en } from "../legacyI18n/en";
+import { zh } from "../legacyI18n/zh";
 import { TEMPLATES } from "./AutomationQuickstart";
 
 // 自动化模板卡片上的每一句话，都必须真的有译文。

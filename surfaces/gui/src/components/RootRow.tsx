@@ -1,4 +1,4 @@
-import { useT } from "../i18n";
+import { useT } from "../legacyI18n";
 import type { RootInfo } from "../api";
 import { Icon } from "./Icon";
 import { baseName } from "../paths";
