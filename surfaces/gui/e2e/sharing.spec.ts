@@ -22,7 +22,7 @@ test("zip import: trust warning leads, tools collapse behind a chevron, replaces
   await page.goto("/");
   await page.getByTestId("account-row").click();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.getByRole("button", { name: "Personas", exact: true }).click();
+  await page.getByRole("button", { name: "Coworkers", exact: true }).click();
 
   // Open the installer disclosure, pick the Bundle zip mode, feed a file through
   // the hidden input.
@@ -66,7 +66,7 @@ test("Export… zips an installed coworker's bundle to a chosen folder", async (
   await page.goto("/");
   await page.getByTestId("account-row").click();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.getByRole("button", { name: "Personas", exact: true }).click();
+  await page.getByRole("button", { name: "Coworkers", exact: true }).click();
 
   // Export moved to the coworker detail page (UX-035); the native folder pick is
   // server-mocked → /tmp/picked-folder.

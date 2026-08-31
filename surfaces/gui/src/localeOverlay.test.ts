@@ -158,6 +158,26 @@ describe("Marlo locale overlay", () => {
     expect(noop, "和上游逐字相同的覆盖是死重量，删掉").toEqual([]);
   });
 
+  // owner 2026-08-31：Persona/Coworker 这套词跟上游走，不再维护我们自己的说法。
+  // 这条拦住的是"又悄悄加回来"——一条只把「同事」改回「角色」（或反过来）的覆盖，
+  // 别处一字不差。那种覆盖不会让任何别的测试红，而它带来的是【术语分裂】：设置页
+  // 说一个词，侧栏说另一个词，正是 2026-08-31 走查里逐字撞见过的那类问题。
+  //
+  // 判据是"抹掉术语差别后两边一模一样"。改了措辞的覆盖不受影响（gallery_sub 那条
+  // 除了术语还接管了产品名，照样留着）。
+  it("carries no override that only swaps the coworker/persona term", () => {
+    const norm = (s: string) => s.replace(/同事|角色/g, "·").replace(/[Cc]oworker|[Pp]ersona/g, "·");
+    const termOnly = [
+      ...Object.keys(flatEnMarlo).filter(
+        (k) => k in flatEnBase && norm(flatEnMarlo[k]) === norm(flatEnBase[k]),
+      ),
+      ...Object.keys(flatZhMarlo).filter(
+        (k) => k in flatZhBase && norm(flatZhMarlo[k]) === norm(flatZhBase[k]),
+      ),
+    ];
+    expect(termOnly, "这些覆盖只改了术语 —— 跟上游走，删掉").toEqual([]);
+  });
+
   it("keeps English and Chinese key sets in parity after the overlay", () => {
     const missingInZh = Object.keys(flatEn).filter((k) => !k.endsWith("_one") && !(k in flatZh));
     const missingInEn = Object.keys(flatZh).filter((k) => !(k in flatEn));
