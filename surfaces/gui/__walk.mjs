@@ -1,0 +1,31 @@
+import { chromium } from "@playwright/test";
+const OUT = process.env.OUT;
+const b = await chromium.launch();
+const page = await (await b.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+const errs = [];
+page.on("pageerror", (e) => errs.push("PAGEERROR " + String(e).slice(0,150)));
+await page.addInitScript(() => localStorage.setItem("openworker.lang", "zh"));
+await page.goto("http://localhost:1420/", { waitUntil: "networkidle" });
+await page.waitForTimeout(2500);
+const closeOverlay = async () => {
+  const back = page.locator("div.fixed.inset-0.z-30");
+  if (await back.count()) await back.first().click({ force: true }).catch(()=>{});
+  await page.waitForTimeout(400);
+};
+await closeOverlay();
+await page.getByTestId("account-row").click(); await page.waitForTimeout(450);
+await page.getByRole("button", { name: /^设置$/ }).first().click();
+await page.waitForTimeout(1600);
+const tabs = await page.locator("nav button, aside button").allInnerTexts();
+console.log("设置页签:", tabs.map(s=>s.trim()).filter(Boolean).join(" · "));
+const tab = page.getByRole("button", { name: /同事|角色/ }).first();
+if (await tab.count()) { await tab.click(); await page.waitForTimeout(1500); }
+const txt = await page.locator("main, [role=main]").last().innerText().catch(()=>"");
+const lines = txt.split("\n").map(s=>s.trim()).filter(Boolean);
+console.log("=== 同事页正文 ===");
+console.log(lines.slice(0,16).map(s=>"  "+s).join("\n"));
+console.log("=== 这一屏上同时出现的两个词 ===");
+console.log("  含「同事」:", lines.filter(s=>s.includes("同事")).length, " 含「角色」:", lines.filter(s=>s.includes("角色")).map(s=>`「${s}」`).join(" "));
+await page.screenshot({ path: `${OUT}/07-coworkers.png`, fullPage: true });
+console.log("=== 错误 ===\n  " + (errs.length ? errs.join("\n  ") : "无"));
+await b.close();

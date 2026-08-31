@@ -11,12 +11,11 @@ gates and the approval flow are upstream's work, and so is the OAuth broker. Rep
 those to upstream at **security@openworker.com**.
 
 Report anything Marlo adds — the Qumge sign-in and gateway, the device-code flow,
-the skills catalog, the update/mirror path — to us at
-[our issues](https://github.com/Qumge/marlo/issues) marked private, or to the
-address on [qumge.com](https://qumge.com).
-
-<!-- TODO(owner): Qumge 还没有公开的安全上报邮箱。定了之后把上面这行换成邮箱 ——
-     "去 issues 提" 对安全问题不是合格的入口（公开可见）。 -->
+the skills catalog, the update/mirror path — through
+[GitHub private vulnerability reporting](https://github.com/Qumge/marlo/security/advisories/new).
+That form is visible only to the maintainers, so it is the right place for anything
+you would not post in public. Please do not open a normal issue for a security
+report — issues are world-readable the moment they are filed.
 
 When in doubt, send it upstream; they route Marlo-specific reports back to us.
 Include:

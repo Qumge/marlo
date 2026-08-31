@@ -84,9 +84,10 @@ describe("Sidebar group/filter control", () => {
     // personas load drives the surfaces; the RECENT header's group/filter control is always present.
     const control = await screen.findByLabelText("Group and filter conversations");
 
-    // Open the popover and choose "Group by → Persona".
+    // Open the popover and choose "Group by → Coworker" (upstream renamed Persona →
+    // Coworker in 0.2.x; owner ruled 2026-08-31 to follow it rather than keep our own word).
     fireEvent.click(control);
-    fireEvent.click(await screen.findByText("Persona"));
+    fireEvent.click(await screen.findByText("Coworker"));
 
     // POSTs the new layout pref.
     await waitFor(() => {
