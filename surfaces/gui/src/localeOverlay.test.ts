@@ -55,6 +55,32 @@ const ADDITIONS = new Set([
   "integrations.connections_sub",
   "integrations.advanced_tool_servers",
   "integrations.advanced_tool_servers_sub",
+  // 首屏第二三张任务卡（写文档 / 整理文件夹）：上游第二三张是 HubSpot 和
+  // GitHub→Slack，借它们的键名会误导下一个人
+  "intro.task_write_title",
+  "intro.task_write_sub",
+  "intro.write_prompt",
+  "intro.task_tidy_title",
+  "intro.task_tidy_sub",
+  "intro.tidy_prompt",
+  // 侧栏的新运行计数：上游没有这个 badge
+  "sidebar.new_runs",
+  "sidebar.new_runs_one",
+  "sidebar.new_runs_failed_suffix",
+  "composer.approvals_inbox_note",
+  // 用量 chip 的明细（c6c5ee5 先把余额说清楚，再等 402）—— 上游整个没有 usage 命名空间
+  "usage.unknown_model",
+  "usage.chip_title_bar",
+  "usage.chip_title_plain",
+  "usage.of_window",
+  "usage.in_context_now",
+  "usage.uncached_input",
+  "usage.cache_reads",
+  "usage.cache_writes",
+  "usage.total_input",
+  "usage.input",
+  "usage.output",
+  "usage.n_tokens",
 ]);
 
 const flatEnBase = flatten(enBase as Tree);

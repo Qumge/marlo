@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { useT } from "../legacyI18n";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import type { Attachment, SessionUsage } from "../types";
 import { isPdfFile, readFile } from "../attach";
 import { getSettings, inspectPdf, sessionSkills, type SessionSkillRow } from "../api";
@@ -23,10 +24,10 @@ import {
 // those modes keeps working; the picker just doesn't offer them.
 // Built at render, not at module load: a label frozen at import time is a label
 // that never changes when the user switches language.
-const permissionOptions = (t: ReturnType<typeof useT>): Option[] => [
-  { value: "discuss", label: t("modeDiscuss"), description: t("modeDiscussSub") },
-  { value: "interactive", label: t("askForApproval"), description: t("modeAskSub") },
-  { value: "auto", label: t("modeFull"), description: t("modeFullSub") },
+const permissionOptions = (t: TFunction): Option[] => [
+  { value: "discuss", label: t("composer.mode.discuss"), description: t("composer.mode.discuss_desc") },
+  { value: "interactive", label: t("composer.mode.interactive"), description: t("composer.mode.interactive_desc") },
+  { value: "auto", label: t("composer.mode.auto"), description: t("composer.mode.auto_desc") },
 ];
 
 // No hardcoded model fallback: until the server supplies the list (a few seconds after a
@@ -103,7 +104,7 @@ interface Props {
 }
 
 export function Composer(props: Props) {
-  const t = useT();
+  const { t } = useTranslation();
   const [text, setText] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   // Whether the top-up card is currently interposed in front of the send. Flipped true
@@ -295,7 +296,7 @@ export function Composer(props: Props) {
     for (const file of list) {
       if (isPdfFile(file) && file.size > maxMb * 1024 * 1024) {
         showAttachNotice(
-          t("tplSkippedSize")(file.name, (file.size / 1024 / 1024).toFixed(1), maxMb),
+          t("composer.pdf_too_big", { name: file.name, mb: (file.size / 1024 / 1024).toFixed(1), limit: maxMb }),
         );
         continue;
       }
@@ -308,12 +309,12 @@ export function Composer(props: Props) {
         const info = await inspectPdf(a.data_url).catch(() => null);
         if (info?.ok && (info.pages ?? 0) > maxPages) {
           showAttachNotice(
-            t("tplSkippedPages")(a.name, info.pages ?? 0, maxPages),
+            t("composer.pdf_too_many_pages", { name: a.name, pages: info.pages ?? 0, limit: maxPages }),
           );
           continue;
         }
         if (info && !info.ok) {
-          showAttachNotice(t("tplSkippedPdfError")(a.name, info.error || t("tplCouldNotReadPdf")));
+          showAttachNotice(t("composer.pdf_unreadable", { name: a.name, error: info.error || t("composer.pdf_could_not_read") }));
           continue;
         }
       }
@@ -420,7 +421,7 @@ export function Composer(props: Props) {
       if (dictation?.recording) {
         setDictationBusy("Transcribing…");
         const transcript = await stopDictation();
-        if (transcript === null) throw new Error(t("cmpTranscribeFailed"));
+        if (transcript === null) throw new Error(t("composer.err_transcribe"));
         if (transcript.trim()) {
           setText((draft) => (draft.trim() ? `${draft.trimEnd()} ${transcript.trim()}` : transcript.trim()));
         }
@@ -430,17 +431,17 @@ export function Composer(props: Props) {
       }
 
       const status = dictation || (await getDictationStatus());
-      if (!status) throw new Error(t("cmpVoiceUnavailable"));
+      if (!status) throw new Error(t("composer.err_dictation_unavailable"));
       if (!status.supported || !status.model_verified || !status.test_passed) {
         props.onConfigureVoiceInput?.();
         return;
       }
-      setDictationBusy(t("cmpStartingMic"));
+      setDictationBusy(t("composer.starting_mic"));
       const recording = await startDictation();
-      if (!recording?.recording) throw new Error(t("cmpMicFailed"));
+      if (!recording?.recording) throw new Error(t("composer.err_mic_start"));
       setDictation(recording);
     } catch (error) {
-      setDictationError(error instanceof Error ? error.message : t("cmpVoiceUnavailable"));
+      setDictationError(error instanceof Error ? error.message : t("composer.err_dictation_unavailable"));
       const status = await getDictationStatus();
       if (status) setDictation(status);
     } finally {
@@ -555,7 +556,7 @@ export function Composer(props: Props) {
         <textarea
           ref={textareaRef}
           className="w-full block px-3.5 pt-3.5 pb-1.5 text-[14.5px]"
-          placeholder={props.placeholder || t("composerPlaceholder")}
+          placeholder={props.placeholder || t("composer.placeholder")}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={onKey}
@@ -579,11 +580,11 @@ export function Composer(props: Props) {
               <>
                 <div className="fixed inset-0 z-30" onClick={() => setAttachMenuOpen(false)} />
                 <div className="absolute z-40 bottom-full mb-1 left-0 min-w-[180px] rounded-xl border border-line bg-panel shadow-2xl py-1.5">
-                  {attachItem("image", t("cmpPhotoOrImage"), () => pickFiles("image/*"))}
+                  {attachItem("image", t("composer.attach_image"), () => pickFiles("image/*"))}
                   {attachItem("file", "PDF", () => pickFiles("application/pdf,.pdf"))}
                   {attachItem(
                     "fileCode",
-                    t("cmpOtherFiles"),
+                    t("composer.attach_other"),
                     () => pickFiles("text/*,.md,.csv,.json,.yaml,.yml,.log,.py,.ts,.tsx,.js,.rs,.go,.toml"),
                   )}
                 </div>
@@ -680,12 +681,12 @@ export function Composer(props: Props) {
               title={
                 dictationBusy ||
                 (dictation?.recording
-                  ? t("cmpStopAndTranscribe")
+                  ? t("composer.voice.stop_transcribe")
                   : voiceReady
-                    ? t("cmpStartLocalDictation")
-                    : t("cmpConfigVoice"))
+                    ? t("composer.voice.start_dictation")
+                    : t("composer.voice.configure"))
               }
-              aria-label={dictation?.recording ? t("cmpStopDictation") : voiceReady ? t("cmpStartDictation") : t("cmpConfigVoice")}
+              aria-label={dictation?.recording ? t("composer.voice.stop_dictation") : voiceReady ? t("composer.voice.start_dictation_btn") : t("composer.voice.configure")}
               aria-disabled={!voiceReady && !dictation?.recording}
             >
               <Icon name={dictation?.recording ? "stop" : "mic"} size={16} />
@@ -707,7 +708,7 @@ export function Composer(props: Props) {
               }
               onClick={submit}
               disabled={!props.connected || !!dictation?.recording || !!dictationBusy}
-              title={needsModel ? t("cmpConnectModel") : undefined}
+              title={needsModel ? t("composer.connect_to_send") : undefined}
               aria-label="Send"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -742,7 +743,7 @@ function UsageChip({
   modelLabels?: Record<string, string>;
 }) {
   // `tr`，不是 `t` —— 下面 byModel 那个 map 把每个模型的用量解构成 `t`，叫 t 会被遮蔽。
-  const tr = useT();
+  const { t: tr } = useTranslation();
   const [open, setOpen] = useState(false);
   const total = totalTokens(usage);
   const pct = contextWindow
@@ -751,7 +752,7 @@ function UsageChip({
   // Settings can hide the bar; without a known window there is nothing to fill either.
   const showBar = pct !== null && contextBar === true;
   const labelFor = (id: string) =>
-    id === "unknown" ? tr("usageUnknownModel") : modelLabels?.[id] || shortModel(id);
+    id === "unknown" ? tr("usage.unknown_model") : modelLabels?.[id] || shortModel(id);
   // One field per line, session-summed (owner ask 2026-07-28). Values are cumulative
   // across the whole session, never just the last turn; "Input" is the fresh
   // (uncached) share — the cached share sits in the cache rows at its own price.
@@ -771,8 +772,8 @@ function UsageChip({
         aria-label="Token usage"
         title={
           showBar
-            ? tr("usageChipTitleBar")(pct as number, formatTokens(total))
-            : tr("usageChipTitlePlain")(formatTokens(total))
+            ? tr("usage.chip_title_bar", { pct: pct as number, total: formatTokens(total) })
+            : tr("usage.chip_title_plain", { total: formatTokens(total) })
         }
         data-testid="usage-chip"
       >
@@ -810,12 +811,12 @@ function UsageChip({
                   />
                 </div>
                 <div className="mt-1 text-[11.5px] text-muted tabular-nums">
-                  {tr("usageOfWindow")(formatTokens(usage.context), formatTokens(contextWindow), pct as number)}
+                  {tr("usage.of_window", { used: formatTokens(usage.context), window: formatTokens(contextWindow), pct: pct as number })}
                 </div>
               </div>
             ) : usage.context > 0 ? (
               <div className="mb-2.5 text-[11.5px] text-muted tabular-nums">
-                {tr("usageInContextNow")(formatTokens(usage.context))}
+                {tr("usage.in_context_now", { n: formatTokens(usage.context) })}
               </div>
             ) : null}
             <div className="text-[10.5px] uppercase tracking-[0.06em] text-faint font-semibold mb-1">
@@ -834,22 +835,22 @@ function UsageChip({
                   <div className="mt-0.5 flex flex-col gap-0.5">
                     {t.cache_read + t.cache_write > 0 ? (
                       <>
-                        {stat(tr("usageUncachedInput"), t.input)}
-                        {stat(tr("usageCacheReads"), t.cache_read)}
-                        {stat(tr("usageCacheWrites"), t.cache_write)}
-                        {stat(tr("usageTotalInput"), t.input + t.cache_read + t.cache_write)}
+                        {stat(tr("usage.uncached_input"), t.input)}
+                        {stat(tr("usage.cache_reads"), t.cache_read)}
+                        {stat(tr("usage.cache_writes"), t.cache_write)}
+                        {stat(tr("usage.total_input"), t.input + t.cache_read + t.cache_write)}
                       </>
                     ) : (
-                      stat(tr("usageInput"), t.input)
+                      stat(tr("usage.input"), t.input)
                     )}
-                    {stat(tr("usageOutput"), t.output)}
+                    {stat(tr("usage.output"), t.output)}
                   </div>
                 </div>
               ))}
             </div>
             <div className="mt-2 pt-2 border-t border-line flex items-baseline justify-between text-[11.5px]">
               <span className="text-faint">Total</span>
-              <span className="text-ink tabular-nums">{tr("usageNTokens")(formatTokens(total))}</span>
+              <span className="text-ink tabular-nums">{tr("usage.n_tokens", { n: formatTokens(total) })}</span>
             </div>
             {model && !modelLabels?.[model] && contextWindow === undefined && (
               <div className="mt-1 text-[10.5px] text-faint leading-snug">
@@ -877,7 +878,7 @@ function ModeMenu({
   unattended?: boolean;
   onUnattendedChange?: (on: boolean) => void;
 }) {
-  const t = useT();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const options = permissionOptions(t);
   const current = options.find((o) => o.value === mode);
@@ -894,7 +895,7 @@ function ModeMenu({
         aria-label="Mode"
         title={
           `Mode: ${current?.label || mode}` +
-          (unattended ? t("cmpApprovalsInboxNote") : "")
+          (unattended ? t("composer.approvals_inbox_note") : "")
         }
       >
         {current?.label || mode}

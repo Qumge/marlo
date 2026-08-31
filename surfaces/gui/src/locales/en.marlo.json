@@ -3,7 +3,11 @@
     "starting": "Starting Marlo…"
   },
   "sidebar": {
-    "sign_in": "Sign in to Marlo"
+    "sign_in": "Sign in to Marlo",
+    "new_runs": "{{count}} new runs",
+    "new_runs_one": "{{count}} new run",
+    "new_runs_failed_suffix": " — the latest failed",
+    "group_persona": "Persona"
   },
   "rail": {
     "empty_state": "For longer multi-step tasks, progress will appear here while Marlo plans, uses tools, waits for approval, and produces artifacts.",
@@ -88,5 +92,36 @@
     "connections_sub": "What Marlo can use on your behalf. Connected ones come first.",
     "advanced_tool_servers": "Advanced: tool servers",
     "advanced_tool_servers_sub": "Connect an MCP server — extra tools, shared across all your coworkers."
+  },
+  "intro": {
+    "greeting": "What takes most of your week?",
+    "lede": "Tell me the part you least want to be doing — I'll take a run at it. Or just say what you need below.",
+    "task_tidy_title": "Sort out a folder that's become a mess",
+    "task_tidy_sub": "I'll propose names and an order, and wait for your go-ahead",
+    "tidy_prompt": "Look through this folder, tell me how you'd rename and organise the files so they make sense, and do it once I say yes.",
+    "task_write_title": "Write one document from a folder of files",
+    "task_write_sub": "I'll read them and draft it for you to edit",
+    "write_prompt": "Read the files in this folder and write me one document that pulls the important parts together. Save it in the folder."
+  },
+  "composer": {
+    "mode": {
+      "auto": "Full access",
+      "auto_desc": "Run everything without asking"
+    },
+    "approvals_inbox_note": " · approvals go to the Inbox"
+  },
+  "usage": {
+    "unknown_model": "Unknown model",
+    "chip_title_bar": "Context window {{pct}}% full · {{total}} tokens this session",
+    "chip_title_plain": "Token usage this session: {{total}}",
+    "of_window": "{{used}} of {{window}} · {{pct}}%",
+    "in_context_now": "In context now: {{n}} tokens",
+    "uncached_input": "Uncached input",
+    "cache_reads": "Cache reads",
+    "cache_writes": "Cache writes",
+    "total_input": "Total input",
+    "input": "Input",
+    "output": "Output",
+    "n_tokens": "{{n}} tokens"
   }
 }

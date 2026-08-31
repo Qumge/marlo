@@ -6,7 +6,28 @@
     "dismiss": "忽略"
   },
   "sidebar": {
-    "sign_in": "登录 Marlo"
+    "sign_in": "登录 Marlo",
+    "new_runs": "{{count}} 次新运行",
+    "new_runs_failed_suffix": " —— 最近一次失败",
+    "status_working": "正在干活",
+    "status_sleeping": "休眠中（到点会自己醒）",
+    "session_actions": "本次会话的动作",
+    "confirm_delete": "再点一次就永久删除",
+    "scheduled": "定时",
+    "group_and_filter_short": "分组和筛选",
+    "group_and_filter": "分组和筛选对话",
+    "group_chrono": "按时间",
+    "filter_all_hint": "一个都不勾就是全部显示。",
+    "no_projects_yet": "还没有项目 —— 用上面的 + 新建一个。",
+    "no_project_convos": "这个项目还没有对话。",
+    "no_matching": "没有匹配的对话",
+    "no_conversations": "还没有对话",
+    "dock": "固定侧栏",
+    "start_with_persona": "指定一个角色开始",
+    "choose_persona": "选一个角色",
+    "start_session_as": "以谁的身份开始会话",
+    "group_persona": "按角色",
+    "show_n_more": "还有 {{n}} 条"
   },
   "nav": {
     "connectors": "外部连接"
@@ -341,6 +362,53 @@
     "try_a_task": "试一件事"
   },
   "composer": {
-    "placeholder": "说说你要什么…（也可以把文件拖进来）"
+    "placeholder": "说说你要什么…（也可以把文件拖进来）",
+    "mode": {
+      "auto": "完全放手",
+      "auto_desc": "什么都不问，直接做",
+      "discuss": "只聊聊",
+      "discuss_desc": "只讨论，不改文件也不执行命令",
+      "interactive": "动手前先问我",
+      "interactive_desc": "改文件、执行命令前先问你"
+    },
+    "approvals_inbox_note": " · 审批会进收件箱",
+    "err_transcribe": "转写失败。",
+    "err_dictation_unavailable": "语音口述不可用。",
+    "err_mic_start": "麦克风启动失败。",
+    "voice": {
+      "start_dictation": "开始本地语音口述",
+      "configure": "在设置里配置语音输入",
+      "stop_dictation": "停止口述",
+      "start_dictation_btn": "开始口述"
+    },
+    "connect_to_send": "连接一个模型才能发送"
+  },
+  "intro": {
+    "greeting": "你每周的时间花在哪儿？",
+    "lede": "挑那件你最不想做的告诉我 —— 我来试试。也可以直接在下面说你要什么。",
+    "task_folder_title": "看看一个文件夹里都有什么",
+    "task_folder_sub": "我读一遍，把要紧的讲给你听",
+    "folder_prompt": "看看这个文件夹里都有什么，把要紧的讲给我听。",
+    "task_tidy_title": "整理一个已经乱掉的文件夹",
+    "task_tidy_sub": "我先给你看怎么改名、怎么排，你点头我再动手",
+    "tidy_prompt": "看看这个文件夹，告诉我你打算怎么给这些文件改名、怎么归类，我同意了你再动手。",
+    "task_folder_cta": "选个文件夹 →",
+    "task_write_title": "把一堆文件写成一份文档",
+    "task_write_sub": "我读完起草，你来改",
+    "write_prompt": "读一遍这个文件夹里的文件，写成一份文档，把重要的内容整合起来，存到这个文件夹里。"
+  },
+  "usage": {
+    "unknown_model": "未知模型",
+    "chip_title_bar": "上下文窗口已用 {{pct}}% · 本次会话 {{total}} tokens",
+    "chip_title_plain": "本次会话 Token 用量：{{total}}",
+    "of_window": "{{used}} / {{window}} · {{pct}}%",
+    "in_context_now": "当前上下文中：{{n}} tokens",
+    "uncached_input": "未命中缓存",
+    "cache_reads": "读缓存",
+    "cache_writes": "写缓存",
+    "total_input": "输入合计",
+    "input": "输入",
+    "output": "输出",
+    "n_tokens": "{{n}} tokens"
   }
 }
