@@ -69,7 +69,12 @@ EXCLUDE_DIRS = {"dist", "build", "node_modules", "__pycache__"}
 # through five releases: a system prompt asking for your Documents folder on
 # behalf of a product you never installed is what malware looks like, and no
 # check reached the file.
-SUFFIXES = {".ts", ".tsx", ".css", ".rs", ".py", ".plist"}
+# .json 是 2026-08-31 补的。i18n 迁到上游的 locales/*.json 之后，界面上每一条文案
+# 都住在 JSON 里，而这个后缀表当时不含 .json —— 上游那两份各带 38 处 OpenWorker，
+# 会一路绿灯发给用户。我们原来的 en.ts / zh.ts 是 .ts，一直被扫着：这份覆盖是
+# 【迁移静默弄丢的】，不是本来就没有。和 .plist 那条是同一类错误 —— 判据停在了
+# 文件格式的边界上，而用户读到的字符串不认识那条边界。
+SUFFIXES = {".ts", ".tsx", ".css", ".rs", ".py", ".plist", ".json"}
 
 
 def _is_self(path: Path) -> bool:
@@ -117,7 +122,11 @@ EXEMPT_DIRS = {"connectors"}
 # 【残余风险，以及它是怎么被堵住的】有人可能在【译文】里写进一个原文没有的品牌名。
 # check_i18n_text.mjs 因此同时检查【反方向】：表里的键必须在源码里真实存在。
 # 键都是真的，值就是那个键的译文，而不是一段没人看过的新文案。
-EXEMPT_FILES = {"zh-text.ts"}
+# tauri.conf.json 是 2026-08-31 和 .json 一起进来的，理由和 zh-text.ts 相反：
+# 那份【必须】留着上游的名字。品牌走 overlay（tauri.marlo.conf.json，见 21cd141），
+# 上游那份保持字节相同，本文件末尾的 check_tauri_overlay() 正是在守这一条。把它
+# 改名会让那个检查红，而且下次合并会平白多出一处冲突 —— 两个检查会打起来。
+EXEMPT_FILES = {"zh-text.ts", "tauri.conf.json"}
 
 # 白名单管不到的一类：字符串本身合法，但【用错了地方】。
 #
@@ -129,6 +138,11 @@ EXEMPT_FILES = {"zh-text.ts"}
 # 路径/命令/常量独立出现。
 SENTENCE_LEAKS = [
     re.compile(r"[a-z]{3,}\s+openworker-(?:server|desktop)\s+[a-z]{2,}"),
+    # 【第二条是 CJK 盲区，2026-08-31 补】上面那条要求进程名两边是英文单词，所以
+    # 它只看得见英文那一句。同一条文案的中文版（"仅在 openworker-server 运行时执行"）
+    # 从 0.4.0 中文界面上线起就一直在，而守卫一路是绿的 —— 判据停在了语言边界上，
+    # 而用户读到的句子不认识那条边界。和 .json 那条是同一类错误。
+    re.compile(r"[\u4e00-\u9fff]\s*openworker-(?:server|desktop)\s*[\u4e00-\u9fff]"),
 ]
 
 # 两个检查器互查会打起来：check_i18n.py 的白名单里列着一串专名（含 OpenWorker），

@@ -41,6 +41,15 @@ jobs:
           pip install -e ".[messaging,dev,bedrock]" -c requirements-ci.txt
       - name: Test
         run: pytest tests -q
+      # 【为什么现在才进 CI】check_branding.py 写好之后从来不在任何 workflow 里 ——
+      # 和 check_i18n_text.mjs 当年一样，手动的守卫等于没有守卫（见 gui-unit 那段）。
+      # 2026-08-31 界面文案全搬进 locales/*.json，而那之前这个守卫连 .json 都不扫：
+      # 两个洞叠起来，上游那 51 条 OpenWorker 会一路绿灯发给用户。补了后缀就得把它
+      # 接上 CI，否则下一个人还是要靠记得手动跑。
+      #
+      # 只要 Python，不要 npm，所以放在这个 job 里。
+      - name: 品牌 — 界面上有没有跑出上游的产品名
+        run: python3 packaging/check_branding.py
 
   gui-unit:
     runs-on: ubuntu-latest
