@@ -262,7 +262,8 @@
     "table_truncated": "显示前 {{max}} 行，共 {{total}} 行。",
     "board_chip_blocked_other": "{{count}} 个受阻",
     "board_chip_review_other": "{{count}} 个待审",
-    "board_chip_active_other": "{{count}} 个进行中"
+    "board_chip_active_other": "{{count}} 个进行中",
+    "open_board": "打开看板"
   },
   "settings": {
     "tab": {
@@ -384,7 +385,8 @@
     "sign_in": "登录 OpenWorker Cloud",
     "checking": "正在检查 OpenWorker Cloud 登录状态…",
     "sign_in_first": "请先登录 OpenWorker Cloud",
-    "sign_in_oneclick": "登录 OpenWorker Cloud 启用一键连接 —— 或在下方添加令牌"
+    "sign_in_oneclick": "登录 OpenWorker Cloud 启用一键连接 —— 或在下方添加令牌",
+    "signin_unlocks_default": "登录后就能一键连接 —— 也可以切到「手动」，不登录也能用。"
   },
   "update": {
     "ready": "Marlo v{{version}} 已准备好安装。",

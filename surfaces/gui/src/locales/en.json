@@ -269,7 +269,8 @@
     "board_chip_review_one": "{{count}} review",
     "board_chip_review_other": "{{count}} review",
     "board_chip_active_one": "{{count}} active",
-    "board_chip_active_other": "{{count}} active"
+    "board_chip_active_other": "{{count}} active",
+    "open_board": "Open the board"
   },
   "settings": {
     "tab": {
@@ -392,7 +393,8 @@
     "sign_in": "Sign in to OpenWorker Cloud",
     "checking": "Checking OpenWorker Cloud sign-in…",
     "sign_in_first": "Sign in to OpenWorker Cloud first",
-    "sign_in_oneclick": "Sign in to OpenWorker Cloud for one-click — or add a token below"
+    "sign_in_oneclick": "Sign in to OpenWorker Cloud for one-click — or add a token below",
+    "signin_unlocks_default": "Sign-in unlocks one-click connects — or switch to Manual, which works without it."
   },
   "update": {
     "ready": "Marlo v{{version}} is ready to install.",
