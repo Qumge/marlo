@@ -311,21 +311,24 @@ function TaskDetail({
           // Deleted (or a stale reopen target): "Loading…" forever is a trap —
           // fall back to the overview (owner-hit 2026-07-20).
           onBack();
-          return;
+          return false;
         }
         setTask(d.task);
         setRuns(d.runs || []);
         setSeenMark((cur) => (cur === null ? d.task?.seen_runs_at ?? 0 : cur));
+        return true;
       })
-      .catch(() => {});
+      .catch(() => false);
   useEffect(() => {
     setSeenMark(null);
-    refresh();
-    // Opening the detail IS reading it: advance the seen mark and nudge the
-    // sidebar so the badge clears immediately (UX-023).
-    markAutomationSeen(id)
-      .then(() => announceAutomationsChanged())
-      .catch(() => {});
+    void refresh().then((loaded) => {
+      if (!loaded) return;
+      // Opening the detail IS reading it: capture its pre-open mark first,
+      // then advance the stored mark so the sidebar badge clears (UX-023).
+      markAutomationSeen(id)
+        .then(() => announceAutomationsChanged())
+        .catch(() => {});
+    });
   }, [id]);
 
   if (!task)
