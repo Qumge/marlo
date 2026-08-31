@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useT } from "../../legacyI18n";
+import { useTranslation } from "react-i18next";
 import {
   connectManaged,
   disconnectAccount,
@@ -20,7 +20,7 @@ import { FOOT, GRP, GRP_H, PILL_ACCENT, ROW, TAG_ACCENT, XBTN } from "./ui";
 // always available underneath — signed out or in, local-only stays first-class.
 
 export function AccountsDetail({ c, cloud, slack: _slack, onChanged }: DetailProps) {
-  const t = useT();
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [showManual, setShowManual] = useState(false);
   const accounts = (c.accounts ?? []) as AccountRow[];
@@ -49,7 +49,7 @@ export function AccountsDetail({ c, cloud, slack: _slack, onChanged }: DetailPro
                 </span>
               </>
             ) : (
-              <span>{t("connNotConnected")}</span>
+              <span>{t("connector.not_connected")}</span>
             )}
           </div>
         </div>
@@ -60,17 +60,17 @@ export function AccountsDetail({ c, cloud, slack: _slack, onChanged }: DetailPro
           disabled={busy}
           title={
             c.managed && !cloud?.signed_in
-              ? t("cxSignInOrToken")
+              ? t("cloud.sign_in_oneclick")
               : ""
           }
         >
-          {busy ? t("connCheckBrowser2") : t("cxPlusAddAccount")}
+          {busy ? t("cloud.check_browser") : t("gmail.add_account")}
         </button>
       </div>
 
       {accounts.length > 0 && (
         <>
-          <div className={GRP_H + " !mt-0"}>{t("connAccounts")}</div>
+          <div className={GRP_H + " !mt-0"}>{t("gmail.accounts")}</div>
           <div className={GRP} data-testid="accounts-group">
             {accounts.map((a) => (
               <Row key={a.account_id} connector={c.name} a={a} onChanged={onChanged} />
@@ -82,7 +82,7 @@ export function AccountsDetail({ c, cloud, slack: _slack, onChanged }: DetailPro
       {(showManual || !c.connected) && (
         <>
           <div className={GRP_H + (accounts.length ? "" : " !mt-0")}>
-            {c.managed ? t("cxAddManually") : t("cxAddAccount")}
+            {c.managed ? t("accounts.add_manually") : t("accounts.add_an_account")}
           </div>
           <div className={GRP} data-testid="accounts-manual-add">
             <div className="px-1.5 py-1">
@@ -117,7 +117,7 @@ function Row({
   a: AccountRow;
   onChanged: () => void;
 }) {
-  const t = useT();
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   return (
     <div className={ROW} data-testid={`account-${a.account_id}`}>
@@ -128,7 +128,7 @@ function Row({
             {a.account_id}
           </span>
         )}
-        {a.default && <span className={TAG_ACCENT}>{t("connDefault")}</span>}
+        {a.default && <span className={TAG_ACCENT}>{t("connector.default")}</span>}
       </span>
       {!a.default && (
         <button
@@ -139,12 +139,12 @@ function Row({
             onChanged();
           }}
         >
-          {t("mtMakeDefault")}
+          {t("connector.make_default")}
         </button>
       )}
       <button
         className={XBTN}
-        title={t("connDisconnectAccount")}
+        title={t("calendar.disconnect_account_title")}
         data-testid={`account-disconnect-${a.account_id}`}
         disabled={busy}
         onClick={async () => {
