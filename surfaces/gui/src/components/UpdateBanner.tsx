@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useT } from "../legacyI18n";
+import { useTranslation } from "react-i18next";
 import {
   checkForUpdate,
   clearPendingUpdate,
@@ -42,7 +42,7 @@ const RETRY_MS = [60_000, 5 * 60_000];
 type Phase = "downloading" | "ready" | "fallback" | "installing" | "error";
 
 export function UpdateBanner() {
-  const t = useT();
+  const { t } = useTranslation();
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
   const [phase, setPhase] = useState<Phase>("downloading");
   const [err, setErr] = useState("");
@@ -123,13 +123,13 @@ export function UpdateBanner() {
       role="status"
       data-testid="update-banner"
     >
-      <div className="text-[13px] font-semibold">{t("uiUpdateAvailable")}</div>
+      <div className="text-[13px] font-semibold">{t("update.banner_title")}</div>
       <div className="text-[12px] text-muted mt-0.5">
-        {t("ubReadyToInstall")(update.version)}
+        {t("update.ready", { version: update.version })}
       </div>
       {phase === "error" && (
         <div className="text-[11.5px] text-warnInk mt-1.5">
-          {t("ubInstallFailed")}
+          {t("update.install_failed")}
           {err && <div className="mt-1 text-faint break-words">{err}</div>}
         </div>
       )}
@@ -140,7 +140,7 @@ export function UpdateBanner() {
           disabled={busy}
           data-testid="update-install"
         >
-          {busy ? "Downloading…" : t("ubRestartToUpdate")}
+          {busy ? "Downloading…" : t("update.restart_to_update")}
         </button>
         <button
           className="px-2 py-1.5 text-[12.5px] text-faint hover:text-muted"
@@ -155,7 +155,7 @@ export function UpdateBanner() {
           disabled={phase === "installing"}
           data-testid="update-later"
         >
-          {t("uiLater")}
+          {t("update.later")}
         </button>
       </div>
     </div>

@@ -23,6 +23,11 @@ test("collapse hides the sidebar and reclaims the width; reveal button docks it 
 test("⌘B toggles the sidebar collapse", async ({ page }) => {
   await page.goto("/");
   const app = page.locator(".app");
+  // 等 app 真的挂上来再按键。上游这一行也没有，而 ⌘B 的监听器是 App 的 useEffect
+  // 注册的：goto 之后立刻按键有可能落在注册之前。i18n 初始化把首屏渲染推后一拍
+  // （main.tsx 的 initI18n().finally），这个本来就存在的竞态才稳定复现。
+  // 上面那个用例等的也是它。
+  await expect(page.locator(".sidebar")).toBeVisible();
   await page.keyboard.press("Meta+b");
   await expect(app).toHaveClass(/nav-collapsed/);
   await page.keyboard.press("Meta+b");

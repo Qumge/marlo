@@ -3,10 +3,11 @@
 // assertions keep working; without this, t("key") renders the key literal.
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
-import { en } from "./localeOverlay"; // Marlo overlay，见该文件
+import { en, zh } from "./localeOverlay"; // Marlo overlay，见该文件
 
 i18n.use(initReactI18next).init({
-  resources: { en: { translation: en } },
+  // zh 也装上：no-english 那把尺子要切到中文再扫 DOM（见 src/testLocale.ts）。
+  resources: { en: { translation: en }, zh: { translation: zh } },
   lng: "en",
   fallbackLng: "en",
   interpolation: { escapeValue: false },

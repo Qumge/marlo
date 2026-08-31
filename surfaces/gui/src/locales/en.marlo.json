@@ -67,5 +67,26 @@
     "scope": {
       "save_skill": "saves to Skills"
     }
+  },
+  "app": {
+    "beta": "BETA"
+  },
+  "connector": {
+    "use_imap_instead": "Use Email (IMAP) →",
+    "waiting_upstream": "Waiting on the provider",
+    "n_workspaces_relay": "{{count}} workspaces · relay",
+    "n_workspaces_relay_one": "{{count}} workspace · relay",
+    "group_mail": "Mail",
+    "group_calendar": "Calendar",
+    "group_chat": "Chat",
+    "group_files": "Files & drives",
+    "group_web": "Web",
+    "group_other": "Everything else"
+  },
+  "integrations": {
+    "connections_title": "Connections",
+    "connections_sub": "What Marlo can use on your behalf. Connected ones come first.",
+    "advanced_tool_servers": "Advanced: tool servers",
+    "advanced_tool_servers_sub": "Connect an MCP server — extra tools, shared across all your coworkers."
   }
 }

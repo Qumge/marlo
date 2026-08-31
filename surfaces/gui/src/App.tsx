@@ -72,7 +72,7 @@ import { DirectoryRequestCard } from "./components/DirectoryRequestCard";
 import { ConnectorRequestCard } from "./components/ConnectorRequestCard";
 import { PlanCard } from "./components/PlanCard";
 import { WorkspaceTrustPrompt } from "./components/WorkspaceTrustPrompt";
-import { t as tr, useT } from "./legacyI18n";
+import { useTranslation } from "react-i18next";
 
 const newId = () =>
   (crypto as any).randomUUID ? crypto.randomUUID().slice(0, 12) : Math.random().toString(36).slice(2, 14);
@@ -161,7 +161,7 @@ function fallbackWorkspace(current: string | null, projects: RecentWorkspace[]):
 }
 
 export function App() {
-  const t = useT();
+  const { t } = useTranslation();
   const qumgeAccount = useQumgeAccount();
   const [workspace, setWorkspace] = useState<string | null>(null);
   const [branch, setBranch] = useState<string | null>(null);
@@ -747,13 +747,13 @@ export function App() {
           break;
         case "turn_end":
           if (d.status === "max_iterations_exceeded")
-            setItems((p) => [...p, { kind: "notice", tone: "warn", text: t("appMaxIterations") }]);
+            setItems((p) => [...p, { kind: "notice", tone: "warn", text: t("app.notice.max_iterations") }]);
           break;
         case "model_changed":
           // Mid-session switch (server-applied): update the header fact and drop the
           // persisted marker into the live transcript (replay renders it from history).
           if (d.model) setModel(d.model);
-          setItems((p) => [...p, { kind: "notice", tone: "info", text: d.text || t("appModelSwitched") }]);
+          setItems((p) => [...p, { kind: "notice", tone: "info", text: d.text || t("app.notice.model_switched") }]);
           break;
         case "memory_saved":
           // §5.1 save notice — inline in the transcript, where the user is already
@@ -780,7 +780,7 @@ export function App() {
           // Auto-compaction marker (OPE-27): outbound-only — the transcript stays intact,
           // this divider just shows where the model's memory was summarized.
           // 事件回调不在渲染里，用模块级的 t()（useT 是给组件订阅语言切换用的）。
-          setItems((p) => [...p, { kind: "notice", tone: "info", text: d.text || tr("appContextCompacted") }]);
+          setItems((p) => [...p, { kind: "notice", tone: "info", text: d.text || t("app.notice.context_compacted") }]);
           break;
         case "interrupted":
           flushPartialStream();
@@ -796,7 +796,7 @@ export function App() {
         case "input_rejected":
           setItems((p) => [
             ...p,
-            { kind: "notice", tone: "warn", text: d.error || t("appMessageRejected") },
+            { kind: "notice", tone: "warn", text: d.error || t("app.notice.input_rejected") },
           ]);
           break;
         case "turn_done":
@@ -1234,7 +1234,7 @@ export function App() {
   const subtitleParts = [modelDisplay];
   if (isProjectScoped(personaOf(agent)) && workspace) subtitleParts.push(baseName(workspace));
   const activeInfo = sessions.find((s) => s.session_id === sessionId);
-  const activeTitle = activeInfo?.title || t("newSession");
+  const activeTitle = activeInfo?.title || t("sidebar.new_session");
 
   const desktop = isTauri();
   // Dev-only: `?overlay=1` simulates the desktop overlay layout in the browser (adds the
@@ -1258,7 +1258,7 @@ export function App() {
         {overlay && (
           <div className="titlebar-drag" data-tauri-drag-region>
             <span className="titlebar-brand brand-wordmark">
-              <Icon name="logo" size={13} className="mark" /> Marlo<span className="beta-tag">{t("beta")}</span>
+              <Icon name="logo" size={13} className="mark" /> Marlo<span className="beta-tag">{t("app.beta")}</span>
             </span>
           </div>
         )}
@@ -1273,8 +1273,8 @@ export function App() {
           <Icon name="logo" size={38} />
         </div>
         <div className="boot-text">
-          {resumedExisting ? t("appRestoring") : "Starting Marlo…"}
-          <span className="beta-tag">{t("beta")}</span>
+          {resumedExisting ? t("boot.restoring") : "Starting Marlo…"}
+          <span className="beta-tag">{t("app.beta")}</span>
         </div>
       </div>
     );
@@ -1306,7 +1306,7 @@ export function App() {
         >
           <div className="flex items-center gap-2 text-[12.5px] font-semibold">
             <span className="w-[7px] h-[7px] rounded-full bg-faint toast-pulse" />
-            {t("appAutomationStarted")}
+            {t("toast.automation_started")}
           </div>
           <div className="text-[12.5px] text-muted mt-0.5 ml-[15px] truncate">
             {runToast.title} · {runToast.time} run
@@ -1320,12 +1320,12 @@ export function App() {
                 setRunToast(null);
               }}
             >
-              {t("appViewRun")}
+              {t("toast.view_run")} ›
             </button>
             <button
               className="text-[12px] text-faint px-0.5"
               data-testid="toast-dismiss"
-              title={t("uiDismiss")}
+              title={t("common.dismiss")}
               onClick={() => setRunToast(null)}
             >
               ✕
@@ -1352,8 +1352,8 @@ export function App() {
           className="nav-reveal-btn"
           onClick={toggleNav}
           onMouseEnter={() => setNavPeek(true)}
-          title={t("appShowSidebarKb")}
-          aria-label={t("appShowSidebar")}
+          title={t("topbar.show_sidebar")}
+          aria-label={t("topbar.show_sidebar_short")}
         >
           <Icon name="sidebar" size={16} />
         </button>
@@ -1432,8 +1432,8 @@ export function App() {
             startNewSession();
             prefillComposer(
               description
-                ? tr("skBuildFor")(description)
-                : tr("skBuildPrompt"),
+                ? t("app.build_skill_prefill", { description })
+                : t("app.build_skill_prefill_empty"),
             );
           }}
         />
@@ -1474,24 +1474,24 @@ export function App() {
                 <button
                   className="topbar-icon-btn"
                   onClick={toggleNav}
-                  aria-label={t("appShowSidebar")}
-                  title={t("appShowSidebarKb")}
+                  aria-label={t("topbar.show_sidebar_short")}
+                  title={t("topbar.show_sidebar")}
                 >
                   <Icon name="sidebar" size={16} />
                 </button>
                 <button
                   className="topbar-icon-btn"
                   onClick={() => startNewSession()}
-                  aria-label={t("newSession")}
-                  title={t("newSession")}
+                  aria-label={t("sidebar.new_session")}
+                  title={t("sidebar.new_session")}
                 >
                   <Icon name="plus" size={16} />
                 </button>
                 <button
                   className="topbar-icon-btn"
                   onClick={() => setSearchOpen(true)}
-                  aria-label={t("search")}
-                  title={t("search")}
+                  aria-label={t("sidebar.search")}
+                  title={t("sidebar.search")}
                 >
                   <Icon name="search" size={16} />
                 </button>
@@ -1527,10 +1527,10 @@ export function App() {
                 className="topbar-artifacts-btn"
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => setRailHidden(false)}
-                title={t("showProducedFiles")}
+                title={t("topbar.show_artifacts")}
               >
                 <Icon name="file" size={14} />
-                <span>{t("artifacts")}</span>
+                <span>{t("topbar.artifacts")}</span>
                 <span className="topbar-artifacts-count">{artifactCount}</span>
               </button>
             )}
@@ -1541,8 +1541,8 @@ export function App() {
                 className="topbar-icon-btn"
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => setRailHidden((h) => !h)}
-                aria-label={railHidden ? t("appShowSidePanel") : t("appHideSidePanel")}
-                title={railHidden ? t("appShowSidePanel") : t("appHideSidePanel")}
+                aria-label={railHidden ? t("topbar.show_side_panel") : t("topbar.hide_side_panel")}
+                title={railHidden ? t("topbar.show_side_panel") : t("topbar.hide_side_panel")}
               >
                 <Icon name="sidebarRight" size={16} />
               </button>
@@ -1590,11 +1590,11 @@ export function App() {
                   <div className="hero">
                     <h1 className="greeting">
                       <span className="mark">✦</span>
-                      {agent === "chat" ? t("appHowCanIHelp") : t("appLetsBuild")}
+                      {agent === "chat" ? t("hero.chat_greeting") : t("hero.build_greeting")}
                     </h1>
                     {needsWorkspace(agent) && (
                       <div className="suggestions">
-                        <div className="suggest-head">{t("appTryATask")}</div>
+                        <div className="suggest-head">{t("hero.try_a_task")}</div>
                         {SUGGESTIONS.map((s, i) => (
                           <div className="suggest" key={i} onClick={() => workspace && send(s.text)}>
                             <span className="ico">{s.ico}</span>
@@ -1628,7 +1628,7 @@ export function App() {
                   )}
                   {/* Compaction runs between provider turns (nothing streams during it), so
                       the transient takes over the waiting slot with a specific label. */}
-                  {running && compacting && <WaitingForAgent label={t("appCompacting")} />}
+                  {running && compacting && <WaitingForAgent label={t("app.compacting_context")} />}
                   {running &&
                     !compacting &&
                     !reasoningStream &&
@@ -1658,7 +1658,7 @@ export function App() {
                   onClick={followLatest}
                 >
                   <Icon name="chevronDown" size={13} />
-                  {t("appJumpToLatest")}
+                  {t("app.jump_to_latest")}
                 </button>
               </div>
             )}
@@ -1700,7 +1700,7 @@ export function App() {
                   ? "Ask the coder to build, fix, or explain…  (drop or paste files)"
                   : agent === "chat"
                     ? "Ask anything…  (drop or paste files)"
-                    : t("composerPlaceholder")
+                    : t("composer.placeholder")
               }
               approvalSlot={
                 // Live inline cards are for ATTENDED sessions only; when Unattended the prompt is
@@ -1813,12 +1813,12 @@ function lastItemIsAssistant(items: Item[]): boolean {
 }
 
 function WaitingForAgent({ label }: { label?: string }) {
-  const t = useT();
+  const { t } = useTranslation();
   return (
     <div className="waiting-transcript">
       <div className="waiting-row" aria-live="polite">
         <span className="waiting-spinner" />
-        <span>{label || t("appWaitingForAgent")}</span>
+        <span>{label || t("app.waiting_for_agent")}</span>
       </div>
     </div>
   );

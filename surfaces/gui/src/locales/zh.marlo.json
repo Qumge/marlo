@@ -47,13 +47,26 @@
     "signin_unlocks_default": "登录后就能一键连接 —— 也可以切到「手动」，不登录也能用。"
   },
   "update": {
-    "ready": "Marlo v{{version}} 已准备好安装。"
+    "ready": "Marlo v{{version}} 已准备好安装。",
+    "banner_title": "有新版本",
+    "install_failed": "这次更新没能装上 —— 下次启动会再提示一次。",
+    "later": "稍后"
   },
   "automations": {
     "sub": "Marlo 按计划运行的重复任务。",
     "empty_state": "还没有定时任务 —— 使用上方模板，点击 <strong>+ 新建自动化</strong>，或在会话里直接让 Marlo 做。",
     "server_hint": "只在 Marlo 开着的时候跑 —— 错过的那次会在你下次打开时补上一遍。",
-    "when": "什么时候"
+    "when": "什么时候",
+    "delete_title": "删除这条自动化",
+    "title_placeholder": "标题（比如：每日站会纪要）",
+    "instructions_placeholder": "每次跑的时候做什么？（比如：把今天的日历和待办总结一下。）",
+    "instructions_label": "要做什么",
+    "allowed_without_asking": "不用问就能做的",
+    "allowed_desc": "这个自动化可以直接使用的长期授权 —— 其余的仍然会先问你。",
+    "revoke_title": "这条自动化会重新征求你同意",
+    "runs_desc": "每次运行都是一段真实对话 —— 打开就能看到助手做了什么，还能追问。",
+    "no_runs": "还没有跑过。",
+    "open_run": "打开这次运行的对话"
   },
   "search": {
     "placeholder": "搜索对话",
@@ -64,7 +77,11 @@
   "integrations": {
     "nav_title": "外部连接",
     "tab_connectors": "外部连接",
-    "connectors_title": "外部连接"
+    "connectors_title": "外部连接",
+    "connections_title": "连接",
+    "connections_sub": "Marlo 可以替你用的东西。已连接的排在前面。",
+    "advanced_tool_servers": "高级：工具服务器",
+    "advanced_tool_servers_sub": "接入一个 MCP 服务器 —— 额外的工具，所有同事共用。"
   },
   "access": {
     "add_btn": "加入",
@@ -140,7 +157,17 @@
   "connector": {
     "back_to_connectors": "‹ 外部连接",
     "waiting": "等待中",
-    "unsubscribe_title": "退订这个会话"
+    "unsubscribe_title": "退订这个会话",
+    "use_imap_instead": "改用邮箱（IMAP）→",
+    "waiting_upstream": "等服务商审核",
+    "n_workspaces_relay": "{{count}} 个工作区 · 中继",
+    "group_mail": "邮件",
+    "group_calendar": "日历",
+    "group_chat": "聊天",
+    "group_files": "文件与网盘",
+    "group_web": "网页",
+    "group_other": "其他",
+    "nothing_matches": "没有匹配的。"
   },
   "github": {
     "relay_live": "在线 · 托管中继",
@@ -291,6 +318,29 @@
     }
   },
   "topbar": {
-    "artifacts": "产出"
+    "artifacts": "产出",
+    "show_sidebar": "显示侧边栏（⌘B）",
+    "show_sidebar_short": "显示侧边栏",
+    "show_artifacts": "查看这次对话产出的文件",
+    "show_side_panel": "显示侧栏",
+    "hide_side_panel": "隐藏侧栏"
+  },
+  "app": {
+    "beta": "测试版",
+    "notice": {
+      "max_iterations": "已停止：达到最大轮次。",
+      "model_switched": "已切换模型",
+      "input_rejected": "这条消息被拒绝了。"
+    },
+    "build_skill_prefill_empty": "帮我做一个新技能：（说说这个技能要做什么）",
+    "waiting_for_agent": "等它回话…"
+  },
+  "hero": {
+    "chat_greeting": "有什么可以帮你的？",
+    "build_greeting": "来做点东西吧。",
+    "try_a_task": "试一件事"
+  },
+  "composer": {
+    "placeholder": "说说你要什么…（也可以把文件拖进来）"
   }
 }

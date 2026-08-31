@@ -38,6 +38,23 @@ const ADDITIONS = new Set([
   "access.n_folders", // 文件夹计数：上游这一处不显示数量
   "access.n_folders_one",
   "access.enabled_tap_mute", // 会话内静音的提示：上游措辞不同且没有单独的键
+  "app.beta", // BETA 角标：上游没有
+  "connector.use_imap_instead", // 邮箱 IMAP 的兜底入口：我们的连接页才有
+  "connector.waiting_upstream",
+  "connector.n_workspaces_relay",
+  "connector.n_workspaces_relay_one",
+  // 连接列表的分组（ac6f51a：按用户认得的东西分组）—— 上游没有分组
+  "connector.group_mail",
+  "connector.group_calendar",
+  "connector.group_chat",
+  "connector.group_files",
+  "connector.group_web",
+  "connector.group_other",
+  // 连接页与工具服务器那一段：上游把这一页拆成了别的形状
+  "integrations.connections_title",
+  "integrations.connections_sub",
+  "integrations.advanced_tool_servers",
+  "integrations.advanced_tool_servers_sub",
 ]);
 
 const flatEnBase = flatten(enBase as Tree);

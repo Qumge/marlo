@@ -3,7 +3,7 @@ import { type CloudStatus, type Connector, type SlackStatus } from "../../api";
 import { ConnectorBadge } from "../../connectors/ConnectorIcon";
 import { AddConnectionModal } from "./AddConnectionModal";
 import { CHIP_OK, CHIP_OFF, CHIP_WARN, GRP, GRP_H, FOOT, PILL_QUIET, ROW } from "./ui";
-import { t, useT } from "../../legacyI18n";
+import { getI18n, useTranslation } from "react-i18next";
 
 // The Connectors LIST (UX-DECISIONS §21): connected first in their own inset group —
 // rows navigate to the connector's detail subpage; problems surface as a chip in the
@@ -14,8 +14,10 @@ const AVAILABLE_FOLD = 8; // rows shown before "show all"
 // 分组顺序固定：邮件/日历/聊天在前 —— 白领的活先落在这几样上；「其他」永远垫底。
 const GROUP_ORDER = ["mail", "calendar", "chat", "files", "web", "other"] as const;
 const GROUP_LABELS = {
-  mail: "groupMail", calendar: "groupCalendar", chat: "groupChat",
-  files: "groupFiles", web: "groupWeb", other: "groupOther",
+  // 值是 i18n 的键。分组本身是我们 fork 的（ac6f51a：连接列表按用户认得的东西
+  // 分组），上游没有对应 UI，所以这六个键住在 overlay 里。
+  mail: "connector.group_mail", calendar: "connector.group_calendar", chat: "connector.group_chat",
+  files: "connector.group_files", web: "connector.group_web", other: "connector.group_other",
 } as const;
 
 /** 这个版本连不上的：只有 OAuth 一条路，而托管那条正卡在上游审核里。
@@ -39,7 +41,7 @@ export function ConnectorsList({
   onOpen: (name: string) => void;
   onChanged: () => void;
 }) {
-  const t = useT();
+  const { t } = useTranslation();
   const [filter, setFilter] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [connecting, setConnecting] = useState<string | null>(null);
@@ -55,7 +57,7 @@ export function ConnectorsList({
     <div>
       <div className="flex items-center justify-end mb-4">
         <input
-          placeholder={t("searchPlaceholder")}
+          placeholder={t("sidebar.search")}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           className="w-44 px-3.5 py-1.5 rounded-full border border-line bg-panel text-[13px] outline-none focus:border-accent"
@@ -133,8 +135,8 @@ export function ConnectorsList({
                       }}
                     >
                       {(c.group || "other") === "mail"
-                        ? t("connectorUseImapInstead")
-                        : t("connectorWaitingUpstream")}
+                        ? t("connector.use_imap_instead")
+                        : t("connector.waiting_upstream")}
                     </span>
                   ) : (
                     <span
@@ -145,7 +147,7 @@ export function ConnectorsList({
                         setConnecting(c.name);
                       }}
                     >
-                      {t("connect")}
+                      {t("automations.connect")}
                     </span>
                   )}
                 </button>
@@ -155,7 +157,7 @@ export function ConnectorsList({
         );
       })}
       {shown.length === 0 && (
-        <div className={ROW + " text-[12.5px] text-muted"}>{t("connNothingMatches")}</div>
+        <div className={ROW + " text-[12.5px] text-muted"}>{t("connector.nothing_matches")}</div>
       )}
       {!showAll && !q && available.length > AVAILABLE_FOLD && (
         <div className={FOOT}>
@@ -179,13 +181,14 @@ export function ConnectorsList({
 }
 
 function statusLine(c: Connector): string {
+  const t = getI18n().getFixedT(null, "translation");
   if (c.name === "slack" && c.mode === "relay") {
     const n = c.workspaces?.length ?? 0;
-    return t("tplNWorkspacesRelay")(n);
+    return t("connector.n_workspaces_relay", { count: n });
   }
   if ((c.accounts?.length ?? 0) > 1) return `${c.accounts!.length} accounts`;
   if ((c.portals?.length ?? 0) > 1) return `${c.portals!.length} portals`;
-  if (c.auth === "none") return t("cxBuiltIn");
+  if (c.auth === "none") return t("connector.built_in");
   return c.account || "Connected";
 }
 

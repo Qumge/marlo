@@ -59,10 +59,10 @@ describe("UpdateBanner", () => {
     // 界面上真正渲染出来的字符里不能有英文 —— 这条横幅正是 0.4.3 上发现
     // "Marlo v… is ready to install." 的地方，守卫当时报的是"无新增"。
     const { englishRunsIn } = await import("../legacyI18n/no-english");
-    const { setLocale } = await import("../legacyI18n");
-    await act(async () => { setLocale("zh"); });
+    const { setTestLocale } = await import("../testLocale");
+    await act(async () => { await setTestLocale("zh"); });
     const runs = englishRunsIn(screen.getByTestId("update-banner") as HTMLElement);
-    await act(async () => { setLocale("en"); });
+    await act(async () => { await setTestLocale("en"); });
     expect(runs).toEqual([]);
   });
 

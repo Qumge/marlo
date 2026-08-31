@@ -2,7 +2,7 @@ import { useState } from "react";
 import { McpTab } from "./ManageTabs";
 import { ConnectorsSection } from "./connectors/ConnectorsSection";
 import { Icon } from "./Icon";
-import { useT } from "../legacyI18n";
+import { useTranslation } from "react-i18next";
 
 // 一个页面，一个列表。
 //
@@ -14,14 +14,14 @@ import { useT } from "../legacyI18n";
 // MCP 收进折叠的「高级」：它有用，但一个刚打开 Marlo 的人不该在这里被 stdio/HTTP
 // 拦住。默认收起 = 默认不存在；想要的人点一下就有。
 export function IntegrationsView() {
-  const t = useT();
+  const { t } = useTranslation();
   const [showServers, setShowServers] = useState(false);
 
   return (
     <main className="flex-1 min-w-0 flex bg-paper">
       <div className="flex-1 min-w-0 overflow-y-auto hairline-scroll">
         <div className="max-w-4xl mx-auto px-7 py-6">
-          <PanelHead title={t("connectionsTitle")} sub={t("connectionsSub")} />
+          <PanelHead title={t("integrations.connections_title")} sub={t("integrations.connections_sub")} />
           <ConnectorsSection />
 
           <section className="mt-8 border-t border-line pt-5">
@@ -32,14 +32,14 @@ export function IntegrationsView() {
               onClick={() => setShowServers((v) => !v)}
             >
               <Icon name="code" size={15} />
-              <span className="font-medium">{t("advancedToolServers")}</span>
+              <span className="font-medium">{t("integrations.advanced_tool_servers")}</span>
               <span className="ml-auto text-faint text-[16px] leading-none">
                 {showServers ? "−" : "+"}
               </span>
             </button>
             {showServers && (
               <div className="mt-4">
-                <p className="text-[12.5px] text-muted mb-4">{t("advancedToolServersSub")}</p>
+                <p className="text-[12.5px] text-muted mb-4">{t("integrations.advanced_tool_servers_sub")}</p>
                 <McpTab />
               </div>
             )}
