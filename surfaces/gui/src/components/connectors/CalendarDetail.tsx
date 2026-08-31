@@ -29,17 +29,17 @@ export function CalendarDetail({ c, cloud, slack: _slack, onChanged }: DetailPro
   return (
     <div data-testid="gcal-detail">
       <div className="flex items-center gap-3.5 mb-5">
-        <ConnectorBadge connector={c} size={44} title="Google Calendar" />
+        <ConnectorBadge connector={c} size={44} title={t("calendar.google_calendar")} />
         <div className="min-w-0 flex-1">
           <h2 className="text-[20px] font-semibold tracking-tight leading-tight">
             Google Calendar
           </h2>
-          <div className="text-[12.5px] text-muted flex items-center gap-1.5">
+          <div className="text-[13px] text-muted flex items-center gap-1.5">
             {c.connected ? (
               <>
                 <span className="w-2 h-2 rounded-full bg-ok" />
                 <span data-testid="gcal-status">
-                  {accounts.length} account{accounts.length === 1 ? "" : "s"}
+                  {t("connector.account_count", { count: accounts.length })}
                 </span>
               </>
             ) : (
@@ -54,28 +54,28 @@ export function CalendarDetail({ c, cloud, slack: _slack, onChanged }: DetailPro
           disabled={busy || !cloud?.signed_in || c.managed_paused}
           title={
             c.managed_paused
-              ? t("gmail.coming_soon_title")
+              ? t("calendar.coming_soon_title")
               : cloud?.signed_in
                 ? ""
                 : t("cloud.sign_in_first")
           }
         >
-          {c.managed_paused ? t("gmail.add_account_coming_soon") : busy ? t("cloud.check_browser") : t("gmail.add_account")}
+          {c.managed_paused ? t("calendar.add_account_coming_soon") : busy ? t("cloud.check_browser") : t("calendar.add_account")}
         </button>
       </div>
 
       {!c.connected && (
         <div className={GRP}>
-          <div className={ROW + " text-[12.5px] text-muted"}>
-            Sign in with Google — each account stays separate, agents say which one they use.
-            {cloud?.signed_in ? "" : t("gmail.requires_cloud")}
+          <div className={ROW + " text-[13px] text-muted"}>
+            {t("calendar.setup_blurb")}
+            {cloud?.signed_in ? "" : " " + t("calendar.requires_cloud")}
           </div>
         </div>
       )}
 
       {accounts.length > 0 && (
         <>
-          <div className={GRP_H + " !mt-0"}>{t("gmail.accounts")}</div>
+          <div className={GRP_H + " !mt-0"}>{t("calendar.accounts")}</div>
           <div className={GRP} data-testid="gcal-accounts">
             {accounts.map((a) => (
               <AccountRow key={a.email} a={a} onChanged={onChanged} />
@@ -86,8 +86,7 @@ export function CalendarDetail({ c, cloud, slack: _slack, onChanged }: DetailPro
 
       <ToolsDisclosure c={c} onChanged={onChanged} />
       <div className={FOOT + " mt-2"}>
-        Creating, changing, or deleting events always asks for your approval first, and the
-        approval names the account.
+        {t("calendar.events_approval_foot")}
       </div>
     </div>
   );
@@ -101,7 +100,7 @@ function AccountRow({ a, onChanged }: { a: GmailAccount; onChanged: () => void }
       <span className="min-w-0 flex-1 flex items-center gap-2">
         <span className="text-[13px] font-medium truncate">{a.email}</span>
         {a.default && <span className={TAG_ACCENT}>{t("connector.default")}</span>}
-        {a.needs_reauth && <span className={TAG_WARN}>⚠ Sign in again</span>}
+        {a.needs_reauth && <span className={TAG_WARN}>{t("calendar.sign_in_again")}</span>}
       </span>
       {!a.default && (
         <button

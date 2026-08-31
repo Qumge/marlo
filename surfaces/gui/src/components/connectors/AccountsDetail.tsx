@@ -40,12 +40,12 @@ export function AccountsDetail({ c, cloud, slack: _slack, onChanged }: DetailPro
           <h2 className="text-[20px] font-semibold tracking-tight leading-tight">
             {c.title}
           </h2>
-          <div className="text-[12.5px] text-muted flex items-center gap-1.5">
+          <div className="text-[13px] text-muted flex items-center gap-1.5">
             {c.connected ? (
               <>
                 <span className="w-2 h-2 rounded-full bg-ok" />
                 <span data-testid="accounts-status">
-                  {accounts.length} account{accounts.length === 1 ? "" : "s"}
+                  {t("connector.account_count", { count: accounts.length })}
                 </span>
               </>
             ) : (
@@ -64,13 +64,13 @@ export function AccountsDetail({ c, cloud, slack: _slack, onChanged }: DetailPro
               : ""
           }
         >
-          {busy ? t("cloud.check_browser") : t("gmail.add_account")}
+          {busy ? t("cloud.check_browser") : t("accounts.add_account")}
         </button>
       </div>
 
       {accounts.length > 0 && (
         <>
-          <div className={GRP_H + " !mt-0"}>{t("gmail.accounts")}</div>
+          <div className={GRP_H + " !mt-0"}>{t("accounts.accounts")}</div>
           <div className={GRP} data-testid="accounts-group">
             {accounts.map((a) => (
               <Row key={a.account_id} connector={c.name} a={a} onChanged={onChanged} />
@@ -101,8 +101,7 @@ export function AccountsDetail({ c, cloud, slack: _slack, onChanged }: DetailPro
 
       <ToolsDisclosure c={c} onChanged={onChanged} />
       <div className={FOOT + " mt-2"}>
-        Each account stays separate — tool results and approvals name the account
-        they used.
+        {t("accounts.foot")}
       </div>
     </div>
   );
@@ -144,7 +143,7 @@ function Row({
       )}
       <button
         className={XBTN}
-        title={t("calendar.disconnect_account_title")}
+        title={t("accounts.disconnect_account_title")}
         data-testid={`account-disconnect-${a.account_id}`}
         disabled={busy}
         onClick={async () => {

@@ -1,10 +1,12 @@
+import type { ParseKeys } from "i18next";
 import { useEffect, useState } from "react";
 import { getI18n, useTranslation } from "react-i18next";
-import type { ParseKeys } from "i18next";
-import { LanguagePicker } from "./LanguagePicker";
+import { getStoredLanguage, setLanguage as setI18nLanguage, type Lang } from "../i18n";
 import {
   getSettings,
   getTrustedWorkspaces,
+  setAutoApprove,
+  setAutoApproveShadow,
   setCompactionSettings,
   setContextBar,
   setOnboarded,
@@ -44,7 +46,6 @@ import { Icon } from "./Icon";
 import { PanelHead } from "./IntegrationsView";
 import { ModelsTab } from "./ManageTabs";
 import { MemorySection } from "./MemorySection";
-import { GalleryModal } from "./GalleryModal";
 import { PersonasTab } from "./PersonasTab";
 import { showPersonas } from "../flags";
 
@@ -60,13 +61,13 @@ import { showPersonas } from "../flags";
 type SetTab = "appearance" | "models" | "voice" | "memory" | "personas";
 
 const CARD = "rounded-xl2 border border-line bg-panel";
-const FIELD_LABEL = "text-[12.5px] font-medium text-ink";
+const FIELD_LABEL = "text-[13px] font-medium text-ink";
 const FIELD_HELP = "text-[12px] text-muted mt-1.5 leading-relaxed";
 const INPUT =
   "flex-1 min-w-0 px-3 py-2 rounded-lg border border-line bg-paper text-[13px] text-ink outline-none focus:border-accent";
-const BTN_ACCENT = "text-[12.5px] px-3 py-2 rounded-lg bg-accent text-white shrink-0 disabled:opacity-40";
+const BTN_ACCENT = "text-[13px] px-3 py-2 rounded-lg bg-accent text-white shrink-0 disabled:opacity-40";
 const BTN_BORDERED =
-  "text-[12.5px] px-3 py-2 rounded-lg border border-line bg-paper hover:border-lineStrong shrink-0";
+  "text-[13px] px-3 py-2 rounded-lg border border-line bg-paper hover:border-lineStrong shrink-0";
 
 // label 存的是 i18n 【键】不是英文 —— 常量保持纯数据，渲染时才 t(key)。
 // 上游这里是英文字面量，我们每次合并都要换回来；这是数据数组，transform 够不到。
@@ -89,33 +90,32 @@ export function SettingsView({
   onOpenPersona?: (id: string) => void;
 }) {
   const { t } = useTranslation();
-  const { t: tr } = useTranslation();
   // Personas is flag-gated (hidden for launch) — filter the tab AND coerce a stale
   // deep-link to it (openSettings("personas") callers) so the page never opens on a
   // section with no nav entry.
   const personas = showPersonas();
-  const tabs = personas ? SET_TABS : SET_TABS.filter((t) => t.key !== "personas");
+  const tabs = personas ? SET_TABS : SET_TABS.filter((tab) => tab.key !== "personas");
   const wanted = initialTab && (personas || initialTab !== "personas") ? initialTab : "appearance";
   const [tab, setTab] = useState<SetTab>(wanted);
 
   return (
     <main className="flex-1 min-w-0 flex bg-paper">
       <nav className="page-subnav w-[208px] shrink-0 border-r border-line bg-panel/40 px-3 py-4">
-        <div className="px-2 text-[13.5px] font-semibold mb-3 flex items-center gap-2">
-          <Icon name="gear" size={16} /> Settings
+        <div className="px-2 text-[13px] font-semibold mb-3 flex items-center gap-2">
+          <Icon name="gear" size={16} /> {t("nav.settings")}
         </div>
-        {tabs.map((t) => {
-          const active = tab === t.key;
+        {tabs.map((tb) => {
+          const active = tab === tb.key;
           return (
             <button
-              key={t.key}
+              key={tb.key}
               className={
                 "w-full text-left px-2.5 py-2 rounded-lg text-[13px] flex items-center gap-2 " +
                 (active ? "bg-paper text-accent font-medium" : "text-muted hover:bg-paper hover:text-ink")
               }
-              onClick={() => setTab(t.key)}
+              onClick={() => setTab(tb.key)}
             >
-              <Icon name={t.icon} size={15} /> {tr(t.label)}
+              <Icon name={tb.icon} size={15} /> {t(tb.label)}
             </button>
           );
         })}
@@ -128,12 +128,13 @@ export function SettingsView({
           ) : tab === "models" ? (
             <section>
               <PanelHead
-                title={tr("settings.tab.models")}
+                title={t("settings.tab.models")}
                 sub={t("settings.models_sub")}
               />
               <ModelsTab />
               {/* Token savings is model-spend behavior, so it lives here (UX-021),
-                  not under General. */}
+                  not under General. 上游把这两张卡挪去了新的 context 页；我们没有
+                  那个页签，settings 管的是本机配置，用量设置跟着模型走。 */}
               <div className="mt-6">
                 <TokenSavingsCard />
                 <CompactionCard />
@@ -153,12 +154,12 @@ export function SettingsView({
 }
 
 // -- Voice input: deliberate model provisioning + compatibility + microphone test (§37) --------
-const voiceError = (error: unknown) => {
-  const t = getI18n().getFixedT(null, "translation");
-  return (
-    error instanceof Error ? error.message : typeof error === "string" ? error : t("settings.voice_action_failed")
-  );
-};
+const voiceError = (error: unknown) =>
+  error instanceof Error
+    ? error.message
+    : typeof error === "string"
+      ? error
+      : getI18n().getFixedT(null, "translation")("settings.voice_action_failed");
 
 const formatBytes = (bytes: number) => {
   if (!bytes) return "0 MiB";
@@ -167,7 +168,6 @@ const formatBytes = (bytes: number) => {
 
 function VoiceInputSection() {
   const { t } = useTranslation();
-  const { t: tr } = useTranslation();
   const [status, setStatus] = useState<DictationStatus | null>(null);
   const [progress, setProgress] = useState<DictationDownloadProgress | null>(null);
   const [phase, setPhase] = useState<"idle" | "downloading" | "verifying" | "testing" | "transcribing">("idle");
@@ -288,37 +288,38 @@ function VoiceInputSection() {
   return (
     <section>
       <PanelHead
-        title={tr("settings.tab.voice")}
+        title={t("settings.tab.voice")}
         sub={t("settings.voice_intro")}
       />
 
       {!desktop ? (
-        <div className={CARD + " p-4 text-[13px] text-muted"}>{tr("settings.voice_desktop_only")}</div>
+        <div className={CARD + " p-4 text-[13px] text-muted"}>{t("settings.voice_desktop_only")}</div>
       ) : (
         <div className="space-y-4">
-          <div className="rounded-xl border border-green-200 bg-green-50/70 px-4 py-3 text-[12.5px] text-green-800">
-            <span className="font-medium">{tr("settings.voice_private_title")}</span> Audio is held in memory only while you record and is transcribed locally.
+          <div className="rounded-xl border border-green-200 bg-green-50/70 px-4 py-3 text-[13px] text-green-800">
+            <span className="font-medium">{t("settings.voice_private_title")}</span>{" "}
+            {t("settings.voice_private_body")}
           </div>
 
           <div className={CARD}>
             <div className="p-4 flex items-start gap-3">
               <Icon name="code" size={18} className="text-accent mt-0.5" />
               <div className="min-w-0 flex-1">
-                <div className="text-[13.5px] font-medium">{tr("settings.voice_device_title")}</div>
+                <div className="text-[13px] font-medium">{t("settings.voice_device_title")}</div>
                 <div className="text-[12px] text-muted mt-1">{status?.device_summary || t("settings.voice_checking")}</div>
                 {status?.compatibility_reason && <div className="text-[12px] text-red-600 mt-1.5">{status.compatibility_reason}</div>}
               </div>
               {status && (
-                <span className={"text-[11.5px] px-2 py-1 rounded-full " + (status.supported ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600")}>
-                  {status.supported ? "● Compatible" : "Unsupported"}
+                <span className={"text-[12px] px-2 py-1 rounded-full " + (status.supported ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600")}>
+                  {status.supported ? `● ${t("settings.voice_compatible")}` : t("settings.voice_unsupported")}
                 </span>
               )}
             </div>
             <div className="border-t border-line bg-paper/50 px-4 py-3 grid grid-cols-2 gap-3 text-[12px] text-muted">
-              <div><span className="block text-ink font-medium">{tr("settings.voice_mac")}</span>macOS 12+ · Apple Silicon M1+</div>
-              <div><span className="block text-ink font-medium">Windows</span>Windows 10 22H2/11 · x64</div>
-              <div><span className="block text-ink font-medium">{tr("settings.tab.memory")}</span>8 GB recommended</div>
-              <div><span className="block text-ink font-medium">{tr("settings.voice_processor")}</span>4 CPU cores recommended</div>
+              <div><span className="block text-ink font-medium">{t("settings.voice_mac")}</span>{t("settings.voice_mac_detail")}</div>
+              <div><span className="block text-ink font-medium">{t("settings.voice_windows")}</span>{t("settings.voice_windows_detail")}</div>
+              <div><span className="block text-ink font-medium">{t("settings.voice_memory")}</span>{t("settings.voice_memory_detail")}</div>
+              <div><span className="block text-ink font-medium">{t("settings.voice_processor")}</span>{t("settings.voice_processor_detail")}</div>
             </div>
           </div>
 
@@ -326,29 +327,31 @@ function VoiceInputSection() {
             <div className="p-4 flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-accentSoft text-accent grid place-items-center font-semibold">W</div>
               <div className="min-w-0 flex-1">
-                <div className="text-[13.5px] font-medium">Whisper Base · English</div>
+                <div className="text-[13px] font-medium">{t("settings.voice_whisper_title")}</div>
                 <div className="text-[12px] text-muted mt-0.5">
-                  {status?.model_verified ? t("settings.voice_installed", { size: formatBytes(status.model_bytes) }) : t("settings.voice_not_installed", { size: formatBytes(status?.model_bytes || 147_964_211) })}
+                  {status?.model_verified
+                    ? t("settings.voice_installed", { size: formatBytes(status.model_bytes) })
+                    : t("settings.voice_not_installed", { size: formatBytes(status?.model_bytes || 147_964_211) })}
                 </div>
               </div>
               {status?.model_verified ? (
                 <>
-                  <span className="text-[11.5px] px-2 py-1 rounded-full bg-green-50 text-green-700">{tr("settings.voice_verified")}</span>
-                  <button className={BTN_BORDERED} onClick={() => void repair()}>{tr("settings.voice_repair")}</button>
-                  <button className="text-[12px] text-red-600 px-2 py-2" onClick={() => void remove()}>{tr("sidebar.delete")}</button>
+                  <span className="text-[12px] px-2 py-1 rounded-full bg-green-50 text-green-700">{t("settings.voice_verified")}</span>
+                  <button className={BTN_BORDERED} onClick={() => void repair()}>{t("settings.voice_repair")}</button>
+                  <button className="text-[12px] text-red-600 px-2 py-2" onClick={() => void remove()}>{t("settings.voice_delete")}</button>
                 </>
               ) : downloading ? (
-                <button className={BTN_BORDERED} onClick={() => void cancelDownload()}>{tr("access.cancel")}</button>
+                <button className={BTN_BORDERED} onClick={() => void cancelDownload()}>{t("common.stop")}</button>
               ) : phase === "verifying" ? (
-                <span className="text-[12px] text-muted">Verifying…</span>
+                <span className="text-[12px] text-muted">{t("settings.voice_verifying")}</span>
               ) : (
-                <button className={BTN_ACCENT} disabled={!status?.supported} onClick={() => void download()}>{tr("settings.voice_download")}</button>
+                <button className={BTN_ACCENT} disabled={!status?.supported} onClick={() => void download()}>{t("settings.voice_download")}</button>
               )}
             </div>
             {downloading && (
               <div className="border-t border-line px-4 py-3">
                 <div className="h-1.5 rounded-full bg-line overflow-hidden"><div className="h-full bg-accent transition-all" style={{ width: `${progressPercent}%` }} /></div>
-                <div className="mt-1.5 text-[11.5px] text-muted flex"><span>{formatBytes(progress?.downloaded_bytes || 0)} of {formatBytes(progressTotal)}</span><span className="ml-auto">{progressPercent}%</span></div>
+                <div className="mt-1.5 text-[12px] text-muted flex"><span>{t("settings.voice_dl_progress", { done: formatBytes(progress?.downloaded_bytes || 0), total: formatBytes(progressTotal) })}</span><span className="ml-auto">{progressPercent}%</span></div>
               </div>
             )}
           </div>
@@ -357,17 +360,23 @@ function VoiceInputSection() {
             <div className="p-4 flex items-center gap-3">
               <Icon name="mic" size={18} className={ready ? "text-green-600" : "text-muted"} />
               <div className="min-w-0 flex-1">
-                <div className="text-[13.5px] font-medium">{tr("settings.voice_mic_test_title")}</div>
+                <div className="text-[13px] font-medium">{t("settings.voice_mic_test_title")}</div>
                 <div className="text-[12px] text-muted mt-0.5">
-                  {ready ? t("settings.voice_mic_works") : t("settings.voice_record_phrase")}
+                  {ready ? t("settings.voice_mic_test_ready") : t("settings.voice_mic_test_pending")}
                 </div>
               </div>
-              {ready && <span className="text-[11.5px] px-2 py-1 rounded-full bg-green-50 text-green-700">● Ready</span>}
+              {ready && <span className="text-[12px] px-2 py-1 rounded-full bg-green-50 text-green-700">● {t("settings.voice_ready_badge")}</span>}
               <button className={BTN_BORDERED} disabled={!status?.supported || !status?.model_verified || phase === "transcribing"} onClick={() => void toggleTest()}>
-                {status?.recording ? t("settings.voice_stop_check") : phase === "transcribing" ? "Transcribing…" : ready ? t("settings.voice_test_again") : t("settings.voice_mic_test_ready")}
+                {status?.recording
+                  ? t("settings.voice_stop_check")
+                  : phase === "transcribing"
+                    ? t("settings.voice_transcribing")
+                    : ready
+                      ? t("settings.voice_test_again")
+                      : t("settings.voice_test_mic")}
               </button>
             </div>
-            {status?.recording && <div className="border-t border-line px-4 py-3 text-[12px] text-accent" role="status">● Listening… speak a short phrase, then stop.</div>}
+            {status?.recording && <div className="border-t border-line px-4 py-3 text-[12px] text-accent" role="status">{t("settings.voice_listening")}</div>}
             {testTranscript && <div className="border-t border-line bg-paper/50 px-4 py-3 text-[13px]">“{testTranscript}”</div>}
           </div>
 
@@ -381,39 +390,18 @@ function VoiceInputSection() {
 // -- Personas: installed/enabled/delete management, the dir/Git importer, and the
 // entry point to the Persona Gallery (a screen-sized modal — installs finish back
 // here, disabled pending consent; a gallery install re-mounts the list in place).
+// The Gallery entry point is GONE (owner 2026-08-21) — coworkers install from
+// GitHub / folder / zip only. GalleryModal stays in the tree for the gallery's
+// possible return as a first-class distribution surface, but nothing mounts it.
 function PersonasSection({ onOpenPersona }: { onOpenPersona?: (id: string) => void }) {
   const { t } = useTranslation();
-  const { t: tr } = useTranslation();
-  const [galleryBump, setGalleryBump] = useState(0);
-  const [galleryOpen, setGalleryOpen] = useState(false);
-
   return (
     <section>
-      <PanelHead
-        title={tr("settings.personas_title")}
-        sub={t("settings.personas_intro")}
-      />
-      <PersonasTab key={galleryBump} onOpenPersona={onOpenPersona} />
-      <button
-        className="mt-6 w-full rounded-xl2 border border-line bg-panel px-4 py-3.5 flex items-center gap-3 text-left hover:border-lineStrong"
-        data-testid="gallery-link"
-        onClick={() => setGalleryOpen(true)}
-      >
-        <Icon name="sparkle" size={16} className="text-accent shrink-0" />
-        <span className="min-w-0 flex-1">
-          <span className="block text-[13.5px] font-medium">{tr("settings.gallery_open")}</span>
-          <span className="block text-[12px] text-muted">
-            {t("settings.gallery_sub")}
-          </span>
-        </span>
-        <span className="text-[12.5px] text-accent shrink-0">Open →</span>
-      </button>
-      {galleryOpen && (
-        <GalleryModal
-          onClose={() => setGalleryOpen(false)}
-          onInstalled={() => setGalleryBump((b) => b + 1)}
-        />
-      )}
+      <PanelHead title={t("settings.tab.personas")} sub={t("settings.personas_intro")} />
+      <p className="text-[13px] text-muted leading-relaxed max-w-[560px] mt-5 mb-1">
+        {t("settings.personas_desc")}
+      </p>
+      <PersonasTab onOpenPersona={onOpenPersona} />
     </section>
   );
 }
@@ -421,11 +409,12 @@ function PersonasSection({ onOpenPersona }: { onOpenPersona?: (id: string) => vo
 // -- Appearance + app behaviour ------------------------------------------------
 function AppearanceSection() {
   const { t } = useTranslation();
-  const { t: tr } = useTranslation();
   const [theme, setTheme] = useThemePref();
   const [autostart, setAuto] = useState(false);
   const [keepAwake, setKeep] = useState(false);
   const desktop = isTauri();
+  // "system" = no explicit choice persisted; the app follows the OS locale.
+  const [currentLang, setCurrentLang] = useState<Lang | "system">(() => getStoredLanguage() ?? "system");
 
   useEffect(() => {
     if (isTauri()) {
@@ -440,33 +429,48 @@ function AppearanceSection() {
     await setOnboarded(false);
     window.dispatchEvent(new CustomEvent("coworker:open-onboarding"));
   };
+  const changeLang = (lang: Lang | "system") => {
+    setCurrentLang(lang);
+    void setI18nLanguage(lang === "system" ? null : lang);
+  };
 
   return (
     <section>
-      <PanelHead title={tr("settings.tab.general")} sub={t("settings.general_sub")} />
-
-      {/* Language sits at the top of General: it is the setting most likely to be
-          wrong for a reader who arrived from a non-English page, and the one that
-          makes every other setting readable. */}
-      <div className={CARD + " p-4 mb-4"}>
-        <LanguagePicker />
-      </div>
+      <PanelHead title={t("settings.general_title")} sub={t("settings.general_sub")} />
 
       <div className={CARD + " p-4 mb-4"}>
-        <div className={FIELD_LABEL}>{tr("settings.theme")}</div>
-        <div className="seg mt-2.5" role="radiogroup" aria-label={tr("settings.appearance_aria")}>
+        <div className={FIELD_LABEL}>{t("settings.theme")}</div>
+        <div className="seg mt-2.5" role="radiogroup" aria-label={t("settings.appearance_aria")}>
           {(["light", "dark", "auto"] as const).map((p) => (
             <button key={p} className={p === theme ? "active" : ""} onClick={() => setTheme(p)}>
-              {p === "light" ? "Light" : p === "dark" ? "Dark" : "Auto"}
+              {p === "light" ? t("settings.theme_light") : p === "dark" ? t("settings.theme_dark") : t("settings.theme_auto")}
             </button>
           ))}
         </div>
-        <div className={FIELD_HELP}>Auto follows your Mac&rsquo;s appearance.</div>
+        <div className={FIELD_HELP}>{t("settings.theme_auto_help")}</div>
+      </div>
+
+      <div className={CARD + " p-4 mb-4"}>
+        <div className={FIELD_LABEL}>{t("settings.language")}</div>
+        <div className="seg mt-2.5" role="radiogroup" aria-label={t("settings.language_aria")}>
+          {(["system", "en", "zh"] as const).map((lng) => (
+            <button
+              key={lng}
+              className={lng === currentLang ? "active" : ""}
+              onClick={() => changeLang(lng)}
+            >
+              {lng === "zh" ? t("settings.language_zh") : lng === "en" ? t("settings.language_en") : t("settings.language_system")}
+            </button>
+          ))}
+        </div>
+        <div className={FIELD_HELP}>{t("settings.language_help")}</div>
       </div>
 
       <SidebarCard />
 
       <ContextBarCard />
+
+      <AutoApproveCard />
 
       <FilesCard />
 
@@ -474,19 +478,19 @@ function AppearanceSection() {
 
       {desktop && (
         <div className={CARD + " p-4"}>
-          <div className={FIELD_LABEL + " mb-2.5"}>Always-on</div>
+          <div className={FIELD_LABEL + " mb-2.5"}>{t("settings.always_on")}</div>
           <label className="flex items-start gap-3 py-2">
             <input type="checkbox" className="mt-0.5" checked={autostart} onChange={(e) => toggleAuto(e.target.checked)} />
             <span>
-              <span className="block text-[13px] text-ink">{tr("settings.open_at_login")}</span>
-              <span className="block text-[12px] text-muted">{tr("settings.open_at_login_help")}</span>
+              <span className="block text-[13px] text-ink">{t("settings.open_at_login")}</span>
+              <span className="block text-[12px] text-muted">{t("settings.open_at_login_help")}</span>
             </span>
           </label>
           <label className="flex items-start gap-3 py-2">
             <input type="checkbox" className="mt-0.5" checked={keepAwake} onChange={(e) => toggleKeep(e.target.checked)} />
             <span>
-              <span className="block text-[13px] text-ink">{tr("settings.keep_awake")}</span>
-              <span className="block text-[12px] text-muted">{tr("settings.keep_awake_help")}</span>
+              <span className="block text-[13px] text-ink">{t("settings.keep_awake")}</span>
+              <span className="block text-[12px] text-muted">{t("settings.keep_awake_help")}</span>
             </span>
           </label>
         </div>
@@ -496,14 +500,14 @@ function AppearanceSection() {
           every build, the browser dev shell runs the same first-run flow) and, on
           desktop, the manual update check (launch also checks automatically). */}
       <div className={CARD + " p-4 mt-4"}>
-        <div className={FIELD_LABEL + " mb-2"}>Setup &amp; updates</div>
+        <div className={FIELD_LABEL + " mb-2"}>{t("settings.setup_updates")}</div>
         <div className="flex items-center gap-2">
           <button className={BTN_BORDERED} onClick={runSetupAgain}>
             {t("settings.run_setup_again")}
           </button>
           {desktop && <UpdateInline />}
         </div>
-        <div className={FIELD_HELP}>Replays the first-run setup: model, first automation, tips.</div>
+        <div className={FIELD_HELP}>{t("settings.run_setup_help")}</div>
       </div>
     </section>
   );
@@ -511,7 +515,6 @@ function AppearanceSection() {
 
 function TrustedWorkspacesCard() {
   const { t } = useTranslation();
-  const { t: tr } = useTranslation();
   const [workspaces, setWorkspaces] = useState<WorkspaceCommandTrust[] | null>(null);
 
   const refresh = () =>
@@ -524,30 +527,30 @@ function TrustedWorkspacesCard() {
   }, []);
 
   const revoke = async (path: string) => {
-    if (!window.confirm(t("settings.trust_revoke_confirm", { path: path }))) return;
+    if (!window.confirm(t("settings.trust_revoke_confirm", { path }))) return;
     await setWorkspaceTrusted(path, false);
     refresh();
   };
 
   return (
     <div className={CARD + " p-4 mb-4"} data-testid="trusted-workspaces-card">
-      <div className={FIELD_LABEL}>{tr("settings.trusted_workspaces")}</div>
+      <div className={FIELD_LABEL}>{t("settings.trusted_workspaces")}</div>
       <div className={FIELD_HELP}>
         {t("settings.trusted_workspaces_help")}
       </div>
       {workspaces === null ? (
-        <div className="text-[12px] text-muted mt-3">Loading…</div>
+        <div className="text-[12px] text-muted mt-3">{t("settings.trust_loading")}</div>
       ) : workspaces.length === 0 ? (
-        <div className="text-[12px] text-muted mt-3">{tr("settings.trust_empty")}</div>
+        <div className="text-[12px] text-muted mt-3">{t("settings.trust_empty")}</div>
       ) : (
         <div className="mt-3 divide-y divide-line">
           {workspaces.map((workspace) => (
             <div key={workspace.workspace} className="py-2.5 flex items-start gap-3">
               <div className="min-w-0 flex-1">
-                <div className="text-[12.5px] text-ink break-all">{workspace.workspace}</div>
-                <div className="text-[11.5px] text-muted mt-0.5">
+                <div className="text-[13px] text-ink break-all">{workspace.workspace}</div>
+                <div className="text-[12px] text-muted mt-0.5">
                   {workspace.requested_commands.length
-                    ? t("settings.project_allowances", { count: workspace.requested_commands.length })
+                    ? t("settings.trust_allowances", { count: workspace.requested_commands.length })
                     : t("settings.trust_no_allowances")}
                   {!workspace.exists ? t("settings.trust_folder_unavailable") : ""}
                 </div>
@@ -605,7 +608,7 @@ function UpdateInline() {
     <span className="inline-flex items-center gap-2.5">
       {state === "found" ? (
         <button className={BTN_BORDERED} onClick={install} data-testid="settings-update-install">
-          {t("settings.update_install", { version: version })}
+          {t("settings.update_install", { version })}
         </button>
       ) : (
         <button
@@ -614,7 +617,7 @@ function UpdateInline() {
           disabled={state === "checking" || state === "installing"}
           data-testid="settings-update-check"
         >
-          {state === "checking" ? "Checking…" : t("settings.check_for_updates")}
+          {state === "checking" ? t("settings.checking") : t("settings.check_for_updates")}
         </button>
       )}
       {(state === "none" || state === "error" || state === "installing") && (
@@ -622,7 +625,10 @@ function UpdateInline() {
           {state === "none"
             ? t("settings.update_latest")
             : state === "error"
-              ? `Couldn't check: ${err || "unknown error"}`
+              ? // 【原因必须说出来】上游只给一句笼统的 update_error。检查失败时用户能做的事
+                // 完全取决于原因（网络不通 vs 代理没被用上 vs 签名不对）—— 而这个按钮是
+                // 唯一能问出原因的地方。见 345fee5 / 6b3dfd7。
+                t("settings.update_error") + (err ? `: ${err}` : "")
               : t("settings.update_downloading")}
         </span>
       )}
@@ -641,7 +647,6 @@ function UpdateInline() {
 // the CompactionCard below, OPE-27.)
 function TokenSavingsCard() {
   const { t } = useTranslation();
-  const { t: tr } = useTranslation();
   const [pdf, setPdf] = useState<PdfSettings | null>(null);
 
   useEffect(() => {
@@ -664,14 +669,13 @@ function TokenSavingsCard() {
   if (!pdf) return null;
   return (
     <div className={CARD + " p-4 mb-4"} data-testid="token-savings-card">
-      <div className={FIELD_LABEL}>{tr("settings.token_savings")}</div>
+      <div className={FIELD_LABEL}>{t("settings.token_savings")}</div>
       <div className={FIELD_HELP}>
-        PDF attachments travel with every turn of a conversation, so large documents multiply
-        what you spend on tokens.
+        {t("settings.token_savings_help")}
       </div>
 
-      <div className="mt-3 text-[13px] text-ink">{tr("settings.pdf_fallback_label")}</div>
-      <div className="seg mt-2" role="radiogroup" aria-label="PDF fallback" data-testid="pdf-fallback">
+      <div className="mt-3 text-[13px] text-ink">{t("settings.pdf_fallback_label")}</div>
+      <div className="seg mt-2" role="radiogroup" aria-label={t("settings.pdf_fallback_aria")} data-testid="pdf-fallback">
         <button
           className={pdf.pdf_fallback === "text" ? "active" : ""}
           onClick={() => save({ pdf_fallback: "text" })}
@@ -686,14 +690,12 @@ function TokenSavingsCard() {
         </button>
       </div>
       <div className={FIELD_HELP}>
-        Claude, GPT and Gemini read PDFs natively — this only applies to models that
-        don&rsquo;t (GLM, Kimi, DeepSeek, local models…). Text extraction is cheapest; page
-        images cost more tokens and need a vision-capable model.
+        {t("settings.pdf_fallback_help")}
       </div>
 
       <div className="mt-3 flex items-center gap-5">
         <label className="flex items-center gap-2.5">
-          <span className="text-[13px] text-ink">{tr("settings.pdf_max_pages")}</span>
+          <span className="text-[13px] text-ink">{t("settings.pdf_max_pages")}</span>
           <input
             type="number"
             min={1}
@@ -705,7 +707,7 @@ function TokenSavingsCard() {
           />
         </label>
         <label className="flex items-center gap-2.5">
-          <span className="text-[13px] text-ink">{tr("settings.pdf_max_size")}</span>
+          <span className="text-[13px] text-ink">{t("settings.pdf_max_size")}</span>
           <input
             type="number"
             min={1}
@@ -715,12 +717,11 @@ function TokenSavingsCard() {
             className="w-16 px-2 py-1.5 rounded-lg border border-line bg-paper text-[13px] text-ink outline-none focus:border-accent"
             onChange={(e) => save({ pdf_max_mb: Math.max(1, Math.min(Number(e.target.value) || 10, 10)) })}
           />
-          <span className="text-[12.5px] text-muted">MB</span>
+          <span className="text-[13px] text-muted">MB</span>
         </label>
       </div>
       <div className={FIELD_HELP}>
-        PDFs over these limits are not attached — you&rsquo;ll see a notice in the composer
-        instead.
+        {t("settings.pdf_limits_help")}
       </div>
     </div>
   );
@@ -785,7 +786,7 @@ function CompactionCard() {
               })
             }
           />
-          <span className="text-[12.5px] text-muted">{t("settings.compact_pct_suffix")}</span>
+          <span className="text-[13px] text-muted">% of the context window</span>
         </label>
         <label className="flex items-center gap-2.5">
           <span className="text-[13px] text-ink">{t("settings.compact_or_at")}</span>
@@ -806,7 +807,7 @@ function CompactionCard() {
               })
             }
           />
-          <span className="text-[12.5px] text-muted">{t("settings.compact_tokens_suffix")}</span>
+          <span className="text-[13px] text-muted">tokens, whichever is smaller</span>
         </label>
       </div>
       <div className={FIELD_HELP}>{t("settings.compaction_cap_help")}</div>
@@ -871,9 +872,80 @@ function ContextBarCard() {
   );
 }
 
+// Auto-Approve (spec §1.5): the experimental feature flag that adds the "Auto-Approve" mode
+// to the composer's mode picker, plus its shadow-evaluation sibling. Both default off and are
+// user-global (a cloned repo can't turn either on). Shadow is nested under the main flag — it
+// only makes sense to measure the reviewer once you know what it is.
+function AutoApproveCard() {
+  const { t } = useTranslation();
+  const [on, setOn] = useState<boolean | null>(null);
+  const [shadow, setShadow] = useState(false);
+
+  useEffect(() => {
+    getSettings()
+      .then((s) => {
+        setOn(s.auto_approve === true);
+        setShadow(s.auto_approve_shadow === true);
+      })
+      .catch(() => setOn(false));
+  }, []);
+
+  const saveOn = async (next: boolean) => {
+    setOn(next);
+    await setAutoApprove(next);
+  };
+  const saveShadow = async (next: boolean) => {
+    setShadow(next);
+    await setAutoApproveShadow(next);
+  };
+
+  if (on === null) return null;
+  return (
+    <div className={CARD + " p-4 mb-4"} data-testid="auto-approve-card">
+      <div className={FIELD_LABEL}>Auto-approve (experimental)</div>
+      <label className="flex items-start gap-3 py-2">
+        <input
+          type="checkbox"
+          className="mt-0.5"
+          data-testid="auto-approve-toggle"
+          checked={on}
+          onChange={(e) => saveOn(e.target.checked)}
+        />
+        <span>
+          <span className="block text-[13px] text-ink">{t("settings.enable_auto_approve")}</span>
+          <span className="block text-[12px] text-muted">
+            Adds an <em>Auto-approve</em> option to the mode picker. In that mode, your session
+            model reviews each action that would normally need approval and clears the routine
+            ones; anything doubtful still asks you. It can never allow something the rules
+            block. One extra model call per check, billed to your usage.
+          </span>
+        </span>
+      </label>
+      <label className="flex items-start gap-3 py-2 pl-7">
+        <input
+          type="checkbox"
+          className="mt-0.5"
+          data-testid="auto-approve-shadow-toggle"
+          checked={shadow}
+          onChange={(e) => saveShadow(e.target.checked)}
+        />
+        <span>
+          <span className="block text-[13px] text-ink">
+            Shadow evaluation <span className="text-faint">(for measuring)</span>
+          </span>
+          <span className="block text-[12px] text-muted">
+            On any mode, the reviewer records what it <em>would</em> have decided next to your
+            own choice — without changing anything. Lets you see how it would behave before
+            trusting it. Also costs one model call per approval.
+          </span>
+        </span>
+      </label>
+    </div>
+  );
+}
+
 function SidebarCard() {
   const { t } = useTranslation();
-  const { t: tr } = useTranslation();
   const [peek, setPeek] = useState<number | null>(null);
 
   useEffect(() => {
@@ -891,9 +963,9 @@ function SidebarCard() {
   if (peek === null) return null;
   return (
     <div className={CARD + " p-4 mb-4"}>
-      <div className={FIELD_LABEL}>{tr("settings.sidebar_title")}</div>
+      <div className={FIELD_LABEL}>{t("settings.sidebar_card_title")}</div>
       <label className="flex items-center gap-3 mt-2.5">
-        <span className="text-[13px] text-ink">{tr("settings.sidebar_per_coworker")}</span>
+        <span className="text-[13px] text-ink">{t("settings.sidebar_per_coworker")}</span>
         <input
           type="number"
           min={1}
@@ -904,7 +976,7 @@ function SidebarCard() {
         />
       </label>
       <div className={FIELD_HELP}>
-        {t("settings.sidebar_show_more_note")}
+        {t("settings.sidebar_card_help")}
       </div>
     </div>
   );
@@ -914,7 +986,6 @@ function SidebarCard() {
 // doesn't earn its own tab) -----------------------------------------------------
 function FilesCard() {
   const { t } = useTranslation();
-  const { t: tr } = useTranslation();
   const [settings, setSettings] = useState<ModelSettings | null>(null);
   const [scratchDraft, setScratchDraft] = useState("");
   const [scratchMsg, setScratchMsg] = useState<string | null>(null);
@@ -935,10 +1006,10 @@ function FilesCard() {
     setScratchMsg(null);
     const res = await setScratchBase(scratchDraft.trim());
     if (res.ok) {
-      setScratchMsg(t("settings.location_saved"));
+      setScratchMsg(t("settings.files_saved"));
       refresh();
     } else {
-      setScratchMsg(res.error || t("settings.location_bad"));
+      setScratchMsg(res.error || t("settings.files_save_error"));
     }
   };
   const browseScratch = async () => {
@@ -950,12 +1021,12 @@ function FilesCard() {
 
   return (
     <div className={CARD + " p-4 mb-4"}>
-      <div className={FIELD_LABEL}>{tr("rail.crumb_files")}</div>
+      <div className={FIELD_LABEL}>{t("settings.files_title")}</div>
         <div className="flex items-center gap-2 mt-2.5">
           <input
             className={INPUT}
             type="text"
-            placeholder="~/Marlo"
+            placeholder={t("settings.scratch_placeholder")}
             value={scratchDraft}
             spellCheck={false}
             autoComplete="off"
@@ -963,8 +1034,8 @@ function FilesCard() {
             onKeyDown={(e) => e.key === "Enter" && saveScratch()}
           />
           {desktop && (
-            <button className={BTN_BORDERED} onClick={browseScratch} title={tr("settings.files_pick_folder")}>
-              {t("rail.browse")}
+            <button className={BTN_BORDERED} onClick={browseScratch} title={t("settings.files_pick_folder")}>
+              {t("settings.files_browse")}
             </button>
           )}
           <button className={BTN_ACCENT} onClick={saveScratch} disabled={!scratchDraft.trim()}>
@@ -972,10 +1043,9 @@ function FilesCard() {
           </button>
         </div>
       <div className={FIELD_HELP}>
-        Each conversation gets its own folder under this location. Existing conversations keep their current
-        folder; you can grant access to more folders inside any conversation.
+        {t("settings.files_help")}
       </div>
-      {scratchMsg && <div className="text-[12.5px] text-muted mt-2.5">{scratchMsg}</div>}
+      {scratchMsg && <div className="text-[13px] text-muted mt-2.5">{scratchMsg}</div>}
     </div>
   );
 }

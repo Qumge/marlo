@@ -24,7 +24,7 @@ const ICON_FOR: Record<string, "diamond" | "chat" | "code"> = {
   code: "code",
 };
 
-// as const 而不是 : { labelKey: string }[]（上游的写法）—— 我们给键上了类型
+// as const 而不是 : { labelKey: ParseKeys }[]（上游的写法）—— 我们给键上了类型
 // （i18nTyped.d.ts），裸 string 进不了 t()。字面量联合既能过类型，又保住了
 // "键写错就红"：这是比上游【多】一层保护，不是放宽。
 const KIND_TABS = [
@@ -34,7 +34,7 @@ const KIND_TABS = [
 ] as const;
 
 const CHIP = (active: boolean) =>
-  "text-[11.5px] px-2.5 py-1 rounded-full border " +
+  "text-[12px] px-2.5 py-1 rounded-full border " +
   (active
     ? "border-accent text-accent bg-accentSoft"
     : "border-line text-muted hover:border-lineStrong");
@@ -60,7 +60,6 @@ export function InboxView({
 }: {
   onOpenSession: (sessionId: string, workspace: string, agent: string) => void;
 }) {
-  const { t: tr } = useTranslation();
   const { t } = useTranslation();
   const [tab, setTab] = useState<"pending" | "configure">("pending");
   const [items, setItems] = useState<InboxItem[]>([]);
@@ -151,7 +150,7 @@ export function InboxView({
       <div className="flex-1 min-w-0 overflow-y-auto hairline-scroll">
         <div className="max-w-4xl mx-auto px-7 py-6">
           <PanelHead
-            title={t("nav.inbox")}
+            title={t("inbox.title")}
             sub={t("inbox.sub")}
           />
 
@@ -167,7 +166,7 @@ export function InboxView({
                 load();
               }}
             >
-              Pending
+              {t("inbox.tab_pending")}
               {items.length > 0 && (
                 <span className="text-[11px] px-1.5 rounded-full bg-accentSoft text-accent leading-4">
                   {items.length}
@@ -179,7 +178,7 @@ export function InboxView({
               data-testid="inbox-tab-configure"
               onClick={() => setTab("configure")}
             >
-              Configure
+              {t("inbox.tab_configure")}
               {unroutedCount > 0 && (
                 <span className="text-[11px] px-1.5 rounded-full bg-warnSoft text-warnInk leading-4">
                   ⚠ {unroutedCount}
@@ -195,18 +194,17 @@ export function InboxView({
               <div className="text-[12px] text-faint -mt-1 mb-4" data-testid="inbox-routing">
                 {routing ? (
                   <span>
-                    Also delivered to{" "}
+                    {t("inbox.also_delivered_to")}{" "}
                     <span className="text-muted" title={routing}>
                       {routingLabel}
                     </span>{" "}
-                    — replies there resolve items here.{" "}
+                    {t("inbox.replies_resolve")}{" "}
                   </span>
                 ) : slackConnected ? (
                   <span>{t("inbox.delivered_here_only")} </span>
                 ) : (
                   <span>
-                    Delivered here only. Connect Slack (Connectors page) to also get these in a
-                    channel — more platforms later.{" "}
+                    {t("inbox.delivered_here_only_connect_slack")}{" "}
                   </span>
                 )}
                 <button
@@ -214,14 +212,14 @@ export function InboxView({
                   data-testid="inbox-route-configure"
                   onClick={() => setTab("configure")}
                 >
-                  {t("intro.cta_configure")}
+                  {t("inbox.configure_arrow")}
                 </button>
               </div>
 
               <div className="flex items-center gap-2 flex-wrap mb-4" data-testid="inbox-filters">
-                {KIND_TABS.map((t) => (
-                  <button key={t.key} className={CHIP(kind === t.key)} onClick={() => setKind(t.key)}>
-                    {tr(t.labelKey)}
+                {KIND_TABS.map((tab) => (
+                  <button key={tab.key} className={CHIP(kind === tab.key)} onClick={() => setKind(tab.key)}>
+                    {t(tab.labelKey)}
                   </button>
                 ))}
                 {personasWithItems.length > 1 && (

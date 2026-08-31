@@ -36,8 +36,7 @@ CODE_TOOLS = {
 COWORK_TOOLS = {
     "request_connector",  # 在对话里要账号授权：连接器页不是主路径
     "list_files",
-    "read_file",  # aisuite (multi-root)
-    "read_file_lines",
+    "read_file",  # numbered/windowed — one reader everywhere (owner ruling 2026-08-20)
     "write_file",
     # 【没有补丁工具】。一个白领在审批卡片上看到 @@ -12,7 +12,7 @@ 是给程序员
     # 看的东西；整文件重写让卡片能说"我要改 合同概览.docx"并给结果摘要。
@@ -115,11 +114,12 @@ def test_patch_tools_are_for_code_only(tmp_path):
 
 
 def test_file_capability_distinction(tmp_path):
-    # Code drops read_file_lines (folded into the windowed reader); Cowork keeps it (multi-root).
+    # One reader everywhere: both capability sets fold read_file_lines into the
+    # windowed read_file (owner ruling 2026-08-20).
     code = _names(expand(["code_files"], _full_context(tmp_path)))
     cowork = _names(expand(["files"], _full_context(tmp_path)))
     assert "read_file_lines" not in code
-    assert "read_file_lines" in cowork
+    assert "read_file_lines" not in cowork
     assert "read_file" in code and "read_file" in cowork
 
 

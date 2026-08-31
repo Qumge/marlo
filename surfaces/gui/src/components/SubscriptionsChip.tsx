@@ -41,7 +41,7 @@ export function ChannelPicker({
 }) {
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement | null>(null);
-  const { t: tt } = useTranslation();
+  const { t } = useTranslation();
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
@@ -145,7 +145,7 @@ export function ChannelPicker({
       <input
         ref={inputRef}
         className="chan-input w-full"
-        placeholder={tt("inbox.channel_picker_placeholder")}
+        placeholder={t("inbox.channel_picker_placeholder")}
         value={display}
         title={value || undefined}
         onChange={(e) => {
@@ -207,7 +207,7 @@ export function ChannelPicker({
               className="px-3 py-1.5 text-[12px] text-faint"
               data-testid="roster-searching"
             >
-              {tt("inbox.searching_channels")}
+              {t("inbox.searching_channels")}
             </div>
           )}
           {/* Live workspace-roster hits: type the NAME, we resolved the id. */}
@@ -237,7 +237,7 @@ export function ChannelPicker({
               )}
               {!r.is_member && (
                 <span className="block text-[11px] text-warnInk">
-                  {tt("inbox.invite_to_listen")}
+                  {t("inbox.invite_to_listen")}
                 </span>
               )}
             </button>

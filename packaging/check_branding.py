@@ -154,6 +154,10 @@ SENTENCE_LEAKS = [
 SELF_CHECKS = {"check_i18n.py", "check_branding.py"}
 
 ALLOWED = [
+    # 标识符里的产品名，不是给人读的字符串：上游 2026-08 新增的 onOpenWorker prop
+    # （BoardPanel / RightRail / App 一路传下去）。判据是【前后紧挨着标识符字符】——
+    # 用户读到的字符串两边不会是 on/= 这种。改名它等于改上游的 API。
+    re.compile(r"[A-Za-z0-9_]OpenWorker|OpenWorker[A-Za-z0-9_]"),
     re.compile(r"OpenWorker Cloud"),
     re.compile(r"openworker\.com"),
     re.compile(r"X-OpenWorker-Token"),

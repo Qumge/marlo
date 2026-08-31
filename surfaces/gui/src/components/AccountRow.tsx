@@ -28,8 +28,6 @@ export function AccountRow({
   onOpenSkills,
   skillsActive,
   onManage,
-  onOpenScheduled,
-  scheduledActive,
   onOpenAudit,
   auditActive,
   totalAttention,
@@ -42,8 +40,6 @@ export function AccountRow({
   onOpenSkills: () => void;
   skillsActive: boolean;
   onManage: () => void;
-  onOpenScheduled: () => void;
-  scheduledActive: boolean;
   onOpenAudit: () => void;
   auditActive: boolean;
   totalAttention: number;
@@ -146,7 +142,8 @@ export function AccountRow({
                 false,
                 <span className="text-[11px] text-faint">⌘ ,</span>,
               )}
-              {appMenuItem("clock", t("automations"), onOpenScheduled, scheduledActive)}
+              {/* 自动化不在这个菜单里（上游 2026-08-21）—— 侧栏的 nav-automations
+                  那一行是唯一入口。两处都有等于同一件事两个门。 */}
               {appMenuItem("audit", t("activity"), onOpenAudit, auditActive)}
               {account.signed_in && (
                 <>

@@ -17,7 +17,7 @@ import { FOOT, GRP, GRP_H, PILL_ACCENT, ROW, TAG_ACCENT, TAG_WARN, XBTN } from "
 // Adding an account launches managed OAuth DIRECTLY — Gmail has one connect mode,
 // so no modal (the pill-modal is only for ≥2-mode connectors like Slack).
 
-const LABEL = "text-[12.5px] text-muted w-24 shrink-0";
+const LABEL = "text-[13px] text-muted w-24 shrink-0";
 
 export function GmailDetail({ c, cloud, slack: _slack, onChanged }: DetailProps) {
   const { t } = useTranslation();
@@ -36,12 +36,12 @@ export function GmailDetail({ c, cloud, slack: _slack, onChanged }: DetailProps)
         <ConnectorBadge connector={c} size={44} title="Gmail" />
         <div className="min-w-0 flex-1">
           <h2 className="text-[20px] font-semibold tracking-tight leading-tight">Gmail</h2>
-          <div className="text-[12.5px] text-muted flex items-center gap-1.5">
+          <div className="text-[13px] text-muted flex items-center gap-1.5">
             {c.connected ? (
               <>
                 <span className="w-2 h-2 rounded-full bg-ok" />
                 <span data-testid="gmail-status">
-                  {accounts.length} account{accounts.length === 1 ? "" : "s"}
+                  {t("connector.account_count", { count: accounts.length })}
                 </span>
               </>
             ) : (
@@ -68,9 +68,9 @@ export function GmailDetail({ c, cloud, slack: _slack, onChanged }: DetailProps)
 
       {!c.connected && (
         <div className={GRP}>
-          <div className={ROW + " text-[12.5px] text-muted"}>
-            Sign in with Google — each mailbox stays separate, agents say which one they use.
-            {cloud?.signed_in ? "" : t("gmail.requires_cloud")}
+          <div className={ROW + " text-[13px] text-muted"}>
+            {t("gmail.setup_blurb")}
+            {cloud?.signed_in ? "" : " " + t("gmail.requires_cloud")}
           </div>
         </div>
       )}
@@ -90,8 +90,7 @@ export function GmailDetail({ c, cloud, slack: _slack, onChanged }: DetailProps)
 
       <ToolsDisclosure c={c} onChanged={onChanged} />
       <div className={FOOT + " mt-2"}>
-        Filters are enforced on this computer, before an agent sees results. Hidden counts show
-        on the tool card and in Activity — never the content.
+        {t("gmail.filters_foot")}
       </div>
     </div>
   );
@@ -105,7 +104,7 @@ function AccountRow({ a, onChanged }: { a: GmailAccount; onChanged: () => void }
       <span className="min-w-0 flex-1 flex items-center gap-2">
         <span className="text-[13px] font-medium truncate">{a.email}</span>
         {a.default && <span className={TAG_ACCENT}>{t("connector.default")}</span>}
-        {a.needs_reauth && <span className={TAG_WARN}>⚠ Sign in again</span>}
+        {a.needs_reauth && <span className={TAG_WARN}>{t("gmail.sign_in_again")}</span>}
       </span>
       {!a.default && (
         <button
@@ -145,7 +144,7 @@ function FiltersGroup({ c, onChanged }: Pick<DetailProps, "c" | "onChanged">) {
       <div className={GRP_H}>{t("gmail.never_show_agents")}</div>
       <div className={GRP} data-testid="gmail-filters">
         <ChipListRow
-          label="Senders"
+          label={t("gmail.senders")}
           testid="gmail-filter-senders"
           placeholder={t("gmail.senders_placeholder")}
           values={filters.senders}
@@ -155,7 +154,7 @@ function FiltersGroup({ c, onChanged }: Pick<DetailProps, "c" | "onChanged">) {
           }}
         />
         <ChipListRow
-          label="Labels"
+          label={t("gmail.labels")}
           testid="gmail-filter-labels"
           placeholder={t("gmail.labels_placeholder")}
           values={filters.labels}
@@ -200,7 +199,7 @@ function ChipListRow({
         {values.map((v) => (
           <span
             key={v}
-            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-paper border border-line text-[12.5px]"
+            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-paper border border-line text-[13px]"
           >
             {v}
             <button
@@ -213,7 +212,7 @@ function ChipListRow({
           </span>
         ))}
         <input
-          className="flex-1 min-w-[140px] bg-transparent text-[12.5px] outline-none placeholder:text-faint"
+          className="flex-1 min-w-[140px] bg-transparent text-[13px] outline-none placeholder:text-faint"
           placeholder={placeholder}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}

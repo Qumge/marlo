@@ -192,6 +192,15 @@ ALLOWED = [
                r"Amplitude|Apollo|Hunter|AutoWhisper|MCP|IMAP|SMTP|OAuth|API|URL|JSON|PDF|"
                r"Ollama|Claude|OpenAI|Anthropic|Gemini|DeepSeek|Windows|macOS|Word|Excel)\b"),
     re.compile(r"^[\W\d]+$"),
+    # i18n 的【键】本身：composer.mode.auto_desc 这种。2026-08-31 上游那次同步之后，
+    # 「常量数组里存键、渲染时才 t()」成了普遍写法（PERMISSION_OPTIONS、SET_TABS、
+    # TOOL_VERBS、TOOL_ROWS…），因为模块加载时 i18next 还没 init，那一刻调 t() 拿到的
+    # 是键名本身。这些字符串永远不该被翻译 —— 翻了就查不到键了。
+    #
+    # 判据收得很紧（全小写 + 点分 + 至少两段），不会误放真正的英文文案进来。
+    re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$"),
+    # HTTP 头名 —— 协议词，翻了浏览器就不认了。
+    re.compile(r"^(Content-Security-Policy|Content-Type|Authorization|User-Agent)$"),
     # 域名（provider 的控制台地址）：console.anthropic.com、platform.openai.com…
     # 翻译它们等于给用户一个打不开的地址。
     re.compile(r"^[a-z0-9-]+(\.[a-z0-9-]+)+$"),

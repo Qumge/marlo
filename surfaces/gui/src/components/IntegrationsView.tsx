@@ -1,8 +1,5 @@
-import { useState } from "react";
-import { McpTab } from "./ManageTabs";
-import { ConnectorsSection } from "./connectors/ConnectorsSection";
-import { Icon } from "./Icon";
 import { useTranslation } from "react-i18next";
+import { ConnectorsSection } from "./connectors/ConnectorsSection";
 
 // 一个页面，一个列表。
 //
@@ -15,7 +12,6 @@ import { useTranslation } from "react-i18next";
 // 拦住。默认收起 = 默认不存在；想要的人点一下就有。
 export function IntegrationsView() {
   const { t } = useTranslation();
-  const [showServers, setShowServers] = useState(false);
 
   return (
     <main className="flex-1 min-w-0 flex bg-paper">
@@ -24,26 +20,10 @@ export function IntegrationsView() {
           <PanelHead title={t("integrations.connections_title")} sub={t("integrations.connections_sub")} />
           <ConnectorsSection />
 
-          <section className="mt-8 border-t border-line pt-5">
-            <button
-              className="w-full flex items-center gap-2 text-left text-[13px] text-muted hover:text-ink"
-              data-testid="advanced-tool-servers"
-              aria-expanded={showServers}
-              onClick={() => setShowServers((v) => !v)}
-            >
-              <Icon name="code" size={15} />
-              <span className="font-medium">{t("integrations.advanced_tool_servers")}</span>
-              <span className="ml-auto text-faint text-[16px] leading-none">
-                {showServers ? "−" : "+"}
-              </span>
-            </button>
-            {showServers && (
-              <div className="mt-4">
-                <p className="text-[12.5px] text-muted mb-4">{t("integrations.advanced_tool_servers_sub")}</p>
-                <McpTab />
-              </div>
-            )}
-          </section>
+          {/* 「高级：工具服务器」那个折叠区去掉了。它当初是为了不让 MCP 单占一个
+              标签页 —— 上游 UX-034 用同一个理由把 MCP 内联进了连接页本身
+              （ConnectorsList 里的 CustomMcpGroup）。两个都留的话，MCP 预设会在
+              一个页面上渲染两遍，e2e 的 strict mode 当场报重复元素。 */}
         </div>
       </div>
     </main>
@@ -53,8 +33,8 @@ export function IntegrationsView() {
 export function PanelHead({ title, sub }: { title: string; sub: string }) {
   return (
     <div className="mb-4">
-      <h2 className="text-[18px] font-semibold tracking-tight">{title}</h2>
-      <p className="text-[12.5px] text-muted mt-0.5">{sub}</p>
+      <h2 className="text-[20px] font-semibold tracking-tight">{title}</h2>
+      <p className="text-[13px] text-muted mt-0.5">{sub}</p>
     </div>
   );
 }

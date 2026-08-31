@@ -128,6 +128,7 @@ const ADDITIONS = new Set([
   "settings.project_allowances",
   "settings.voice_mic_works",
   "settings.voice_record_phrase",
+  "settings.enable_auto_approve", // 上游这句没包进 t()
   "manage.granola_label", // Granola 连接器：上游没有
   "manage.granola_blurb",
   "personas.installed_n", // 「已安装 N 个」那条：上游没有

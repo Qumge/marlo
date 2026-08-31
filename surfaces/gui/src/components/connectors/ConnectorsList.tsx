@@ -1,13 +1,17 @@
 import { useState } from "react";
-import { type CloudStatus, type Connector, type SlackStatus } from "../../api";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
+import { type CloudStatus, type Connector, type McpServer, type SlackStatus } from "../../api";
 import { ConnectorBadge } from "../../connectors/ConnectorIcon";
 import { AddConnectionModal } from "./AddConnectionModal";
-import { CHIP_OK, CHIP_OFF, CHIP_WARN, GRP, GRP_H, FOOT, PILL_QUIET, ROW } from "./ui";
-import { getI18n, useTranslation } from "react-i18next";
+import { AddMcpModal, CustomMcpGroup } from "./CustomMcp";
+import { CHIP_OK, CHIP_OFF, CHIP_WARN, GRP, GRP_H, PILL_QUIET, FOOT, ROW } from "./ui";
 
 // The Connectors LIST (UX-DECISIONS §21): connected first in their own inset group —
 // rows navigate to the connector's detail subpage; problems surface as a chip in the
 // list, never one click deep. Available connectors below with a Connect pill.
+// Custom MCP servers (UX-034) render as their own group after Connected; the "Add
+// custom server" affordance sits at the top of the page (owner ruling: top).
 
 const AVAILABLE_FOLD = 8; // rows shown before "show all"
 
@@ -30,12 +34,14 @@ function blocked(c: Connector): boolean {
 
 export function ConnectorsList({
   connectors,
+  mcpServers,
   cloud,
   slack,
   onOpen,
   onChanged,
 }: {
   connectors: Connector[];
+  mcpServers: McpServer[];
   cloud: CloudStatus | null;
   slack: SlackStatus | null;
   onOpen: (name: string) => void;
@@ -43,21 +49,30 @@ export function ConnectorsList({
 }) {
   const { t } = useTranslation();
   const [filter, setFilter] = useState("");
-  const [showAll, setShowAll] = useState(false);
   const [connecting, setConnecting] = useState<string | null>(null);
+  const [addingMcp, setAddingMcp] = useState(false);
 
   const q = filter.trim().toLowerCase();
   const match = (c: Connector) => !q || c.title.toLowerCase().includes(q) || c.name.includes(q);
   const connected = connectors.filter((c) => c.connected && match(c));
   const available = connectors.filter((c) => !c.connected && c.available && match(c));
+  const customMcp = mcpServers.filter((s) => !q || s.name.toLowerCase().includes(q));
+  const [showAll, setShowAll] = useState(false);
   const shown = showAll || q ? available : available.slice(0, AVAILABLE_FOLD);
   const connectingC = connecting ? connectors.find((c) => c.name === connecting) : null;
 
   return (
     <div>
-      <div className="flex items-center justify-end mb-4">
+      <div className="flex items-center justify-between mb-4">
+        <button
+          className={PILL_QUIET}
+          onClick={() => setAddingMcp(true)}
+          data-testid="add-custom-server"
+        >
+          {t("connector.add_custom_mcp")}
+        </button>
         <input
-          placeholder={t("sidebar.search")}
+          placeholder={t("connector.search")}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           className="w-44 px-3.5 py-1.5 rounded-full border border-line bg-panel text-[13px] outline-none focus:border-accent"
@@ -68,7 +83,7 @@ export function ConnectorsList({
           sign-in home, and the connect modals keep their inline sign-in panes. */}
       {connected.length > 0 && (
         <>
-          <div className={GRP_H + " !mt-0"}>Connected · {connected.length}</div>
+          <div className={GRP_H + " !mt-0"}>{t("connector.connected_count", { count: connected.length })}</div>
           <div className={GRP}>
             {connected.map((c) => (
               <button
@@ -79,11 +94,11 @@ export function ConnectorsList({
               >
                 <ConnectorBadge connector={c} size={34} title={c.title} />
                 <span className="min-w-0 flex-1">
-                  <span className="font-medium text-[13.5px]">{c.title}</span>
-                  <span className="block text-[12px] text-muted">{statusLine(c)}</span>
+                  <span className="font-medium text-[13px]">{c.title}</span>
+                  <span className="block text-[12px] text-muted">{statusLine(c, t)}</span>
                 </span>
-                {healthChip(c, slack)}
-                <span className="text-faint text-[15px] shrink-0">›</span>
+                {healthChip(c, slack, t)}
+                <span className="text-faint text-[14px] shrink-0">›</span>
               </button>
             ))}
           </div>
@@ -159,11 +174,24 @@ export function ConnectorsList({
       {shown.length === 0 && (
         <div className={ROW + " text-[12.5px] text-muted"}>{t("connector.nothing_matches")}</div>
       )}
+      <CustomMcpGroup
+        servers={customMcp}
+        onOpen={(name) => onOpen("mcp:" + name)}
+        onChanged={onChanged}
+      />
+
+      {/* 上游在这里还有一份平铺的 Available 列表。我们的分组列表（上面 GROUP_ORDER
+          那段，ac6f51a：按用户认得的东西分组）已经把同一批连接器渲染过一遍了 ——
+          两份都留会让每个连接器出现两次，e2e 的 strict mode 当场报重复元素。 */}
+
+      {/* 展开入口：分组列表默认只铺前 AVAILABLE_FOLD 个。上游把它放在自己那份
+          平铺列表的末尾，删那份的时候连它一起删了 —— 结果 36 个连接器里只看得见
+          8 个，而且没有任何办法看到其余的。 */}
       {!showAll && !q && available.length > AVAILABLE_FOLD && (
         <div className={FOOT}>
-          {available.length - AVAILABLE_FOLD} more ·{" "}
+          {t("connector.more_count", { count: available.length - AVAILABLE_FOLD })}{" "}
           <button className="text-muted hover:text-ink" onClick={() => setShowAll(true)}>
-            show all
+            {t("connector.show_all")}
           </button>
         </div>
       )}
@@ -176,35 +204,35 @@ export function ConnectorsList({
           onChanged={onChanged}
         />
       )}
+      {addingMcp && <AddMcpModal onClose={() => setAddingMcp(false)} onChanged={onChanged} />}
     </div>
   );
 }
 
-function statusLine(c: Connector): string {
-  const t = getI18n().getFixedT(null, "translation");
+function statusLine(c: Connector, t: TFunction): string {
   if (c.name === "slack" && c.mode === "relay") {
     const n = c.workspaces?.length ?? 0;
-    return t("connector.n_workspaces_relay", { count: n });
+    return t("connector.slack_status", { count: n });
   }
-  if ((c.accounts?.length ?? 0) > 1) return `${c.accounts!.length} accounts`;
-  if ((c.portals?.length ?? 0) > 1) return `${c.portals!.length} portals`;
+  if ((c.accounts?.length ?? 0) > 1) return t("connector.account_count", { count: c.accounts!.length });
+  if ((c.portals?.length ?? 0) > 1) return t("connector.portal_count", { count: c.portals!.length });
   if (c.auth === "none") return t("connector.built_in");
-  return c.account || "Connected";
+  return c.account || t("connector.connected");
 }
 
-function healthChip(c: Connector, slack: SlackStatus | null) {
+function healthChip(c: Connector, slack: SlackStatus | null, t: TFunction) {
   // Slack relay gets a LIVE chip from /v1/connectors/slack/status — problems
   // surface in the list, never one click deep. Named honestly per layer; we
   // never claim "Slack↔cloud down" (the desktop can't see that leg).
   if (c.name === "slack" && c.mode === "relay" && slack) {
-    if (!slack.signed_in) return <span className={CHIP_WARN}>● Sign-in needed</span>;
-    if (slack.relay.state === "offline") return <span className={CHIP_OFF}>● Offline</span>;
+    if (!slack.signed_in) return <span className={CHIP_WARN}>{"● " + t("connector.sign_in_needed")}</span>;
+    if (slack.relay.state === "offline") return <span className={CHIP_OFF}>{"● " + t("connector.offline")}</span>;
     if (slack.relay.state === "reconnecting")
-      return <span className={CHIP_WARN}>● Reconnecting</span>;
-    if (Object.values(slack.teams).some((t) => !t.token_ok))
-      return <span className={CHIP_WARN}>⚠ Token</span>;
-    return <span className={CHIP_OK}>● Live</span>;
+      return <span className={CHIP_WARN}>{"● " + t("connector.reconnecting")}</span>;
+    if (Object.values(slack.teams).some((tm) => !tm.token_ok))
+      return <span className={CHIP_WARN}>{"⚠ " + t("connector.token")}</span>;
+    return <span className={CHIP_OK}>{"● " + t("connector.live")}</span>;
   }
-  if (c.two_way && c.connected) return <span className={CHIP_OK}>● Live</span>;
-  return <span className={CHIP_OK}>● Ready</span>;
+  if (c.two_way && c.connected) return <span className={CHIP_OK}>{"● " + t("connector.live")}</span>;
+  return <span className={CHIP_OK}>{"● " + t("connector.ready")}</span>;
 }

@@ -48,7 +48,8 @@
     "location_bad": "Could not use that location.",
     "tab": {
       "personas": "Personas"
-    }
+    },
+    "enable_auto_approve": "Enable Auto-approve mode"
   },
   "cloud": {
     "signin_unlocks_default": "Sign-in unlocks one-click connects — or switch to Manual, which works without it."

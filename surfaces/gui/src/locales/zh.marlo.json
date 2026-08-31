@@ -104,7 +104,8 @@
     "tab": {
       "personas": "角色"
     },
-    "gallery_title": "角色库"
+    "gallery_title": "角色库",
+    "enable_auto_approve": "开启自动批准"
   },
   "cloud": {
     "check_browser": "去浏览器里完成…",
@@ -268,7 +269,8 @@
     "group_files": "文件与网盘",
     "group_web": "网页",
     "group_other": "其他",
-    "nothing_matches": "没有匹配的。"
+    "nothing_matches": "没有匹配的。",
+    "asks_first": "会先问过你"
   },
   "github": {
     "relay_live": "在线 · 托管中继",
@@ -517,7 +519,8 @@
       "stop_dictation": "停止口述",
       "start_dictation_btn": "开始口述"
     },
-    "connect_to_send": "连接一个模型才能发送"
+    "connect_to_send": "连接一个模型才能发送",
+    "placeholder_cowork": "说说你要什么…（也可以把文件拖进来）"
   },
   "intro": {
     "greeting": "你每周的时间花在哪儿？",

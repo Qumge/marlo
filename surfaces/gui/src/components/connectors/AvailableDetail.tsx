@@ -20,7 +20,7 @@ export function AvailableDetail({
   cloud: CloudStatus | null;
   onChanged: () => void;
 }) {
-  const { t: tt } = useTranslation();
+  const { t } = useTranslation();
   const [connecting, setConnecting] = useState(false);
   const [showTools, setShowTools] = useState(false);
   const tools = c.tools || [];
@@ -38,7 +38,7 @@ export function AvailableDetail({
           data-testid="available-connect"
           onClick={() => setConnecting(true)}
         >
-          {tt("available.connect")}
+          {t("available.connect")}
         </button>
       </div>
 
@@ -46,7 +46,7 @@ export function AvailableDetail({
 
       {(c.access?.length ?? 0) > 0 && (
         <>
-          <div className={GRP_H}>{tt("available.access")}</div>
+          <div className={GRP_H}>{t("available.access")}</div>
           <div className={GRP} data-testid="available-access">
             {c.access!.map((line) => (
               <div key={line} className={ROW + " !min-h-[36px] !py-2 text-[13px]"}>
@@ -55,14 +55,14 @@ export function AvailableDetail({
             ))}
           </div>
           <div className={FOOT}>
-            {tt("available.access_foot")}
+            {t("available.access_foot")}
           </div>
         </>
       )}
 
       {tools.length > 0 && (
         <>
-          <div className={GRP_H}>{tt("available.tools")}</div>
+          <div className={GRP_H}>{t("available.tools")}</div>
           <div className={GRP}>
             <button
               className={ROW + " w-full text-left hover:bg-paper/60 text-[13px]"}
@@ -70,9 +70,9 @@ export function AvailableDetail({
               onClick={() => setShowTools((v) => !v)}
             >
               <span className="min-w-0 flex-1 text-muted">
-                {tt("available.tools_added", { count: tools.length })}
+                {t("available.tools_added", { count: tools.length })}
               </span>
-              <span className="text-faint text-[13px] shrink-0">{showTools ? tt("available.hide") : tt("available.view")}</span>
+              <span className="text-faint text-[13px] shrink-0">{showTools ? t("available.hide") : t("available.view")}</span>
             </button>
             {showTools &&
               tools.map((tool) => (
@@ -81,7 +81,7 @@ export function AvailableDetail({
                     <span className="text-[13px]">{tool.label}</span>
                     <span className="block text-[12px] text-muted">{tool.description}</span>
                   </span>
-                  {tool.kind !== "read" && <span className={TAG_QUIET}>{tt("available.asks_first")}</span>}
+                  {tool.kind !== "read" && <span className={TAG_QUIET}>{t("available.asks_first")}</span>}
                 </div>
               ))}
           </div>

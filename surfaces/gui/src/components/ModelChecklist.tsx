@@ -1,14 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  addModel,
-  gatewayModels,
-  getSettings,
-  removeModel,
-  setDefaultModel,
-  type GatewayModel,
-} from "../api";
-import { useTranslation } from "react-i18next";
 import type { ParseKeys } from "i18next";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { addModel, gatewayModels, getSettings, removeModel, setDefaultModel, type GatewayModel } from "../api";
 
 // Cloud-account providers dispatch by a family segment baked into the model id
 // (`bedrock:claude/…`, `vertex:openweight/…`). The add-model row shows a dropdown so

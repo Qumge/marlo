@@ -18,7 +18,7 @@ import { FOOT, GRP, GRP_H, PILL_ACCENT, ROW, TAG_ACCENT, TAG_QUIET, TAG_WARN, XB
 // are the ACL against humans) + collapsed Tools. Adding a portal goes through
 // the ONE entry point: header button → modal (One click w/ access radios | Manual).
 
-const LABEL = "text-[12.5px] text-muted w-24 shrink-0";
+const LABEL = "text-[13px] text-muted w-24 shrink-0";
 
 export function HubSpotDetail({ c, cloud, slack: _slack, onChanged }: DetailProps) {
   const { t } = useTranslation();
@@ -31,12 +31,12 @@ export function HubSpotDetail({ c, cloud, slack: _slack, onChanged }: DetailProp
         <ConnectorBadge connector={c} size={44} title="HubSpot" />
         <div className="min-w-0 flex-1">
           <h2 className="text-[20px] font-semibold tracking-tight leading-tight">HubSpot</h2>
-          <div className="text-[12.5px] text-muted flex items-center gap-1.5">
+          <div className="text-[13px] text-muted flex items-center gap-1.5">
             {c.connected ? (
               <>
                 <span className="w-2 h-2 rounded-full bg-ok" />
                 <span data-testid="hubspot-status">
-                  {portals.length} portal{portals.length === 1 ? "" : "s"}
+                  {t("hubspot.portal_count", { count: portals.length })}
                 </span>
               </>
             ) : (
@@ -45,15 +45,14 @@ export function HubSpotDetail({ c, cloud, slack: _slack, onChanged }: DetailProp
           </div>
         </div>
         <button className={PILL_ACCENT} data-testid="add-portal-btn" onClick={() => setAdding(true)}>
-          ＋ Add portal
+          {t("hubspot.add_portal")}
         </button>
       </div>
 
       {!c.connected && (
         <div className={GRP}>
-          <div className={ROW + " text-[12.5px] text-muted"}>
-            Connect a portal — read-only or read &amp; write is chosen at consent; there are no
-            delete tools either way.
+          <div className={ROW + " text-[13px] text-muted"}>
+            {t("hubspot.setup_blurb")}
           </div>
         </div>
       )}
@@ -73,8 +72,7 @@ export function HubSpotDetail({ c, cloud, slack: _slack, onChanged }: DetailProp
 
       <ToolsDisclosure c={c} onChanged={onChanged} />
       <div className={FOOT + " mt-2"}>
-        Hidden fields never reach an agent; stripped counts land in Activity. To limit what a
-        HUMAN teammate could ask for, use HubSpot permission sets on the connected user.
+        {t("hubspot.hidden_fields_foot")}
       </div>
 
       {adding && (
@@ -103,10 +101,10 @@ function PortalRow({ p, onChanged }: { p: HubSpotPortal; onChanged: () => void }
         {p.sandbox && <span className={TAG_WARN}>{t("hubspot.sandbox")}</span>}
         {p.access && (
           <span className={TAG_QUIET} data-testid={`hubspot-access-tag-${p.hub_id}`}>
-            {p.access === "write" ? t("hubspot.read_write") : "read-only"}
+            {p.access === "write" ? t("hubspot.read_write") : t("hubspot.read_only")}
           </span>
         )}
-        {!p.managed && <span className={TAG_QUIET}>private app</span>}
+        {!p.managed && <span className={TAG_QUIET}>{t("hubspot.private_app")}</span>}
       </span>
       {!p.default && (
         <button
@@ -154,7 +152,7 @@ function PrivacyGroup({ c, onChanged }: Pick<DetailProps, "c" | "onChanged">) {
   };
   return (
     <>
-      <div className={GRP_H}>Access &amp; privacy</div>
+      <div className={GRP_H}>{t("hubspot.access_privacy")}</div>
       <div className={GRP}>
         <div className={ROW} data-testid="hubspot-hidden-fields">
           <span className={LABEL}>{t("hubspot.hidden_fields")}</span>
@@ -162,7 +160,7 @@ function PrivacyGroup({ c, onChanged }: Pick<DetailProps, "c" | "onChanged">) {
             {fields.map((f) => (
               <span
                 key={f}
-                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-paper border border-line text-[12.5px] font-mono"
+                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-paper border border-line text-[13px] font-mono"
               >
                 {f}
                 <button className={XBTN} title={t("common.remove")} onClick={() => save(fields.filter((x) => x !== f))}>
@@ -171,7 +169,7 @@ function PrivacyGroup({ c, onChanged }: Pick<DetailProps, "c" | "onChanged">) {
               </span>
             ))}
             <input
-              className="flex-1 min-w-[140px] bg-transparent text-[12.5px] outline-none placeholder:text-faint"
+              className="flex-1 min-w-[140px] bg-transparent text-[13px] outline-none placeholder:text-faint"
               placeholder={t("hubspot.hidden_fields_placeholder")}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}

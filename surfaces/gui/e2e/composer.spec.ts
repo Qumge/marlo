@@ -36,6 +36,7 @@ test("composer: send-gating, + attach menu, Mode menu", async ({ page }) => {
   await expect(menu.locator("button").filter({ hasText: "Ask for approval" })).toContainText("✓");
   await expect(menu.getByRole("switch", { name: "Send approvals to the Inbox" })).toBeVisible();
   // Picking an option closes the menu (and would flip the live engine's mode).
+  // 这个模式在 Marlo 叫「Full access」（overlay 覆盖了 composer.mode.auto）。
   await menu.getByText("Full access").click();
   await expect(page.getByTestId("mode-menu")).toHaveCount(0);
 });

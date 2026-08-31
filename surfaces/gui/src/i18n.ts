@@ -16,10 +16,30 @@ const STORAGE_KEY = "openworker.lang";
 export const SUPPORTED_LANGS = ["en", "zh"] as const;
 export type Lang = (typeof SUPPORTED_LANGS)[number];
 
+// Marlo 迁移：我们自己那套 i18n 把语言选择存在 "marlo.locale"（见 legacyI18n/index.ts）。
+// 换到上游的 runtime 之后键名变成 "openworker.lang" —— 不迁的话，所有【显式选过中文】
+// 的老用户升级后会读不到自己的选择，静默回落到系统语言：英文系统的中文用户，一次更新
+// 之后整个界面变回英文，而且没有任何提示。读一次旧键、写进新键、删掉旧键，只发生一次。
+const LEGACY_STORAGE_KEY = "marlo.locale";
+
+function migrateLegacyLang(): string | null {
+  try {
+    const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (!legacy) return null;
+    if ((SUPPORTED_LANGS as readonly string[]).includes(legacy)) {
+      if (!localStorage.getItem(STORAGE_KEY)) localStorage.setItem(STORAGE_KEY, legacy);
+    }
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+    return legacy;
+  } catch {
+    return null;
+  }
+}
+
 /** The user's explicit choice wins; otherwise follow the system locale. */
 function resolveLang(): Lang {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(STORAGE_KEY) ?? migrateLegacyLang();
     if (stored && (SUPPORTED_LANGS as readonly string[]).includes(stored)) {
       return stored as Lang;
     }

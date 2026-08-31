@@ -52,9 +52,8 @@ export function InboxConfigure() {
           the Inbox now (§28; previously with routing under Connectors, §26). */}
       <div className="mt-6" data-testid="unrouted-section">
         <h3 className="text-[14px] font-semibold mb-1">{t("inbox.unrouted_title")}</h3>
-        <p className="text-[12.5px] text-muted mb-3">
-          Inbound messages and background-turn failures nothing claimed — nothing vanishes
-          silently.
+        <p className="text-[13px] text-muted mb-3">
+          {t("inbox.unrouted_sub")}
         </p>
         <UnroutedTable />
       </div>
@@ -135,13 +134,13 @@ function InboxRoutingCard() {
 
   return (
     <div className={CARD + " p-4"} data-testid="inbox-mirror-card">
-      <div className="font-semibold text-[13.5px] mb-1">{t("inbox.unattended_approvals")}</div>
+      <div className="font-semibold text-[13px] mb-1">{t("inbox.unattended_approvals")}</div>
       <p className="text-[12px] text-muted mb-3">
-        Channel where an Unattended session posts Approve/Deny buttons. Currently mirroring to{" "}
+        {t("inbox.mirror_desc_prefix")}{" "}
         <strong className="text-ink font-medium" title={target || undefined}>
           {known ? `#${known}` : target || t("inbox.in_app_inbox_only")}
         </strong>
-        .
+        {t("inbox.mirror_desc_suffix")}
       </p>
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-muted shrink-0">
@@ -157,16 +156,16 @@ function InboxRoutingCard() {
         </button>
         {target && (
           <button className="text-[12px] text-danger/80 hover:text-danger" onClick={clear}>
-            clear
+            {t("inbox.clear")}
           </button>
         )}
       </div>
       {missingSlackOwner && (
-        <p className="text-[11.5px] text-warnInk mt-2">
+        <p className="text-[12px] text-warnInk mt-2">
           {t("inbox.missing_slack_owner")}
         </p>
       )}
-      {error && <p className="text-[11.5px] text-warnInk mt-2">{error}</p>}
+      {error && <p className="text-[12px] text-warnInk mt-2">{error}</p>}
     </div>
   );
 }
@@ -196,7 +195,7 @@ function DmRouteCard() {
 
   return (
     <div className={CARD + " p-4"}>
-      <div className="font-semibold text-[13.5px] mb-1">{t("inbox.direct_messages")}</div>
+      <div className="font-semibold text-[13px] mb-1">{t("inbox.direct_messages")}</div>
       <p className="text-[12px] text-muted mb-3">
         {t("inbox.dm_desc")}
       </p>
@@ -205,7 +204,7 @@ function DmRouteCard() {
           <Icon name="chat" size={16} />
         </span>
         <select className={"flex-1 " + SELECT} value={dm} onChange={(e) => choose(e.target.value)}>
-          <option value="">No session — park DMs</option>
+          <option value="">{t("inbox.dm_no_session")}</option>
           {real.map((s) => (
             <option key={s.session_id} value={s.session_id}>
               {s.title || s.session_id}
@@ -256,8 +255,8 @@ function SubscriptionsCard() {
         <span className="text-muted shrink-0">
           <Icon name="plug" size={15} />
         </span>
-        <span className="font-semibold text-[13.5px]">{t("inbox.channel_subscriptions")}</span>
-        <span className="text-[12px] text-muted">— sessions that listen to a channel (inbound)</span>
+        <span className="font-semibold text-[13px]">{t("inbox.channel_subscriptions")}</span>
+        <span className="text-[12px] text-muted">{t("inbox.subscriptions_sub")}</span>
       </div>
 
       {subs && subs.length > 0 ? (
@@ -291,7 +290,7 @@ function SubscriptionsCard() {
                       className="ml-1.5 text-[11px] text-warnInk bg-warnSoft/70 border border-warnInk/15 rounded px-1.5 py-0.5"
                       title={t("inbox.collision_title")}
                     >
-                      ⚠ collides
+                      {t("inbox.collides")}
                     </span>
                   )}
                 </td>
@@ -310,7 +309,7 @@ function SubscriptionsCard() {
           </tbody>
         </table>
       ) : (
-        <div className="px-4 py-3 text-[12.5px] text-muted">
+        <div className="px-4 py-3 text-[13px] text-muted">
           {t("inbox.no_subscriptions")}
         </div>
       )}
@@ -321,7 +320,7 @@ function SubscriptionsCard() {
           value={addSession}
           onChange={(e) => setAddSession(e.target.value)}
         >
-          <option value="">Choose a session…</option>
+          <option value="">{t("inbox.choose_session")}</option>
           {real.map((s) => (
             <option key={s.session_id} value={s.session_id}>
               {s.title || s.session_id}
@@ -330,7 +329,7 @@ function SubscriptionsCard() {
         </select>
         <ChannelPicker value={addChannel} onChange={setAddChannel} recent={recent} onSubmit={add} />
         <button className={BTN_ACCENT_SM} disabled={!addSession || !addChannel.trim()} onClick={add}>
-          + Subscribe
+          {t("inbox.subscribe")}
         </button>
       </div>
     </div>
@@ -362,7 +361,7 @@ function UnroutedTable() {
       <table className="w-full text-[13px]">
         <thead className="text-[11px] uppercase tracking-[0.04em] text-faint">
           <tr className="text-left">
-            <th className="font-medium px-4 py-2">{t("automations.when")}</th>
+            <th className="font-medium px-4 py-2">{t("inbox.col_when")}</th>
             <th className="font-medium px-4 py-2">{t("inbox.col_source")}</th>
             <th className="font-medium px-4 py-2">{t("inbox.col_reason")}</th>
             <th className="font-medium px-4 py-2">{t("inbox.col_message")}</th>

@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, act, cleanup } from "@testing-library/react";
-import { setLocale } from "../../legacyI18n";
+import { setTestLocale } from "../../testLocale";
 import { englishRunsIn } from "../../legacyI18n/no-english";
 import { ToolsDisclosure } from "./ToolsDisclosure";
 
@@ -28,13 +28,13 @@ const CONNECTOR = {
 } as never;
 
 describe("工具折叠块 · 中文界面上不该有英文", () => {
-  afterEach(() => {
+  afterEach(async () => {
     cleanup();
-    act(() => setLocale("en"));
+    await act(async () => { await setTestLocale("en"); });
   });
 
-  it("切到中文之后，› Tools / enabled / asks first 都是中文", () => {
-    act(() => setLocale("zh"));
+  it("切到中文之后，› Tools / enabled / asks first 都是中文", async () => {
+    await act(async () => { await setTestLocale("zh"); });
     render(<ToolsDisclosure c={CONNECTOR} onChanged={() => {}} />);
 
     // 断言的是【屏幕上真的出现了中文】，不是"表里有这个键"—— 后者在判据漏掉这
@@ -45,14 +45,14 @@ describe("工具折叠块 · 中文界面上不该有英文", () => {
     expect(screen.queryByText("› Tools")).toBeNull();
   });
 
-  it("英文仍然是英文 —— 译文不能反过来把 en 也改了", () => {
-    act(() => setLocale("en"));
+  it("英文仍然是英文 —— 译文不能反过来把 en 也改了", async () => {
+    await act(async () => { await setTestLocale("en"); });
     render(<ToolsDisclosure c={CONNECTOR} onChanged={() => {}} />);
     expect(screen.getByText("› Tools")).toBeTruthy();
   });
 
-  it("整块 DOM 里没有英文虚词残留", () => {
-    act(() => setLocale("zh"));
+  it("整块 DOM 里没有英文虚词残留", async () => {
+    await act(async () => { await setTestLocale("zh"); });
     const { container } = render(<ToolsDisclosure c={CONNECTOR} onChanged={() => {}} />);
     expect(englishRunsIn(container)).toEqual([]);
   });

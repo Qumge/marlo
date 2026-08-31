@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import {
   createAutomation,
   deleteAutomation,
@@ -125,13 +125,13 @@ export function ScheduledView({ onOpenRun, onRunNow, initialOpenId }: Props) {
     <Shell>
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <PanelHead title={t("sidebar.automations")} sub={t("automations.sub")} />
+          <PanelHead title={t("automations.title")} sub={t("automations.sub")} />
         </div>
         <button
-          className="text-[12.5px] px-3 py-1.5 rounded-lg border border-lineStrong bg-panel hover:border-accent hover:text-accent shrink-0"
+          className="text-[13px] px-3 py-1.5 rounded-lg border border-lineStrong bg-panel hover:border-accent hover:text-accent shrink-0"
           onClick={() => setShowForm((v) => !v)}
         >
-          + New automation
+          {t("automations.new_btn")}
         </button>
       </div>
 
@@ -154,9 +154,11 @@ export function ScheduledView({ onOpenRun, onRunNow, initialOpenId }: Props) {
 
       {empty ? (
         !showForm && (
-          <div className={CARD + " p-4 text-[12.5px] text-muted"}>
-            No scheduled tasks yet — use a template above, click <strong>+ New automation</strong>,
-            or just ask Marlo in a session.
+          <div className={CARD + " p-4 text-[13px] text-muted"}>
+            <Trans
+              i18nKey="automations.empty_state"
+              components={{ strong: <strong /> }}
+            />
           </div>
         )
       ) : (
@@ -168,11 +170,11 @@ export function ScheduledView({ onOpenRun, onRunNow, initialOpenId }: Props) {
               onClick={() => setOpenId(task.id)}
             >
               <div className="flex items-center justify-between gap-2.5 mb-1">
-                <span className="text-[13.5px] font-semibold truncate">{task.title}</span>
+                <span className="text-[13px] font-semibold truncate">{task.title}</span>
                 <button
                   className="sched-card-del"
                   title={t("automations.delete_title")}
-                  aria-label={`Delete ${task.title}`}
+                  aria-label={t("automations.delete_aria", { title: task.title })}
                   onClick={async (e) => {
                     e.stopPropagation();
                     await deleteAutomation(task.id);
@@ -231,7 +233,7 @@ function NewAutomationForm({
       />
       <div className="tmpl-sched">
         <label className="tmpl-field">
-          <span>At</span>
+          <span>{t("automations.at")}</span>
           <input
             type="time"
             className="tmpl-input tmpl-time"
@@ -264,9 +266,9 @@ function NewAutomationForm({
             })
           }
         >
-          {busy ? "Creating…" : t("automations.create_btn")}
+          {busy ? t("automations.creating") : t("automations.create_btn")}
         </button>
-        <button className="link" onClick={onCancel}>cancel</button>
+        <button className="link" onClick={onCancel}>{t("automations.cancel")}</button>
       </div>
     </div>
   );
@@ -332,7 +334,7 @@ function TaskDetail({
   if (!task)
     return (
       <Shell>
-        <div className="text-[13px] text-muted">Loading…</div>
+        <div className="text-[13px] text-muted">{t("automations.loading")}</div>
       </Shell>
     );
 
@@ -371,7 +373,7 @@ function TaskDetail({
   return (
     <Shell>
       <button className="text-[13px] text-muted hover:text-ink mb-3" onClick={onBack}>
-        ← Automations
+        {t("automations.back_to_automations")}
       </button>
       <div className="sched-detail">
         <div className="sched-detail-head">
@@ -383,24 +385,24 @@ function TaskDetail({
               placeholder={t("automations.title_label")}
             />
           ) : (
-            <h2 className="text-[18px] font-semibold tracking-tight">{task.title}</h2>
+            <h2 className="text-[20px] font-semibold tracking-tight">{task.title}</h2>
           )}
           <div className="sched-actions">
             {editing ? (
               <>
                 <button className="btn-primary sm" disabled={saving || !title.trim() || !instructions.trim()} onClick={saveEdit}>
-                  {saving ? "Saving…" : "Save"}
+                  {saving ? t("automations.saving") : t("automations.save")}
                 </button>
-                <button className="link" onClick={() => setEditing(false)}>cancel</button>
+                <button className="link" onClick={() => setEditing(false)}>{t("automations.cancel")}</button>
               </>
             ) : (
               <>
                 <button className="btn-primary sm" onClick={() => onRunNow(id, task.title)}>
-                  ▶ Run now
+                  {t("automations.run_now")}
                 </button>
                 <button className="btn sm" onClick={startEdit}>{t("automations.edit")}</button>
                 <button className="btn sm danger-btn" onClick={remove}>
-                  <Icon name="trash" size={14} /> {t("sidebar.delete")}
+                  <Icon name="trash" size={14} /> {t("automations.delete")}
                 </button>
               </>
             )}
@@ -410,7 +412,7 @@ function TaskDetail({
         {editing ? (
           <div className="tmpl-sched sched-edit-sched">
             <label className="tmpl-field">
-              <span>At</span>
+              <span>{t("automations.at")}</span>
               <input type="time" className="tmpl-input tmpl-time" value={time} onChange={(e) => setTime(e.target.value)} />
             </label>
             <label className="tmpl-field">
@@ -464,7 +466,7 @@ function TaskDetail({
                       refresh();
                     }}
                   >
-                    {t("settings.trust_revoke")}
+                    {t("automations.revoke")}
                   </button>
                 </div>
               ))}
@@ -493,10 +495,10 @@ function TaskDetail({
             <div className="sched-run-row">
               <span>
                 {seenMark !== null && r.started_at > seenMark && (
-                  <span className="run-new-pill" data-testid="run-new">new</span>
+                  <span className="run-new-pill" data-testid="run-new">{t("automations.new_pill")}</span>
                 )}
                 {fmt(r.started_at)} · <span className={"run-" + r.status}>{r.status}</span> · {r.trigger}
-                {r.artifacts.length > 0 && <span className="dim"> · {r.artifacts.length} file(s)</span>}
+                {r.artifacts.length > 0 && <span className="dim"> · {t("automations.file_count", { count: r.artifacts.length })}</span>}
               </span>
               <span className="sched-run-go" aria-hidden>
                 {t("automations.open_go")}

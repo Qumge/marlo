@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Sidebar } from "./Sidebar";
 import type { SessionInfo } from "../types";
 
@@ -24,10 +24,10 @@ function stubFetch(routes: { match: string; method?: string; json: any }[]) {
 
 const PERSONAS = {
   personas: [
-    { id: "cowork", name: "OpenWorker", icon: "cowork", tagline: "general assistant", family: "knowledge", enabled: true, surfaced: true, default: true },
-    { id: "ops", name: "Ops", icon: "ops", tagline: "incidents, runbooks", family: "code", enabled: true, surfaced: true, default: false },
-    { id: "code", name: "Code", icon: "code", tagline: "repository work", family: "code", enabled: true, surfaced: true, default: false },
-    { id: "secret", name: "Disabled One", icon: "cowork", tagline: "off", family: "knowledge", enabled: false, surfaced: false, default: false },
+    { id: "cowork", name: "OpenWorker", icon: "cowork", tagline: "general assistant", requires_folder: false, enabled: true, surfaced: true, default: true },
+    { id: "ops", name: "Ops", icon: "ops", tagline: "incidents, runbooks", requires_folder: true, enabled: true, surfaced: true, default: false },
+    { id: "code", name: "Code", icon: "code", tagline: "repository work", requires_folder: true, enabled: true, surfaced: true, default: false },
+    { id: "secret", name: "Disabled One", icon: "cowork", tagline: "off", requires_folder: false, enabled: false, surfaced: false, default: false },
   ],
 };
 
@@ -53,7 +53,6 @@ const baseProps = {
   onTogglePin: vi.fn(),
   onManage: vi.fn(),
   onOpenPersona: vi.fn(),
-  onManagePersonas: vi.fn(),
   onOpenScheduled: vi.fn(),
   onOpenAutomation: vi.fn(),
   onOpenIntegrations: vi.fn(),
@@ -80,7 +79,7 @@ describe("Sidebar group/filter control", () => {
       { match: "/v1/settings", method: "GET", json: { nav_layout: "flat" } },
       { match: "/v1/settings/nav-layout", method: "POST", json: { ok: true, nav_layout: "grouped" } },
     ]);
-    render(<Sidebar {...baseProps} />);
+    render(<Sidebar onManagePersonas={() => {}} {...baseProps} />);
 
     // personas load drives the surfaces; the RECENT header's group/filter control is always present.
     const control = await screen.findByLabelText("Group and filter conversations");
@@ -118,7 +117,7 @@ describe("Chronological list row actions (⋮ menu)", () => {
       { match: "/v1/personas", method: "GET", json: PERSONAS },
       { match: "/v1/settings", method: "GET", json: { nav_layout: "flat" } },
     ]);
-    render(<Sidebar {...baseProps} />);
+    render(<Sidebar onManagePersonas={() => {}} {...baseProps} />);
     await screen.findByText("incident watch"); // flat Recent list rendered
 
     // Rename: menu item → inline input → Enter commits.
@@ -153,7 +152,7 @@ describe("Chronological list row actions (⋮ menu)", () => {
       { match: "/v1/personas", method: "GET", json: PERSONAS },
       { match: "/v1/settings", method: "GET", json: { nav_layout: "flat" } },
     ]);
-    render(<Sidebar {...baseProps} />);
+    render(<Sidebar onManagePersonas={() => {}} {...baseProps} />);
     await screen.findByText("incident watch");
 
     openOpsMenu();
@@ -186,7 +185,7 @@ describe("From Slack group (§31)", () => {
       { match: "/v1/personas", method: "GET", json: PERSONAS },
       { match: "/v1/settings", method: "GET", json: { nav_layout: "flat" } },
     ]);
-    render(<Sidebar {...baseProps} sessions={[...SESSIONS, SLACK_SESSION]} />);
+    render(<Sidebar onManagePersonas={() => {}} {...baseProps} sessions={[...SESSIONS, SLACK_SESSION]} />);
     await screen.findByText("incident watch"); // flat Recent rendered
 
     // No collapsed band — the session sits directly in the Recent list, exactly once…
@@ -200,68 +199,17 @@ describe("From Slack group (§31)", () => {
   });
 });
 
-describe("New-session split button", () => {
-  it("collapses to a plain button when only one persona is enabled", async () => {
+describe("New session button", () => {
+  it("is a plain button (no \u25be picker \u2014 UX-029 moved the pick to the composer) starting the last-used coworker", async () => {
     stubFetch([
-      {
-        match: "/v1/personas",
-        method: "GET",
-        json: { personas: [PERSONAS.personas[0], PERSONAS.personas[3]] }, // cowork + a disabled one
-      },
+      { match: "/v1/personas", method: "GET", json: PERSONAS },
       { match: "/v1/settings", method: "GET", json: { nav_layout: "flat" } },
     ]);
-    const { container } = render(<Sidebar {...baseProps} />);
+    render(<Sidebar onManagePersonas={() => {}} {...baseProps} />);
     await screen.findByText("incident watch");
 
-    // No ▾ — nothing to pick; the primary button starts the sole enabled persona.
-    await waitFor(() => expect(screen.queryByLabelText("Choose a persona")).toBeNull());
-    fireEvent.click(container.querySelector(".newsplit-primary")!);
+    expect(screen.queryByLabelText("Choose a persona")).toBeNull();
+    fireEvent.click(screen.getByText("New session"));
     expect(baseProps.onNewSession).toHaveBeenCalledWith("cowork");
-  });
-
-  it("primary starts the last-used persona; the menu lists enabled personas + Manage personas…", async () => {
-    localStorage.setItem("ocw.flag.personas", "1"); // Manage entry is launch-flagged off
-    stubFetch([
-      { match: "/v1/personas", method: "GET", json: PERSONAS },
-      { match: "/v1/settings", method: "GET", json: { nav_layout: "flat" } },
-    ]);
-    const { container } = render(<Sidebar {...baseProps} />);
-    await screen.findByLabelText("Group and filter conversations");
-
-    // Primary action → a new session with the current (last-used) persona.
-    fireEvent.click(container.querySelector(".newsplit-primary")!);
-    expect(baseProps.onNewSession).toHaveBeenCalledWith("cowork");
-
-    // ▾ opens the persona menu: enabled personas appear, the disabled one does not, plus a manage entry.
-    fireEvent.click(screen.getByLabelText("Choose a persona"));
-    const menu = (await screen.findByText("Start a session as")).closest(".newsplit-menu") as HTMLElement;
-    const w = within(menu);
-    expect(w.getByText("Ops")).toBeTruthy();
-    expect(w.getByText("Code")).toBeTruthy();
-    expect(w.queryByText("Disabled One")).toBeNull();
-    expect(w.getByText("Manage personas…")).toBeTruthy();
-
-    // Selecting a persona starts a session as that persona.
-    fireEvent.click(w.getByText("Ops"));
-    expect(baseProps.onNewSession).toHaveBeenCalledWith("ops");
-
-    // "Manage personas…" opens the persona management surface.
-    fireEvent.click(screen.getByLabelText("Choose a persona"));
-    fireEvent.click(await screen.findByText("Manage personas…"));
-    expect(baseProps.onManagePersonas).toHaveBeenCalled();
-  });
-
-  it("hides Manage personas… while the launch flag is off (the default)", async () => {
-    localStorage.removeItem("ocw.flag.personas");
-    stubFetch([
-      { match: "/v1/personas", method: "GET", json: PERSONAS },
-      { match: "/v1/settings", method: "GET", json: { nav_layout: "flat" } },
-    ]);
-    render(<Sidebar {...baseProps} />);
-    await screen.findByLabelText("Group and filter conversations");
-    fireEvent.click(screen.getByLabelText("Choose a persona"));
-    const menu = (await screen.findByText("Start a session as")).closest(".newsplit-menu") as HTMLElement;
-    expect(within(menu).getByText("Ops")).toBeTruthy();
-    expect(within(menu).queryByText("Manage personas…")).toBeNull();
   });
 });

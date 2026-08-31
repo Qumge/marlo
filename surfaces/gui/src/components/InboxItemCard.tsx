@@ -21,13 +21,13 @@ import {
 // Shared styles (mock parity — same language as SourcesDrawer/PersonaView).
 const SEC = "text-[11px] uppercase tracking-[0.05em] text-faint font-semibold";
 const BTN_PRIMARY =
-  "px-3 py-1.5 rounded-lg bg-accent text-white text-[12.5px] font-medium hover:brightness-105 disabled:opacity-40 disabled:hover:brightness-100";
+  "px-3 py-1.5 rounded-lg bg-accent text-white text-[13px] font-medium hover:brightness-105 disabled:opacity-40 disabled:hover:brightness-100";
 const BTN_BORDERED =
-  "px-3 py-1.5 rounded-lg border border-line bg-paper text-[12.5px] hover:border-lineStrong";
+  "px-3 py-1.5 rounded-lg border border-line bg-paper text-[13px] hover:border-lineStrong";
 // §35 approval buttons: blue border for the primary, quiet Deny (matches ApprovalCard).
 const BTN_ACCENT =
-  "px-3 py-1.5 rounded-lg border border-accent text-accent text-[12.5px] font-semibold hover:bg-accentSoft";
-const BTN_QUIET = "px-3 py-1.5 text-[12.5px] text-faint hover:text-danger";
+  "px-3 py-1.5 rounded-lg border border-accent text-accent text-[13px] font-semibold hover:bg-accentSoft";
+const BTN_QUIET = "px-3 py-1.5 text-[13px] text-faint hover:text-danger";
 const OPT_BASE =
   "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[13px] transition-colors";
 const OPT_OFF = "border-line bg-paper text-ink hover:border-accent hover:bg-accentSoft/50";
@@ -113,8 +113,8 @@ function QuestionBlock({ spec, onAnswer }: { spec: QSpec; onAnswer: (a: string) 
   const preview = previewIdx >= 0 ? options[previewIdx].preview : "";
 
   const recommendedTag = (
-    <span className="text-[10px] uppercase tracking-[0.04em] font-semibold text-ok bg-okSoft border border-okLine rounded-full px-1.5 py-px shrink-0">
-      Recommended
+    <span className="text-[11px] uppercase tracking-[0.04em] font-semibold text-ok bg-okSoft border border-okLine rounded-full px-1.5 py-px shrink-0">
+      {t("inbox.recommended")}
     </span>
   );
 
@@ -191,7 +191,7 @@ function QuestionBlock({ spec, onAnswer }: { spec: QSpec; onAnswer: (a: string) 
             disabled={!selected.length}
             onClick={() => onAnswer(selected.join(", "))}
           >
-            Send{selected.length ? ` (${selected.length})` : ""}
+            {selected.length ? t("inbox.send_count", { count: selected.length }) : t("common.send")}
           </button>
         </div>
       )}
@@ -207,7 +207,7 @@ function QuestionBlock({ spec, onAnswer }: { spec: QSpec; onAnswer: (a: string) 
             }}
           />
           <button className={BTN_PRIMARY} disabled={!text.trim()} onClick={() => onAnswer(text)}>
-            Send
+            {t("common.send")}
           </button>
         </div>
       )}
@@ -255,22 +255,21 @@ function QuestionCard({
         {grouped && step > 0 && (
           <button
             className="text-faint hover:text-ink leading-none text-[13px]"
-            title="Previous question"
-            aria-label="Previous question"
+            title={t("inbox.previous_question")}
+            aria-label={t("inbox.previous_question")}
             onClick={() => setStep(step - 1)}
           >
             ‹
           </button>
         )}
         <span className={grouped ? "text-accent" : undefined}>
-          {spec.header || (grouped ? t("inbox.question_n", { n: step + 1 }) : "question")}
+          {spec.header ||
+            (grouped ? t("inbox.question_n", { n: step + 1 }) : t("inbox.question_label"))}
         </span>
         {grouped && (
           <>
             <span>·</span>
-            <span>
-              {step + 1} of {specs.length}
-            </span>
+            <span>{t("inbox.step_of", { step: step + 1, total: specs.length })}</span>
             {next && (
               <>
                 <span>·</span>
@@ -280,7 +279,7 @@ function QuestionCard({
           </>
         )}
       </div>
-      <div className="text-[15px] font-semibold mt-0.5 leading-snug">{spec.question}</div>
+      <div className="text-[14px] font-semibold mt-0.5 leading-snug">{spec.question}</div>
       {item.body ? (
         <div className="text-[13px] text-muted mt-1 whitespace-pre-wrap">{item.body}</div>
       ) : null}
@@ -330,7 +329,7 @@ export function InboxItemCard({
       ) : isQuestion ? null : ( // QuestionCard owns its header + title (stepper needs them)
         <>
           <div className={SEC}>{item.kind}</div>
-          <div className="text-[15px] font-semibold mt-0.5 leading-snug">{item.title}</div>
+          <div className="text-[14px] font-semibold mt-0.5 leading-snug">{item.title}</div>
         </>
       )}
       {item.kind === "approval" && item.data?.tool === "save_skill" ? (
@@ -360,7 +359,7 @@ export function InboxItemCard({
               className={BTN_BORDERED}
               title={t("inbox.always_task_title", {
                 target: item.data.standing_target,
-                task: item.data.task_title || "this automation",
+                task: item.data.task_title || t("approval.btn.this_automation"),
               })}
               onClick={() => onResolve(item.id, "always_task")}
             >
@@ -385,11 +384,19 @@ export function InboxItemCard({
             onClick={() =>
               onResolve(
                 item.id,
-                JSON.stringify({ granted: true, path: item.data?.path || "", writable: !!item.data?.writable }),
+                JSON.stringify({
+                  granted: true,
+                  path: item.data?.path || "",
+                  writable: item.data?.primary ? true : !!item.data?.writable,
+                }),
               )
             }
           >
-            {item.data?.path ? "Grant" : "Grant (no folder)"}
+            {item.data?.path
+              ? item.data?.primary
+                ? t("inbox.make_workspace")
+                : t("inbox.grant")
+              : t("inbox.grant_no_folder")}
           </button>
           <button className={BTN_BORDERED} onClick={() => onResolve(item.id, JSON.stringify({ granted: false }))}>
             {t("approval.deny")}
@@ -413,7 +420,7 @@ export function InboxItemCard({
       ) : (
         <div className="flex items-center gap-2 mt-2.5">
           <button className={BTN_BORDERED} onClick={() => onResolve(item.id, "seen")}>
-            {t("common.dismiss")}
+            {t("inbox.dismiss")}
           </button>
         </div>
       )}

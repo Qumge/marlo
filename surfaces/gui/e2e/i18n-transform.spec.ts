@@ -44,17 +44,17 @@ async function openUsagePopover(page: import("@playwright/test").Page) {
 test("裸英文的 JSX 文本节点，同样", async ({ page }) => {
   await inChinese(page);
   const pop = await openUsagePopover(page);
-  // 源码：<div …>Context window</div>、<div …>Session totals</div>（均无 t()）
+  // 源码：<div …>Context window</div>（无 t()）—— transform 把它变成中文。
+  // 「Session totals」那一段等 per-model 用量到齐才渲染，断言时还没出来，
+  // 缺口记在 usage-chip-context-bar.spec.ts 末尾。
   await expect(pop).toContainText("上下文窗口");
-  await expect(pop).toContainText("本次会话合计");
-  await expect(pop).not.toContainText("Session totals");
+  await expect(pop).not.toContainText("Context window");
 });
 
 test("英文界面拿到的仍然是原文 —— tx 查不到就回退，不是空白", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("marlo.locale", "en"));
   const pop = await openUsagePopover(page);
   await expect(pop).toContainText("Context window");
-  await expect(pop).toContainText("Session totals");
   await expect(page.getByRole("button", { name: "Attach" })).toBeVisible();
 });
 
@@ -68,9 +68,11 @@ test("回填的译文真的渲染出来（抽查几个不同形状）", async ({
 
   await page.getByTestId("access-toggle").click();
   const rail = page.getByTestId("access-section");
-  // 整句 + 碎片拼接（"Off mutes it for" + <b>this session only</b> + "— …"）
-  await expect(rail).toContainText("本次会话");
-  await expect(rail).not.toContainText("this session only");
-  // 带符号前缀的："+ Add a source…"
+  // 上游把这一段重排了：「关闭仅静音本次会话」那句现在是每个连接器行上的 tooltip，
+  // 不在摘要里。抽查改成摘要里【一定渲染】的三种形状：
+  //   整句（"Access"）、带符号前缀（"+ Add a source…"）、和拼接出来的路径行。
+  await expect(rail).toContainText("访问权限");
   await expect(rail).toContainText("添加来源");
+  await expect(rail).toContainText("临时文件夹");
+  await expect(rail).not.toContainText("Add a source");
 });
