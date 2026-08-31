@@ -1,0 +1,28 @@
+共同祖先 9702c86c   我们领先 202，落后 250
+
+文件                                                hunk      上游提交      风险
+------------------------------------------------------------------------
+surfaces/gui/src/App.tsx                            51        24    1224
+surfaces/gui/src/components/SettingsView.tsx        85         8     680
+surfaces/gui/src/components/Composer.tsx            38        11     418
+coworker/server/app.py                              18        18     324
+surfaces/gui/e2e/fixtures.ts                        19        16     304
+coworker/server/manager.py                          12        22     264
+surfaces/gui/src/components/Sidebar.tsx             54         4     216
+coworker/engine.py                                  15        14     210
+surfaces/gui/src/api.ts                             10        21     210
+surfaces/gui/src/components/Transcript.tsx          17         9     153
+surfaces/gui/src/components/AutomationQuickstart    49         3     147
+surfaces/gui/src/components/ManageTabs.tsx          67         2     134
+…… 另外 152 个文件，合计 2043 分
+------------------------------------------------------------------------
+总风险分                                                                6327
+
+怎么读：分高 = 下次上游改这个文件时，要人手工判断的地方多。
+降低它的办法是把【我们新增的】代码搬到新文件（新文件永不冲突）；
+【替换上游功能】的地方搬不掉，但抽成独立组件能让解冲突从逐行判断
+变成一次性的取舍。
+
+已知的、故意不动的：
+  surfaces/gui/src/App.tsx —— 上游改得最勤，但我们只改了 32 行，
+      拆它的收益不抵风险。这是决定，不是遗漏。
