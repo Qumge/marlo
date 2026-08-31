@@ -12,11 +12,26 @@
     "connectors": "外部连接"
   },
   "transcript": {
-    "mcp_open_connectors": "打开外部连接"
+    "mcp_open_connectors": "打开外部连接",
+    "add_credit": "去充值",
+    "step": {
+      "tried_skill_pre": "尝试使用技能：",
+      "hidden_tip": "在助手看到结果之前就被你的隐私过滤器移除了 —— 助手看不到任何痕迹。"
+    },
+    "dir_granted": "已授予文件夹访问",
+    "plan_rejected": "已带反馈退回"
   },
   "rail": {
     "empty_state": "对于较长的多步任务，进度会显示在这里：Marlo 规划、调用工具、等待批准并产出文件。",
-    "open_board": "打开看板"
+    "open_board": "打开看板",
+    "progress_title": "进展",
+    "show_folder": "打开这些文件所在的文件夹",
+    "refresh": "刷新",
+    "artifacts_empty": "还没有可预览的文件",
+    "working": "正在做…",
+    "working_task": "正在做这件事。",
+    "empty_file": "空文件",
+    "sheet_empty": "空表。"
   },
   "settings": {
     "general_sub": "Marlo 在本机的外观与行为。",
@@ -54,7 +69,17 @@
   "access": {
     "add_btn": "加入",
     "addfolder_path_placeholder": "选一个文件夹，或把路径粘进来…",
-    "choose_location": "选个位置"
+    "choose_location": "选个位置",
+    "n_folders": "{{count}} 个文件夹",
+    "enabled_tap_mute": "这个会话已启用 —— 点一下静音",
+    "channel_add_error": "这个频道加不上。",
+    "summary_no_sources": "没有外部来源",
+    "section_title": "访问权限",
+    "region_label": "本次会话的权限",
+    "no_connectors": "这个会话没有启用任何连接。",
+    "search_placeholder": "搜索连接…",
+    "no_match": "没有匹配 —— 到下面的「连接」页看全部。",
+    "collision_title": "这个频道同时也是本会话的收件箱转发目标 —— 收和发会撞车。"
   },
   "root": {
     "main": "主",
@@ -239,5 +264,33 @@
     "err_couldnt_verify": "验证不通过",
     "no_key_needed": "不需要密钥",
     "test_save_hint": "会做一次只读校验，然后保存。"
+  },
+  "approval": {
+    "scope": {
+      "save_skill": "保存到技能",
+      "connector": "会作用于一个已连接的服务",
+      "stays_mac": "只在这台电脑上"
+    },
+    "btn": {
+      "add_to_skills": "加进我的技能",
+      "not_now": "先不要",
+      "always_allow": "始终允许",
+      "always_command": "始终允许这条命令"
+    },
+    "allow_once": "只允许这一次",
+    "grant": {
+      "always_after_approve": "—— 你批准之后就一直允许"
+    },
+    "verbs": {
+      "write_file": "写入一个文件",
+      "edit_file": "编辑一个文件",
+      "apply_patch": "应用一个补丁",
+      "run_command": "执行一条命令",
+      "send_message": "发送一条消息",
+      "send_file": "发送一个文件"
+    }
+  },
+  "topbar": {
+    "artifacts": "产出"
   }
 }

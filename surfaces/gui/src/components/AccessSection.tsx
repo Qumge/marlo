@@ -10,7 +10,7 @@
 // to expand it and scroll it into view.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useT } from "../legacyI18n";
+import { useTranslation } from "react-i18next";
 import {
   CLOUD_CHANGED,
   getCloudStatus,
@@ -76,7 +76,7 @@ export function AccessSection({
   openKey?: number;
   onOpenIntegrations?: () => void;
 }) {
-  const t = useT();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [conns, setConns] = useState<SessionConnections | null>(null);
   const [byName, setByName] = useState<ConnectorMap>({});
@@ -181,7 +181,7 @@ export function AccessSection({
     const channel = raw.includes(":") || raw.startsWith("#") ? raw : `${channelsFor}:${raw}`;
     const r = await subscribeChannel(sessionId, channel);
     if (!r.ok) {
-      setAddErr(r.error || t("acAddChannelFailed"));
+      setAddErr(r.error || t("access.channel_add_error"));
       return;
     }
     setAddErr(null);
@@ -220,14 +220,14 @@ export function AccessSection({
   const names = live.map((c) => labelFor(c.connector, byName));
   const sourcesPart =
     names.length === 0
-      ? t("noSources")
+      ? t("access.summary_no_sources")
       : names.length <= 2
         ? names.join(", ")
         : `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
   const folderPart = projectScoped
     ? baseName(workspace || roots.find((r) => r.primary)?.path || "") || null
     : roots.length > 0
-      ? t("nFolders")(roots.length)
+      ? t("access.n_folders", { count: roots.length })
       : null;
   const summary = [sourcesPart, folderPart].filter(Boolean).join(" · ");
 
@@ -236,7 +236,7 @@ export function AccessSection({
       <div className="rail-section-head">
         <button className="rail-section-toggle" onClick={() => setOpen((v) => !v)} data-testid="access-toggle">
           <Icon name={open ? "chevronDown" : "chevronRight"} size={14} className="rail-chev" />
-          <span>{t("access")}</span>
+          <span>{t("access.section_title")}</span>
           <span
             className="ml-auto min-w-0 truncate text-[11px] font-normal text-faint"
             data-testid="access-summary"
@@ -247,7 +247,7 @@ export function AccessSection({
         </button>
       </div>
       {open && (
-        <div className="rail-section-body" role="region" aria-label={t("uiSessionAccess")}>
+        <div className="rail-section-body" role="region" aria-label={t("access.region_label")}>
           {connectFor ? (
             <ConnectInline
               c={connectFor}
@@ -290,10 +290,10 @@ export function AccessSection({
             <div className="space-y-4">
               {/* Sources — each toggle is a per-session override (mute for THIS session only). */}
               <div>
-                <div className={`${SEC_H} mb-1.5`}>{t("uiSources")}</div>
+                <div className={`${SEC_H} mb-1.5`}>{t("access.sources")}</div>
                 {connected.length === 0 && (
                   <div className="text-[12px] text-faint py-0.5">
-                    {t("acNoneEnabled")}
+                    {t("access.no_connectors")}
                   </div>
                 )}
                 <div className="space-y-1">
@@ -321,7 +321,7 @@ export function AccessSection({
                       <Toggle
                         checked={c.enabled}
                         onChange={(next) => toggleSession(c.connector, next)}
-                        title={t("uiEnabledTapMute")}
+                        title={t("access.enabled_tap_mute")}
                       />
                     </div>
                   ))}
@@ -338,7 +338,7 @@ export function AccessSection({
                   <div className="mt-1.5">
                     <input
                       className="w-full px-2.5 py-1.5 rounded-lg border border-line bg-panel text-[12.5px] outline-none focus:border-accent"
-                      placeholder={t("uiSearchConnectors")}
+                      placeholder={t("access.search_placeholder")}
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       onKeyDown={(e) => {
@@ -354,7 +354,7 @@ export function AccessSection({
                       // Also covers a failed/empty catalog fetch: an open picker must never
                       // be silently blank — point at the Connectors page either way.
                       <div className="text-[11.5px] text-faint mt-1.5 px-0.5">
-                        {t("acNoMatch")}
+                        {t("access.no_match")}
                       </div>
                     )}
                     <div className="mt-1 max-h-64 overflow-y-auto">
@@ -403,7 +403,7 @@ export function AccessSection({
 
               {recommended.length > 0 && (
                 <div>
-                  <div className={`${SEC_H} mb-1.5`}>{t("uiRecommended")}</div>
+                  <div className={`${SEC_H} mb-1.5`}>{t("access.recommended")}</div>
                   <div className="space-y-1">
                     {recommended.map((r) => (
                       <div className="flex items-center gap-2 py-1" key={r.connector}>
@@ -427,7 +427,7 @@ export function AccessSection({
                             else onOpenIntegrations?.();
                           }}
                         >
-                          {t("uiConnect")}
+                          {t("automations.connect")}
                         </button>
                       </div>
                     ))}
@@ -439,7 +439,7 @@ export function AccessSection({
                   a quiet "+" link, structurally identical to Sources (owner ask 2026-07-13:
                   the old drawer's card wrapper read too heavy in the rail). */}
               <div data-testid="drawer-directories">
-                <div className={`${SEC_H} mb-1.5`}>{t("uiFolders")}</div>
+                <div className={`${SEC_H} mb-1.5`}>{t("access.folders")}</div>
                 <div className="-mx-1.5">
                   {roots.map((r) => (
                     <RootRow
@@ -467,7 +467,7 @@ export function AccessSection({
                     className="mt-1 text-[12px] text-accent hover:underline text-left"
                     onClick={() => setAddingFolder(true)}
                   >
-                    {t("giveFolderAccess")}
+                    + {t("access.give_folder")}
                   </button>
                 )}
                 {rootsError && <div className="roots-err">{rootsError}</div>}
@@ -494,7 +494,7 @@ function ConnectInline({
   onDone: () => void;
   onBack: () => void;
 }) {
-  const t = useT();
+  const { t } = useTranslation();
   useEffect(() => {
     const timer = setInterval(async () => {
       try {
@@ -512,7 +512,7 @@ function ConnectInline({
       <button
         className="inline-flex items-center gap-1 text-[12px] text-faint hover:text-ink mb-2"
         onClick={onBack}
-        aria-label={t("uiBackToSources")}
+        aria-label={t("access.back_to_sources")}
       >
         <Icon name="arrowLeft" size={13} /> Connect {c.title}
       </button>
@@ -553,20 +553,20 @@ function ChannelsInline({
   onRemove: (channel: string) => void;
   onBack: () => void;
 }) {
-  const t = useT();
+  const { t } = useTranslation();
   return (
     <div>
       <button
         className="inline-flex items-center gap-1 text-[12px] text-faint hover:text-ink mb-2"
         onClick={onBack}
-        aria-label={t("uiBackToSources")}
+        aria-label={t("access.back_to_sources")}
       >
         <Icon name="arrowLeft" size={13} /> {label} channels
       </button>
-      <div className={`${SEC_H} mb-1.5`}>{t("acSubscribedChannels")} · {channels.length}</div>
+      <div className={`${SEC_H} mb-1.5`}>{t("access.subscribed", { count: channels.length })}</div>
       {channels.length === 0 ? (
         <div className="text-[12px] text-faint py-0.5">
-          {t("acNotListening")(label)}
+          {t("access.no_channels", { label })}
         </div>
       ) : (
         <div className="space-y-1">
@@ -579,14 +579,14 @@ function ChannelsInline({
               {s.collision && (
                 <span
                   className="text-[10.5px] text-warnInk bg-warnSoft/70 border border-warnInk/15 rounded px-1 shrink-0"
-                  title={t("acChannelCollide")}
+                  title={t("access.collision_title")}
                 >
                   ⚠
                 </span>
               )}
               <button
                 className="w-5 h-5 grid place-items-center text-faint hover:text-danger shrink-0"
-                title={t("uiStopListening")}
+                title={t("access.stop_listening")}
                 onClick={() => onRemove(s.channel)}
               >
                 ×
@@ -595,11 +595,11 @@ function ChannelsInline({
           ))}
         </div>
       )}
-      <div className={`${SEC_H} mt-3 mb-1.5`}>{t("uiAddChannel")}</div>
+      <div className={`${SEC_H} mt-3 mb-1.5`}>{t("access.add_channel")}</div>
       <div className="flex items-center gap-1.5">
         <ChannelPicker value={draft} onChange={onDraft} recent={recent} onSubmit={onAdd} />
         <button className={BTN_ACCENT} disabled={!draft.trim()} onClick={onAdd}>
-          {t("uiAdd")}
+          {t("access.add_btn")}
         </button>
       </div>
       {error && (

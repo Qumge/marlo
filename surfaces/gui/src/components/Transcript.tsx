@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { t, useT } from "../legacyI18n";
+import { getI18n, useTranslation } from "react-i18next";
 import type { ApprovalDecision, Item } from "../types";
 import { shortArgs } from "./ApprovalCard";
 import { humanizeAsk, humanizeTool, type HumanLine } from "../humanize";
@@ -36,7 +36,7 @@ function ClampedUserText({ text }: { text: string }) {
 // so revealing it on group-hover never shifts the layout. `ts` is unix seconds — canonical
 // messages carry it, pre-stamp history doesn't, so the time simply omits itself when absent.
 function BubbleMeta({ text, ts, align }: { text: string; ts?: number; align: "left" | "right" }) {
-  const t = useT();
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const when = typeof ts === "number" ? new Date(ts * 1000) : null;
   const copy = () => {
@@ -61,7 +61,7 @@ function BubbleMeta({ text, ts, align }: { text: string; ts?: number; align: "le
         <button
           className="flex items-center cursor-pointer hover:text-muted"
           data-testid="bubble-copy"
-          title={t("uiCopyMessage")}
+          title={t("transcript.copy_message")}
           onClick={copy}
         >
           {copied ? "Copied" : <Icon name="copy" size={11} />}
@@ -80,6 +80,7 @@ function BubbleMeta({ text, ts, align }: { text: string; ts?: number; align: "le
 // collapsed by default, the trace one click away. `live` = still streaming (pulsing label);
 // App renders that variant above the transcript, this one rides a finalized assistant item.
 export function ThinkingBlock({ text, live }: { text: string; live?: boolean }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   return (
     <div className="thinking">
@@ -90,7 +91,7 @@ export function ThinkingBlock({ text, live }: { text: string; live?: boolean }) 
       >
         <Icon name="chevronDown" size={12} className={"thinking-caret" + (open ? " open" : "")} />
         <span className={live ? "thinking-live" : undefined}>
-          {live ? "Thinking…" : t("trThoughtProcess")}
+          {live ? "Thinking…" : t("transcript.thinking_process")}
         </span>
       </button>
       {open && (
@@ -159,14 +160,19 @@ function buildRows(items: TurnItem[]): TurnRow[] {
 }
 
 function approvalChip(resolved: ApprovalDecision | undefined) {
+  const t = getI18n().getFixedT(null, "translation");
   if (resolved === "deny")
-    return <span className="text-[10.5px] px-1.5 rounded-full bg-dangerSoft text-danger shrink-0">✕ declined</span>;
+    return <span className="text-[10.5px] px-1.5 rounded-full bg-dangerSoft text-danger shrink-0">{t("transcript.approval.declined")}</span>;
   return (
     <span
       className="text-[10.5px] px-1.5 rounded-full bg-okSoft text-ok shrink-0"
-      title={resolved ? t("tplApprovedVia")(resolved.replace(/_/g, " ")) : "approved"}
+      title={
+        resolved
+          ? t("transcript.approval.approved_scope", { scope: resolved.replace(/_/g, " ") })
+          : t("transcript.approval.approved_title")
+      }
     >
-      ✓ approved
+      {t("transcript.approval.approved")}
     </span>
   );
 }
@@ -182,6 +188,7 @@ function LineText({ line }: { line: HumanLine }) {
 }
 
 function StepRow({ tool, approval }: { tool: ToolItem; approval?: ApprovalItem }) {
+  const { t } = useTranslation();
   const [raw, setRaw] = useState(false);
   const running = tool.status === "…";
   const failed = tool.status !== "ok" && !running;
@@ -196,7 +203,7 @@ function StepRow({ tool, approval }: { tool: ToolItem; approval?: ApprovalItem }
             // A refused load must not read as a success — "Used skill:" is the trust line
             // (SKILLS-SPEC §4.1 #4), so a blocked attempt gets honest wording instead.
             tool.name === "load_skill" && tool.preview?.includes('"error"')
-              ? { pre: t("trTriedSkill"), obj: String(tool.args?.name ?? ""), post: t("trNotAvailable") }
+              ? { pre: t("transcript.step.tried_skill_pre"), obj: String(tool.args?.name ?? ""), post: t("transcript.step.tried_skill_post") }
               : humanizeTool(tool.name, tool.args)
           }
         />
@@ -205,7 +212,7 @@ function StepRow({ tool, approval }: { tool: ToolItem; approval?: ApprovalItem }
           <span
             className="text-[10.5px] px-1.5 rounded-full bg-tealSoft text-tealInk shrink-0"
             data-testid="tool-standing-rule"
-            title={t("tplAutoAllowedFull")(tool.standingRule)}
+            title={t("transcript.step.auto_allowed_tip", { name: tool.standingRule })}
           >
             auto-allowed
           </span>
@@ -214,7 +221,7 @@ function StepRow({ tool, approval }: { tool: ToolItem; approval?: ApprovalItem }
           <span
             className="text-[11px] text-warnInk shrink-0"
             data-testid="tool-hidden-count"
-            title={t("trPrivacyRemoved")}
+            title={t("transcript.step.hidden_tip")}
           >
             {tool.hidden} hidden
           </span>
@@ -250,7 +257,7 @@ function TurnGroup({
   // the header as the live line; expanded → the small quiet line under the steps.
   streamingText?: string;
 }) {
-  const t = useT();
+  const { t } = useTranslation();
   // Turns start COLLAPSED, running or not (owner call 2026-07-14) — the header's live
   // line is the pulse; expanding is opt-in.
   const rows = buildRows(items);
@@ -264,7 +271,7 @@ function TurnGroup({
   const nSteps = rows.filter((r) => r.type !== "narr").length;
   const declined = items.filter((it) => it.kind === "approval" && it.resolved === "deny").length;
   const hiddenTotal = tools.reduce((n, t) => n + (t.hidden || 0), 0);
-  const stepsLabel = t("tplNSteps")(nSteps);
+  const stepsLabel = t("transcript.turn.steps_label", { count: nSteps });
 
   return (
     <details className="stepgroup" open={open}>
@@ -277,7 +284,7 @@ function TurnGroup({
       >
         <span className={"chev inline-block transition-transform" + (open ? " rotate-90" : "")}>›</span>
         <span>
-          <span>{running ? t("tplRunningSteps")(stepsLabel) : stepsLabel}</span>
+          <span>{running ? t("transcript.turn.running", { label: stepsLabel }) : stepsLabel}</span>
           {declined > 0 && (
             <>
               {" · "}
@@ -365,7 +372,7 @@ export function retryAnchor(items: Item[]): number {
 }
 
 export function Transcript({ items, running, streamingText, onRetry, onUndoMemory }: Props) {
-  const t = useT();
+  const { t } = useTranslation();
   // Hook must live at the component top, not inside the items.map(...) switch below —
   // conditionally calling a hook per-item would violate the rules of hooks. `balance`
   // is the same data source the sidebar account row and composer gate already read.
@@ -469,7 +476,7 @@ export function Transcript({ items, running, streamingText, onRetry, onUndoMemor
                 <span className={"status " + (item.resolved === "granted" ? "ok" : "denied")}>
                   {item.resolved === "granted" ? "✓" : "✕"}
                 </span>
-                <span>{item.resolved === "granted" ? t("trGrantedFolder") : t("trDeclinedFolder")}</span>
+                <span>{item.resolved === "granted" ? t("transcript.dir_granted") : t("transcript.dir_declined")}</span>
                 {item.path && <span className="dim">{item.path}</span>}
               </div>
             );
@@ -483,7 +490,7 @@ export function Transcript({ items, running, streamingText, onRetry, onUndoMemor
                   <span className={"status " + (item.resolved === "approved" ? "ok" : "denied")}>
                     {item.resolved === "approved" ? "✓" : "✕"}
                   </span>
-                  <span>{item.resolved === "approved" ? t("trPlanApproved") : t("trSentBack")}</span>
+                  <span>{item.resolved === "approved" ? t("transcript.plan_approved") : t("transcript.plan_rejected")}</span>
                 </div>
               </div>
             );
@@ -493,7 +500,7 @@ export function Transcript({ items, running, streamingText, onRetry, onUndoMemor
                 {item.text}
                 {item.retriable && !running && onRetry && block.i === retryAnchor(items) && (
                   <button className="btn ml-2" data-testid="notice-retry" onClick={onRetry}>
-                    {t("uiRetry")}
+                    {t("transcript.retry")}
                   </button>
                 )}
                 {item.cause === "no_credit" &&
@@ -510,7 +517,7 @@ export function Transcript({ items, running, streamingText, onRetry, onUndoMemor
                         if (url) openExternal(url);
                       }}
                     >
-                      {t("addCredit2")}
+                      {t("transcript.add_credit")}
                     </button>
                   )}
               </div>

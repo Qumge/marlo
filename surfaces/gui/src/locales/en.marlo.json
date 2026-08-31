@@ -54,5 +54,18 @@
   },
   "skills": {
     "door_ai": "Create with Marlo"
+  },
+  "transcript": {
+    "add_credit": "Add credit"
+  },
+  "access": {
+    "n_folders": "{{count}} folders",
+    "n_folders_one": "{{count}} folder",
+    "enabled_tap_mute": "Enabled for this session — tap to mute here"
+  },
+  "approval": {
+    "scope": {
+      "save_skill": "saves to Skills"
+    }
   }
 }

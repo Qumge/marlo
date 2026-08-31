@@ -34,6 +34,10 @@ const placeholders = (s: string) => (s.match(/\{\{\s*(\w+)/g) ?? []).map((m) => 
 const ADDITIONS = new Set([
   "rail.open_board", // 看板 chip 的 title：上游这句没包进 t()
   "cloud.signin_unlocks_default", // 没有 blurb 时的默认说明：同上
+  "transcript.add_credit", // 零余额充值入口：我们 fork 的功能，上游没有
+  "access.n_folders", // 文件夹计数：上游这一处不显示数量
+  "access.n_folders_one",
+  "access.enabled_tap_mute", // 会话内静音的提示：上游措辞不同且没有单独的键
 ]);
 
 const flatEnBase = flatten(enBase as Tree);
