@@ -1,8 +1,8 @@
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
+import { useTranslation } from "react-i18next";
 import remarkGfm from "remark-gfm";
 import { Icon } from "./Icon";
 
-import { useT } from "../i18n";
 // §34 (UX-016): the agent ends a deliverable turn with plain markdown —
 // [Title](artifact:relative/path) — and the renderer turns it into a chip that opens the
 // artifact viewer in place. Plumbing is a window event (the viewer lives in RightRail;
@@ -10,8 +10,28 @@ import { useT } from "../i18n";
 // the session's artifact list, App un-hides the rail.
 export const OPEN_ARTIFACT_EVENT = "ocw-open-artifact";
 
+// Seventeenth pass: the lead mentions the board ONCE — [Board · 5 items](board:) — and the
+// chip opens the drawer on its Board section. Same event plumbing as artifact chips: App
+// un-hides the rail and bumps the key that expands the section.
+export const OPEN_BOARD_EVENT = "ocw-open-board";
+
+function BoardChip({ label }: { label: string }) {
+  const { t } = useTranslation();
+  return (
+    <button
+      className="boardlink-chip"
+      data-testid="board-chip"
+      title={t("rail.open_board")}
+      onClick={() => window.dispatchEvent(new CustomEvent(OPEN_BOARD_EVENT))}
+    >
+      <Icon name="table" size={12} />
+      <span>{label || t("rail.board_title")}</span>
+    </button>
+  );
+}
+
 function ArtifactChip({ path, title }: { path: string; title: string }) {
-  const t = useT();
+  const { t } = useTranslation();
   const file = path.split("/").pop() || path;
   return (
     <button
@@ -29,7 +49,7 @@ function ArtifactChip({ path, title }: { path: string; title: string }) {
         <b>{title || file}</b>
         {title && title !== file && <span>{file}</span>}
       </span>
-      <span className="art-chip-open">{t("svOpenRun")}</span>
+      <span className="art-chip-open">{t("rail.open")} ›</span>
     </button>
   );
 }
@@ -42,14 +62,20 @@ export function Markdown({ text }: { text: string }) {
     <div className="md">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        // artifact: is ours — keep it through the sanitizer (everything else gets the default
-        // http/https/mailto policy).
-        urlTransform={(url) => (url.startsWith("artifact:") ? url : defaultUrlTransform(url))}
+        // artifact:/board: are ours — keep them through the sanitizer (everything else gets
+        // the default http/https/mailto policy).
+        urlTransform={(url) =>
+          url.startsWith("artifact:") || url.startsWith("board:") ? url : defaultUrlTransform(url)
+        }
         components={{
           a: ({ node: _n, href, children, ...props }) => {
             if (href?.startsWith("artifact:")) {
               const title = Array.isArray(children) ? children.join("") : String(children ?? "");
               return <ArtifactChip path={href.slice("artifact:".length)} title={title} />;
+            }
+            if (href?.startsWith("board:")) {
+              const label = Array.isArray(children) ? children.join("") : String(children ?? "");
+              return <BoardChip label={label} />;
             }
             return (
               <a href={href} {...props} target="_blank" rel="noreferrer">

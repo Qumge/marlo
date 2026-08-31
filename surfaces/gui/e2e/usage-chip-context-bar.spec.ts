@@ -8,7 +8,10 @@ import { test, expect } from "./fixtures";
 //
 // 这里把它拆成能确定成立的那一半。放在新文件而不是就地改上游那份：上游文件每改一行，
 // 下次合并就多一处要人判断的地方。
-test("context_bar off (default): the chip is the session total, no fill bar", async ({ page }) => {
+// 【默认变了】上游 2026-08 把 chip 的默认从「本次会话合计」改成了「上下文占比」
+// （它自己那条测试的标题也从 "the session total" 改成了 "the in-context number"）。
+// 这条跟着改：断言的是默认那一种，不是某一种。
+test("默认的 chip：上下文占比 + 会话合计，popover 里有明细", async ({ page }) => {
   await page.goto("/");
   await page.getByText("Draft the launch note").first().click();
   const box = page.getByPlaceholder(/Ask the coworker/);
@@ -16,17 +19,18 @@ test("context_bar off (default): the chip is the session total, no fill bar", as
   await box.press("Enter");
 
   const chip = page.getByTestId("usage-chip");
-  await expect(chip).toContainText("10k", { timeout: 10_000 });
-  await expect(chip).toHaveAttribute("title", /Token usage this session/);
+  await expect(chip).toContainText("9.8k", { timeout: 10_000 });
+  await expect(chip).toHaveAttribute("title", /Context window .* full · .* tokens this session/);
 
   // 翻译过的那条路径也要真的走一遍：popover 里的中文/英文都来自 i18n 目录，
   // 而目录里存的是函数（usageChipTitlePlain 之类）——键写成字符串的话这里会炸。
   await chip.click();
   const pop = page.getByTestId("usage-popover");
   await expect(pop).toBeVisible();
-  await expect(pop).toContainText("Session totals");
-  await expect(pop).toContainText("Uncached input");
-  await expect(pop).toContainText("Cache reads");
+  // 上游把 popover 重排了：上下文那一段先出，按模型的明细要等 per-model 用量到齐
+  // 才渲染。断言先卡在【一定在】的那一段上；明细那一段的覆盖记在下面的缺口里。
+  await expect(pop).toContainText("Context window");
+  await expect(pop).toContainText("9.8k");
 });
 
 // 【已知缺口】context_bar: true 那条分支（chip 变成刻度条）目前没有 e2e 覆盖。
@@ -39,3 +43,8 @@ test("context_bar off (default): the chip is the session total, no fill bar", as
 // 而它是上游改得第二勤的文件（11 个上游提交 / 16 个 hunk）——单独一件事，不混在合并里。
 // 在那之前这个分支只有 tsc 保证类型正确，没有渲染保证。写在这里，是因为一个没人知道
 // 的缺口和没有缺口看起来一模一样。
+
+// 【已知缺口 2】popover 里「按模型的明细」（Uncached input / Cache reads / Cache writes）
+// 这一段是等 per-model 用量到齐才渲染的，断言时还没出来。要覆盖它得让 fixture 在
+// 首条消息里就带上 per-model 用量 —— 那要改 fixtures.ts，和上面那条缺口同一个原因，
+// 单独一件事。写在这里，是因为一个没人知道的缺口和没有缺口看起来一模一样。

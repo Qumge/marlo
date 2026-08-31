@@ -1,0 +1,188 @@
+{
+  "boot": {
+    "starting": "Starting Marlo…"
+  },
+  "sidebar": {
+    "sign_in": "Sign in to Marlo",
+    "new_runs": "{{count}} new runs",
+    "new_runs_one": "{{count}} new run",
+    "new_runs_failed_suffix": " — the latest failed"
+  },
+  "rail": {
+    "empty_state": "For longer multi-step tasks, progress will appear here while Marlo plans, uses tools, waits for approval, and produces artifacts.",
+    "open_board": "Open the board"
+  },
+  "settings": {
+    "general_sub": "How Marlo looks and behaves on this machine.",
+    "open_at_login_help": "Launch Marlo automatically when you sign in.",
+    "update_downloading": "Downloading — Marlo restarts by itself when it's ready.",
+    "voice_desktop_only": "Voice Input setup is available in the Marlo desktop app.",
+    "scratch_placeholder": "~/Marlo",
+    "voice_delete_confirm": "Delete the local Whisper model and disable Voice Input?",
+    "voice_no_speech": "No speech was detected. Try again and speak for a little longer.",
+    "voice_mac": "Mac",
+    "voice_download": "Download model",
+    "voice_stop_check": "Stop and check",
+    "voice_mic_test_ready": "Test microphone",
+    "context_bar_desc": "A small meter showing how full the model’s context window is. Turn it off to show this ",
+    "voice_mic_works": "Your microphone and local transcription engine are working.",
+    "voice_record_phrase": "Record a short phrase to enable the composer microphone.",
+    "personas_title": "Coworkers",
+    "project_allowances": "{{count}} project command allowances",
+    "compaction_title": "Context compaction",
+    "compaction_help": "Long sessions are compacted automatically: older turns are summarized so the coworker keeps working instead of running out of context. Your visible transcript is never ",
+    "compact_at": "Compact at",
+    "compact_pct_suffix": "% of the context window",
+    "compact_or_at": "or at",
+    "compact_tokens_suffix": "tokens, whichever is smaller",
+    "compaction_cap_help": "The cap makes very-large-context models compact early — quality and speed degrade ",
+    "summarizer_model": "Summarizer model",
+    "summarizer_default": "Session’s own model (default)",
+    "summarizer_help": "The summary is written by this model. The default follows whatever model the session is using.",
+    "sidebar_title": "Sidebar",
+    "sidebar_show_more_note": "Longer lists collapse behind “Show more”. Applies per coworker and per project.",
+    "location_saved": "Saved. New conversations will use this location.",
+    "location_bad": "Could not use that location.",
+    "enable_auto_approve": "Enable Auto-approve mode"
+  },
+  "cloud": {
+    "signin_unlocks_default": "Sign-in unlocks one-click connects — or switch to Manual, which works without it."
+  },
+  "update": {
+    "ready": "Marlo v{{version}} is ready to install."
+  },
+  "automations": {
+    "sub": "Recurring tasks Marlo runs on a schedule.",
+    "empty_state": "No scheduled tasks yet — use a template above, click <strong>+ New automation</strong>, or just ask Marlo in a session.",
+    "server_hint": "Runs only while Marlo is open — a missed schedule catches up once when you next open it."
+  },
+  "slack": {
+    "hiw_msg_kp": "Message Marlo…"
+  },
+  "modal": {
+    "mcp_blurb": "Opens {{title}} in your browser — sign in and approve access there. No tokens typed, and no Marlo account needed: the sign-in runs entirely on this computer.",
+    "github_blurb": "Opens GitHub in your browser — approve Marlo there. An existing @ocw-agent App installation links right up; otherwise you'll pick an account and repos. No tokens typed; the agent acts as ocw-agent[bot]."
+  },
+  "gallery": {
+    "filter_brand": "From Marlo",
+    "can_message": "· can use messaging"
+  },
+  "manage": {
+    "tools_exposed": "Tools exposed to Marlo",
+    "device_code_hint": "Check this code matches the one in your browser:",
+    "granola_label": "Granola",
+    "granola_blurb": "Meeting notes & transcripts — sign in with your Granola account."
+  },
+  "onboarding": {
+    "model_intro": "Pick a model provider to get started — Marlo runs on your own key, and your key and your data stay on this computer.",
+    "welcome": "Welcome to Marlo",
+    "lede": "Connect to Qumge to get started — one sign-in, every model, and your key stays on {{dev}}.",
+    "signin_body": "OpenWorker handles the OAuth for 20+ tools — no dev consoles, no pasted keys. Tokens stay on {{dev}}.",
+    "more_tools_hint": "30+ more tools on the Connectors page — add or remove anytime. Tokens stay on {{dev}}.",
+    "connected_qumge": "Connected to Qumge",
+    "use_own_key": "Use your own API key instead",
+    "connect_qumge": "Connect to Qumge",
+    "signed_in": "You&rsquo;re signed in",
+    "this_mac": "this Mac",
+    "this_computer": "this computer"
+  },
+  "workspace_trust": {
+    "sub": "This project asks Marlo to run the commands below without individual approval. Trust applies to future configuration changes at this exact folder until you revoke it in Settings."
+  },
+  "toolreq": {
+    "installs_with_source": "Marlo installs its own verified copy from {{source}} — or install it yourself and continue.",
+    "installs": "Marlo installs its own verified copy — or install it yourself and continue.",
+    "no_build": "Marlo has no verified build for this machine — install it yourself if you want this check, or continue and the coworker will note the gap."
+  },
+  "skills": {
+    "door_ai": "Create with Marlo"
+  },
+  "transcript": {
+    "add_credit": "Add credit"
+  },
+  "access": {
+    "n_folders": "{{count}} folders",
+    "n_folders_one": "{{count}} folder",
+    "enabled_tap_mute": "Enabled for this session — tap to mute here"
+  },
+  "approval": {
+    "scope": {
+      "save_skill": "saves to Skills"
+    }
+  },
+  "app": {
+    "beta": "BETA"
+  },
+  "connector": {
+    "use_imap_instead": "Use Email (IMAP) →",
+    "waiting_upstream": "Waiting on the provider",
+    "n_workspaces_relay": "{{count}} workspaces · relay",
+    "n_workspaces_relay_one": "{{count}} workspace · relay",
+    "group_mail": "Mail",
+    "group_calendar": "Calendar",
+    "group_chat": "Chat",
+    "group_files": "Files & drives",
+    "group_web": "Web",
+    "group_other": "Everything else"
+  },
+  "integrations": {
+    "connections_title": "Connections",
+    "connections_sub": "What Marlo can use on your behalf. Connected ones come first.",
+    "advanced_tool_servers": "Advanced: tool servers",
+    "advanced_tool_servers_sub": "Connect an MCP server — extra tools, shared across all your coworkers."
+  },
+  "intro": {
+    "greeting": "What takes most of your week?",
+    "lede": "Tell me the part you least want to be doing — I'll take a run at it. Or just say what you need below.",
+    "task_tidy_title": "Sort out a folder that's become a mess",
+    "task_tidy_sub": "I'll propose names and an order, and wait for your go-ahead",
+    "tidy_prompt": "Look through this folder, tell me how you'd rename and organise the files so they make sense, and do it once I say yes.",
+    "task_write_title": "Write one document from a folder of files",
+    "task_write_sub": "I'll read them and draft it for you to edit",
+    "write_prompt": "Read the files in this folder and write me one document that pulls the important parts together. Save it in the folder."
+  },
+  "composer": {
+    "mode": {
+      "auto": "Full access",
+      "auto_desc": "Run everything without asking"
+    },
+    "approvals_inbox_note": " · approvals go to the Inbox"
+  },
+  "usage": {
+    "unknown_model": "Unknown model",
+    "chip_title_bar": "Context window {{pct}}% full · {{total}} tokens this session",
+    "chip_title_plain": "Token usage this session: {{total}}",
+    "of_window": "{{used}} of {{window}} · {{pct}}%",
+    "in_context_now": "In context now: {{n}} tokens",
+    "uncached_input": "Uncached input",
+    "cache_reads": "Cache reads",
+    "cache_writes": "Cache writes",
+    "total_input": "Total input",
+    "input": "Input",
+    "output": "Output",
+    "n_tokens": "{{n}} tokens"
+  },
+  "gateway": {
+    "vision": "vision",
+    "search": "Filter by name or vendor…",
+    "selected": "In your picker · {{n}}",
+    "offline": "Can't reach Qumge to list the rest right now. The models you've already picked still work.",
+    "others": "Other models on Qumge · {{n}}",
+    "partial_of": "{{total}} models on the gateway; this is the most-used batch — search by name or vendor to reach the rest.",
+    "partial": "This is the most-used batch. There are more on the gateway — search by name or vendor to find them.",
+    "searching": "Searching Qumge…",
+    "no_match": "No model matches that."
+  },
+  "models": {
+    "family_label": "Model family",
+    "family_claude": "Claude family",
+    "family_other": "Other models",
+    "family_gemini": "Gemini family",
+    "family_openweight": "Open-weight"
+  },
+  "personas": {
+    "mode_local": "Local directory",
+    "installed_n": "{{count}} installed — review and enable them below.",
+    "consent_recommended_mode": "Recommended mode: {{mode}}. Enable it above to use it."
+  }
+}

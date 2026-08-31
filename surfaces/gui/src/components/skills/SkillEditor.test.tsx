@@ -5,7 +5,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { SkillEditor } from "./SkillEditor";
-import { setLocale } from "../../i18n";
+import { setLocale } from "../../legacyI18n";
 
 beforeEach(() => setLocale("zh"));
 afterEach(() => {

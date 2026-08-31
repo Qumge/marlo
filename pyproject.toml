@@ -36,16 +36,17 @@ dependencies = [
     # 省掉它等于把「上游哪天发大版本」变成我们的定时炸弹。
     # 迁到 2.x 是另一件事：要先把 2.0 装上、把 client.py 的调用改成新签名、
     # 真跑一遍测试再合——不能靠读旧版本里那个新名字的签名去猜。
-    "mcp>=1.1,<2",
+    # 【下界】2026-08-31 从 1.1 抬到 1.28.1，跟上游走：PYSEC-2026-3481/3482/3483
+    # （1.27.2 / 1.28.1 修的）。上界的理由见上面那段，没有变。
+    "mcp>=1.28.1,<2",
     "httpx>=0.27",  # sync outbound senders for messaging connectors (send_message tool)
     "websockets>=13",  # managed Slack relay client transport (relay_client.py)
-    "ddgs>=9",
+    "ddgs>=9",  # keyless default web-search provider (DuckDuckGo); Tavily/Brave use httpx
     # Deliverables arrive as .docx and .xlsx, not .md and .csv. Bundled rather
     # than installed at runtime: the sidecar is a frozen binary with no
     # interpreter to import from, and the user's Mac has neither library.
     "python-docx>=1.1",
     "openpyxl>=3.1",
-  # keyless default web-search provider (DuckDuckGo); Tavily/Brave use httpx
     "croniter>=2",  # cron next-fire math for the automation scheduler
     # PDF attachments for models without native PDF support (pdf_support.py):
     # pypdf = pure-python text extraction; pypdfium2 = page rasterization (BSD pdfium,
@@ -74,14 +75,24 @@ bedrock = ["boto3>=1.34"]
 openworker = "coworker.cli:main"
 openworker-server = "coworker.server.run:main"
 openworker-connectors = "coworker.connectors.cli:main"
+# The board as an open surface (OPE-100): `ocw board …` / `ocw journal …`,
+# including `ocw board mcp` — the stdio MCP server external harnesses attach to.
+ocw = "coworker.teams.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["coworker*"]
 
 [tool.setuptools.package-data]
-coworker = ["personas/builtin/*.md"]
+coworker = [
+    "personas/builtin/*.md",
+    "personas/builtin/*/manifest.md",
+    "personas/builtin/*/skills/*/SKILL.md",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# The reviewer-eval tests import from the repo-root scripts/ package; the pytest
+# console script (CI) does not put the root on sys.path the way `python -m pytest` does.
+pythonpath = ["."]
 asyncio_mode = "auto"

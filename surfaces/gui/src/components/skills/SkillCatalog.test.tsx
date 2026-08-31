@@ -5,7 +5,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { SkillCatalog } from "./SkillCatalog";
-import { setLocale } from "../../i18n";
+import { setLocale } from "../../legacyI18n";
 
 // 一个按 URL 分发的假后端：搜到什么 / 装的结果 / 正文详情。
 const serve = (results: any[] = [], opts: any = {}) =>

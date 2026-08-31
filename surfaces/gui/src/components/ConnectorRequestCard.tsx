@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Item } from "../types";
-import { useT } from "../i18n";
+import { useT } from "../legacyI18n";
 import { Icon } from "./Icon";
 
 type ConnReqItem = Extract<Item, { kind: "connreq" }>;

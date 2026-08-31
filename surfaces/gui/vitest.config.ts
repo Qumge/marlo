@@ -18,5 +18,9 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     include: ["src/**/*.test.{ts,tsx}"],
+    // 上游那套 i18n 在测试里要同步初始化，否则组件测试里的 t("key") 渲染出来是
+    // 【键名本身】，断言会以一种很难看懂的方式红。用 en 资源，所以现存的英文断言
+    // 照旧成立。i18nText()（上面那条第二条路）在迁移期间两者并存，Phase C 才退役。
+    setupFiles: ["./src/test-setup.ts"],
   },
 });

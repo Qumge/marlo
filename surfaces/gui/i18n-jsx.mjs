@@ -94,7 +94,7 @@ export function normalize(s) {
 export function shouldSkip(id) {
   return (
     !id.endsWith(".tsx") ||
-    id.includes("/src/i18n/") ||
+    id.includes("/src/legacyI18n/") ||
     /\.test\.tsx$/.test(id)
   );
 }
@@ -227,6 +227,6 @@ export function transform(code) {
     hits++;
   });
   if (!ok || !hits) return null;
-  s.prepend('import { tx as __tx } from "/src/i18n/tx";\n');
+  s.prepend('import { tx as __tx } from "/src/legacyI18n/tx";\n');
   return { code: s.toString(), map: s.generateMap({ hires: true }) };
 }

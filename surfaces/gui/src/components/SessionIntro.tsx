@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useT } from "../i18n";
+import { useTranslation } from "react-i18next";
 import type { Attachment } from "../types";
 import { useRoots } from "../useRoots";
 import { AddFolderForm } from "./AddFolderForm";
@@ -27,7 +27,7 @@ export function SessionIntro({
   sessionId: string;
   onPrefill: (text: string, attachments?: Attachment[]) => void;
 }) {
-  const t = useT();
+  const { t } = useTranslation();
   const { roots, busy, error, addRoot } = useRoots(sessionId);
   const [addingFolder, setAddingFolder] = useState(false);
 
@@ -35,24 +35,24 @@ export function SessionIntro({
 
   const pickFolder = () => {
     // A shared folder already exists → straight to the prompt; otherwise share one first.
-    if (shared.length > 0) onPrefill(t("promptAnalyze"));
+    if (shared.length > 0) onPrefill(t("intro.folder_prompt"));
     else setAddingFolder((v) => !v);
   };
 
   return (
     <div className="intro">
       <h1 className="greeting">
-        <span className="mark">✦</span> {t("introGreeting")}
+        <span className="mark">✦</span> {t("intro.greeting")}
       </h1>
-      <p className="intro-lede">{t("introLede")}</p>
+      <p className="intro-lede">{t("intro.lede")}</p>
 
       <div className="intro-tasks">
         <button className="task-card" data-testid="intro-task-folder" onClick={pickFolder}>
           <span className="task-card-body">
-            <span className="task-card-title">{t("taskAnalyzeTitle")}</span>
-            <span className="task-card-sub">{t("taskAnalyzeSub")}</span>
+            <span className="task-card-title">{t("intro.task_folder_title")}</span>
+            <span className="task-card-sub">{t("intro.task_folder_sub")}</span>
           </span>
-          <span className="task-card-act">{t("taskAnalyzeAct")}</span>
+          <span className="task-card-act">{t("intro.task_folder_cta")}</span>
         </button>
         {addingFolder && (
           <div className="intro-addfolder">
@@ -61,7 +61,7 @@ export function SessionIntro({
               busy={busy}
               onAdd={async (path, writable) => {
                 const ok = await addRoot(path, writable);
-                if (ok !== false) onPrefill(t("promptAnalyze"));
+                if (ok !== false) onPrefill(t("intro.folder_prompt"));
                 return ok;
               }}
               onDismiss={() => setAddingFolder(false)}
@@ -73,25 +73,25 @@ export function SessionIntro({
         <button
           className="task-card"
           data-testid="intro-task-write"
-          onClick={() => onPrefill(t("promptWrite"))}
+          onClick={() => onPrefill(t("intro.write_prompt"))}
         >
           <span className="task-card-body">
-            <span className="task-card-title">{t("taskWriteTitle")}</span>
-            <span className="task-card-sub">{t("taskWriteSub")}</span>
+            <span className="task-card-title">{t("intro.task_write_title")}</span>
+            <span className="task-card-sub">{t("intro.task_write_sub")}</span>
           </span>
-          <span className="task-card-act">{t("taskStart")}</span>
+          <span className="task-card-act">{t("intro.cta_start")}</span>
         </button>
 
         <button
           className="task-card"
           data-testid="intro-task-tidy"
-          onClick={() => onPrefill(t("promptTidy"))}
+          onClick={() => onPrefill(t("intro.tidy_prompt"))}
         >
           <span className="task-card-body">
-            <span className="task-card-title">{t("taskTidyTitle")}</span>
-            <span className="task-card-sub">{t("taskTidySub")}</span>
+            <span className="task-card-title">{t("intro.task_tidy_title")}</span>
+            <span className="task-card-sub">{t("intro.task_tidy_sub")}</span>
           </span>
-          <span className="task-card-act">{t("taskStart")}</span>
+          <span className="task-card-act">{t("intro.cta_start")}</span>
         </button>
       </div>
     </div>

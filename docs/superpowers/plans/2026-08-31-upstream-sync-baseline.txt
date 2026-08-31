@@ -1,0 +1,53 @@
+=== pytest（合并前）===
+........................................................................ [ 40%]
+........................................................................ [ 45%]
+........................................................................ [ 50%]
+........................................................................ [ 55%]
+........................................................................ [ 60%]
+........................................................................ [ 65%]
+........................................................................ [ 70%]
+........................................................................ [ 75%]
+........................................................................ [ 80%]
+........................................................................ [ 85%]
+........................................................................ [ 90%]
+........................................................................ [ 95%]
+..............................................................           [100%]
+=============================== warnings summary ===============================
+tests/test_gemini_provider.py::test_ensure_client_without_key_raises
+  /private/tmp/marlo-upstream-sync/.venv/lib/python3.14/site-packages/google/genai/types.py:42: DeprecationWarning: '_UnionGenericAlias' is deprecated and slated for removal in Python 3.17
+    VersionedUnionType = Union[builtin_types.UnionType, _UnionGenericAlias]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+1429 passed, 1 skipped, 1 warning in 58.17s
+=== vitest（合并前）===
+ ✓ src/components/skills/SkillEditor.test.tsx (2 tests) 132ms
+ ✓ src/components/AutomationQuickstart.keys.test.tsx (5 tests) 2ms
+ ✓ src/streamGate.test.ts (5 tests) 4ms
+ ✓ src/api.connectorTitles.test.ts (3 tests) 5ms
+ ✓ src/useQumgeAccount.test.tsx (6 tests) 26ms
+ ✓ src/voiceProxyHint.test.ts (3 tests) 1ms
+ ✓ src/api.auth.test.ts (1 test) 3ms
+ ✓ src/components/Markdown.test.tsx (3 tests) 42ms
+ ✓ src/humanize.skills.test.ts (2 tests) 1ms
+
+ Test Files  37 passed (37)
+      Tests  277 passed (277)
+   Start at  14:26:33
+   Duration  3.58s (transform 1.94s, setup 0ms, collect 7.07s, tests 5.59s, environment 9.94s, prepare 1.44s)
+
+=== e2e（合并前）===
+  ✓  178 [chromium] › e2e/standing-approvals.spec.ts:80:1 › task detail lists standing rules under 'Allowed without asking'; Revoke removes one (1.9s)
+  ✓  180 [chromium] › e2e/transcript-scroll.spec.ts:65:1 › bubbles carry hover copy + timestamp without layout shift (1.5s)
+  ✓  181 [chromium] › e2e/unattended.spec.ts:16:1 › attended (default): a tool request surfaces the inline approval card (1.4s)
+  ✓  182 [chromium] › e2e/unattended.spec.ts:24:1 › Send-to-Inbox toggle (in the Mode menu) flips and persists across a reload (2.3s)
+  ✓  184 [chromium] › e2e/unattended.spec.ts:60:1 › answering the live approval never re-flashes its parked Inbox mirror (2.2s)
+  ✓  185 [chromium] › e2e/usage-chip-context-bar.spec.ts:11:1 › context_bar off (default): the chip is the session total, no fill bar (1.0s)
+  ✓  168 [chromium] › e2e/slack-workspaces.spec.ts:27:1 › Add workspace opens the modal; signed out shows the sign-in hint, signed in installs (12.5s)
+  -  188 [chromium] › e2e/usage-chip.spec.ts:78:6 › Settings toggle turns the context bar on; default is the session total
+  ✓  186 [chromium] › e2e/usage-chip.spec.ts:9:1 › usage chip appears after a turn and opens the breakdown popover (1.1s)
+  ✓  187 [chromium] › e2e/usage-chip.spec.ts:56:1 › usage resets on a new session (1.0s)
+  ✓  179 [chromium] › e2e/transcript-scroll.spec.ts:16:1 › scrolling up mid-stream pins the viewport; jump-to-latest re-engages (7.1s)
+  ✓  183 [chromium] › e2e/unattended.spec.ts:43:1 › unattended: a tool request parks (no inline approval card) (6.3s)
+
+  3 skipped
+  185 passed (1.3m)

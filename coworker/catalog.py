@@ -55,17 +55,22 @@ class Capability:
 
 
 def _code_files(context: AgentContext) -> list:
-    """Repo-oriented files: single-root, line-numbered/windowed `read_file`. Our `grep` and
-    windowed `read_file` replace aisuite's slower `search_files` / `read_file`/`read_file_lines`.
+    """Repo-oriented files: line-numbered/windowed `read_file`. Our `grep` and windowed
+    `read_file` replace aisuite's slower `search_files` / `read_file`/`read_file_lines`.
+    Multi-root aware (universal scratch): with session roots, writes/reads reach the
+    scratch and granted dirs too; the workspace stays the relative-path anchor.
     """
     ws = str(context.workspace)
     replaced = {"search_files", "read_file", "read_file_lines"}
+    file_kwargs = (
+        {"roots": context.roots} if context.roots else {"root": ws, "allow_write": True}
+    )
     files = [
         t
-        for t in ai.toolkits.files(root=ws, allow_write=True)
+        for t in ai.toolkits.files(**file_kwargs)
         if getattr(t, "__name__", "") not in replaced
     ]
-    return [*files, *file_tools(ws)]
+    return [*files, *file_tools(ws, roots=context.roots)]
 
 
 # 知识工作角色【不给】补丁类工具。
@@ -90,20 +95,25 @@ _PATCH_TOOLS = {"apply_patch", "apply_unified_diff", "replace_in_file"}
 
 
 def _files(context: AgentContext) -> list:
-    """Knowledge-work files: multi-root aware (reads/writes across the session's roots), keeps
-    aisuite's `read_file`/`read_file_lines`. Our `grep` replaces the slow `search_files`, and
-    the patch tools are dropped entirely — see _PATCH_TOOLS above.
+    """Knowledge-work files: multi-root aware (reads/writes across the session's roots).
+    One reader everywhere (upstream, owner ruling 2026-08-20): the windowed, line-numbered
+    `read_file` replaces aisuite's `read_file`/`read_file_lines`, and our `grep`
+    replaces the slow `search_files` — same set Code uses.
+
+    Marlo additionally drops the patch tools entirely — see _PATCH_TOOLS above
+    (85bc781：改文件就是整文件重写).
     """
     ws = str(context.workspace)
     file_kwargs = (
         {"roots": context.roots} if context.roots else {"root": ws, "allow_write": True}
     )
-    dropped = {"search_files", *_PATCH_TOOLS}
-    return [
+    replaced = {"search_files", "read_file", "read_file_lines", *_PATCH_TOOLS}
+    files = [
         t
         for t in ai.toolkits.files(**file_kwargs)
-        if getattr(t, "__name__", "") not in dropped
+        if getattr(t, "__name__", "") not in replaced
     ]
+    return [*files, *file_tools(ws, roots=context.roots)]
 
 
 def _connect(context: AgentContext) -> list:

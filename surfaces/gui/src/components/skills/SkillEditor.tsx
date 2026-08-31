@@ -5,7 +5,7 @@ import {
   updateSkill,
   type SkillUploadPreview,
 } from "../../api";
-import { useT } from "../../i18n";
+import { useT } from "../../legacyI18n";
 
 const CARD = "rounded-xl2 border border-line bg-panel";
 const FIELD_LABEL = "text-[12.5px] font-medium text-ink";

@@ -15,7 +15,7 @@ import {
   type ProviderInfo,
 } from "../api";
 import { startQumgeDevice, pollQumgeDevice, type QumgeDeviceStart } from "../api.qumge";
-import { setLocale } from "../i18n";
+import { setTestLocale } from "../testLocale";
 
 vi.mock("../api", () => ({
   getProviders: vi.fn(),
@@ -281,13 +281,13 @@ describe("Onboarding — step 0 (Task 4: connect to Qumge, not the gallery)", ()
   // 断言中文【出现】还不够：漏掉一个键时，界面显示的是键名，中文那句照样在。所以
   // 同时断言英文原文【不出现】。
   it("中文界面下第一屏没有英文残留", async () => {
-    setLocale("zh");   // 其余 mock 走全局 beforeEach
+    await setTestLocale("zh");   // 其余 mock 走全局 beforeEach
     render(<Onboarding onDone={() => {}} />);
     await act(async () => {});
 
     // 【扫渲染结果，不数守卫的条数】。守卫今天四次报"无新增"而界面是英文 ——
     // 它量源码、这里量用户看到的字符，两把尺子必须都过。
-    const { englishRunsIn } = await import("../i18n/no-english");
+    const { englishRunsIn } = await import("../legacyI18n/no-english");
     expect(englishRunsIn(screen.getByTestId("onboarding") as HTMLElement)).toEqual([]);
 
     const box = screen.getByTestId("onboarding").textContent || "";
@@ -302,6 +302,6 @@ describe("Onboarding — step 0 (Task 4: connect to Qumge, not the gallery)", ()
     ]) {
       expect(box).not.toContain(en);
     }
-    setLocale("en");
+    await setTestLocale("en");
   });
 });

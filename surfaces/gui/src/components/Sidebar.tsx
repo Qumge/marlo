@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { t, useT } from "../i18n";
+import { useTranslation } from "react-i18next";
 import {
   AUTOMATIONS_CHANGED,
   getAutomations,
@@ -17,7 +17,7 @@ import type { SessionInfo } from "../types";
 import { isProjectScoped, shortPersonaName } from "../personaScope";
 import { ConnectorIcon } from "../connectors/ConnectorIcon";
 import { Icon, type IconName } from "./Icon";
-import { PersonaGlyph, personaGlyph } from "./personaIcon";
+import { personaGlyph } from "./personaIcon";
 import { SearchModal } from "./SearchModal";
 import { AccountRow } from "./AccountRow";
 import { AttnBadge } from "./AttnBadge";
@@ -35,7 +35,7 @@ const SURFACES: { key: string; label: string; icon: IconName; cls: string }[] = 
 const surfaceFromPersona = (p: Persona) => ({
   key: p.id,
   label: shortPersonaName(p.name, p.id),
-  icon: personaGlyph(p.icon, p.family),
+  icon: personaGlyph(p.icon, p.requires_folder),
   cls: `ico-${p.icon || "cowork"}`,
 });
 
@@ -45,11 +45,15 @@ const surfaceFromPersona = (p: Persona) => ({
 // treatment as the attention badge; failure only colors the tooltip's words, not the
 // sidebar (owner call 2026-07-20: no color, and the entry alone carries the count).
 function UnseenBadge({ n, failed }: { n: number; failed?: boolean }) {
+  const { t } = useTranslation();
   if (!n) return null;
   return (
     <span
       className="text-[10px] font-semibold text-ink bg-faint/30 rounded-full px-1.5 leading-[15px] shrink-0"
-      title={t("tplNewRuns")(n, !!failed)}
+      title={
+        t("sidebar.new_runs", { count: n }) +
+        (failed ? t("sidebar.new_runs_failed_suffix") : "")
+      }
     >
       {n > 99 ? "99+" : n}
     </span>
@@ -59,14 +63,14 @@ function UnseenBadge({ n, failed }: { n: number; failed?: boolean }) {
 // Liveness = working (in-flight turn) / sleeping (a self-wake is pending). A count-less dot that
 // never bubbles — it says "this is alive", not "this needs you".
 function LiveDot({ state }: { state?: "working" | "sleeping" | "idle" }) {
-  const t = useT();
+  const { t } = useTranslation();
   if (state !== "working" && state !== "sleeping") return null;
   return state === "working" ? (
-    <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse shrink-0" title={t("workingNow")} />
+    <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse shrink-0" title={t("sidebar.status_working")} />
   ) : (
     <span
       className="w-1.5 h-1.5 rounded-full bg-faint/60 shrink-0"
-      title={t("sleeping")}
+      title={t("sidebar.status_sleeping")}
     />
   );
 }
@@ -158,7 +162,7 @@ const compactAge = (iso?: string | null): string => {
 // Sessions shown per group before "Show more" comes from Settings (sessions_peek, default 5).
 
 export function Sidebar(props: Props) {
-  const t = useT();
+  const { t } = useTranslation();
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   // Inbox chip sticky unlock (§26): absent until the product first parks an item (or a
   // session first goes Unattended), then permanent. Per-device, like nav collapse.
@@ -400,8 +404,8 @@ export function Sidebar(props: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         <button
-          title={t("sessionActions")}
-          aria-label={t("uiSessionActions")}
+          title={t("sidebar.session_actions")}
+          aria-label={t("sidebar.session_actions")}
           aria-haspopup="menu"
           aria-expanded={menuOpen}
           data-testid="row-menu"
@@ -435,7 +439,7 @@ export function Sidebar(props: Props) {
               <div className="h-px bg-line my-1 mx-2" />
               {confirmDelId === s.session_id ? (
                 <button
-                  title={t("confirmDelete")}
+                  title={t("sidebar.confirm_delete")}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[12.5px] text-left font-medium text-danger hover:bg-paper"
                   data-testid="row-menu-delete"
                   role="menuitem"
@@ -445,7 +449,7 @@ export function Sidebar(props: Props) {
                   }}
                 >
                   <Icon name="trash" size={13} className="shrink-0" />
-                  <span className="flex-1">{t("deleteQ")}</span>
+                  <span className="flex-1">{t("sidebar.delete_confirm")}</span>
                 </button>
               ) : (
                 <button
@@ -455,7 +459,7 @@ export function Sidebar(props: Props) {
                   onClick={() => setConfirmDelId(s.session_id)}
                 >
                   <Icon name="trash" size={13} className="shrink-0" />
-                  <span className="flex-1">{t("delete")}</span>
+                  <span className="flex-1">{t("sidebar.delete")}</span>
                 </button>
               )}
             </div>
@@ -607,7 +611,7 @@ export function Sidebar(props: Props) {
     pinnedSessions.length > 0 ? (
       <div>
         <div className="px-1.5 text-[10.5px] uppercase tracking-[0.07em] text-faint font-semibold mb-1">
-          {t("uiPinned")}
+          {t("sidebar.pinned")}
         </div>
         <div className="space-y-0.5">
           {pinnedSessions.map((s) => cardRow(s))}
@@ -622,7 +626,7 @@ export function Sidebar(props: Props) {
     automations.length > 0 ? (
       <div data-testid="scheduled-band">
         <div className="px-1.5 text-[10.5px] uppercase tracking-[0.07em] text-faint font-semibold mb-1">
-          {t("uiScheduled")}
+          {t("sidebar.scheduled")}
         </div>
         <div className="space-y-0.5">
           {automations.map((a) => (
@@ -654,12 +658,12 @@ export function Sidebar(props: Props) {
     return (
     <div className="relative flex items-center justify-between px-1.5 mb-1" data-testid="recent-header">
       <span className="text-[10.5px] uppercase tracking-[0.07em] text-faint font-semibold">
-        {t("recent")}
+        {t("sidebar.recent")}
       </span>
       <button
         className="w-6 h-6 grid place-items-center rounded-md text-faint hover:text-ink hover:bg-paper -mr-1"
-        title={t("groupAndFilter")}
-        aria-label={t("groupAndFilterAria")}
+        title={t("sidebar.group_and_filter_short")}
+        aria-label={t("sidebar.group_and_filter")}
         onClick={() => setGroupMenuOpen((v) => !v)}
       >
         <Icon name="sliders" size={14} />
@@ -673,9 +677,9 @@ export function Sidebar(props: Props) {
             data-testid="group-filter-menu"
           >
             <div className="px-2 pt-1 pb-1 text-[10.5px] uppercase tracking-[0.06em] text-faint font-semibold">
-              {t("groupBy")}
+              {t("sidebar.group_by")}
             </div>
-            {([["grouped", t("groupPersona")], ["flat", t("groupChronological")]] as ["flat" | "grouped", string][]).map(
+            {([["grouped", t("sidebar.group_persona")], ["flat", t("sidebar.group_chrono")]] as ["flat" | "grouped", string][]).map(
               ([key, label]) => (
                 <button
                   key={key}
@@ -692,11 +696,11 @@ export function Sidebar(props: Props) {
                 <div className="my-1 border-t border-line" />
                 <div className="px-2 pt-1 pb-1 flex items-center justify-between">
                   <span className="text-[10.5px] uppercase tracking-[0.06em] text-faint font-semibold">
-                    {t("sbFilterByCoworker")}
+                    {t("sidebar.filter_coworker")}
                   </span>
                   {filterPersonas.size > 0 && (
                     <button className="text-[11px] text-accent" onClick={() => setFilterPersonas(new Set())}>
-                      {t("uiClear")}
+                      {t("sidebar.clear")}
                     </button>
                   )}
                 </div>
@@ -723,7 +727,7 @@ export function Sidebar(props: Props) {
                   })}
                 </div>
                 <div className="px-2 pt-1 pb-0.5 text-[11px] text-faint leading-snug">
-                  {t("sbNoneCheckedShowsAll")}
+                  {t("sidebar.filter_all_hint")}
                 </div>
               </>
             )}
@@ -799,7 +803,7 @@ export function Sidebar(props: Props) {
       <div className="space-y-1 px-1.5 pb-2 pt-0.5">
         {/* Body is flush inside the expanded group's fill (provided by the wrapper) so the header +
             its sessions read as one connected block — clear where a group ends and the next begins. */}
-        {/* No per-persona t("sbNewSession") here — the top split button's ▾ already starts a session
+        {/* No per-persona t("sidebar.new_session") here — the top split button's ▾ already starts a session
             in any persona (it was redundant + the mock's grouped cards don't have it). */}
         {workspaceSurface ? (
           <>
@@ -807,12 +811,12 @@ export function Sidebar(props: Props) {
                 rows carry a right-aligned compact age and truncate to PROJECT_PEEK + t("uiShowMore"). */}
             <div className="flex items-center justify-between px-1.5 pt-1">
               <span className="text-[10.5px] uppercase tracking-[0.07em] text-faint font-semibold">
-                {t("uiProjects")}
+                {t("sidebar.projects")}
               </span>
               <button
                 className="w-5 h-5 grid place-items-center rounded text-faint hover:text-ink hover:bg-panel"
-                title={t("newProject")}
-                aria-label={t("uiNewProject")}
+                title={t("sidebar.new_project")}
+                aria-label={t("sidebar.new_project")}
                 onClick={() => props.onNewProject(browseKey)}
               >
                 <Icon name="folderPlus" size={14} />
@@ -821,7 +825,7 @@ export function Sidebar(props: Props) {
             <div className="space-y-0.5">
               {projectOrder.length === 0 && (
                 <div className="px-2 py-1.5 text-[12px] text-faint leading-snug">
-                  {t("sbNoProjects")}
+                  {t("sidebar.no_projects_yet")}
                 </div>
               )}
               {projectOrder.map((proj) => {
@@ -877,7 +881,7 @@ export function Sidebar(props: Props) {
                         </div>
                       ) : (
                         <div className="px-2 py-1.5 pl-[19px] text-[12px] text-faint leading-snug">
-                          {t("sbNoConversations")}
+                          {t("sidebar.no_project_convos")}
                         </div>
                       ))}
                   </div>
@@ -889,7 +893,7 @@ export function Sidebar(props: Props) {
           <div className="space-y-0.5">
             {mine.filter(matches).length === 0 ? (
               <div className="px-2 py-1.5 text-[12px] text-faint leading-snug">
-                {normalizedQuery ? t("noMatchingConversations") : t("noConversations")}
+                {normalizedQuery ? t("sidebar.no_matching") : t("sidebar.no_conversations")}
               </div>
             ) : (
               <>
@@ -943,22 +947,25 @@ export function Sidebar(props: Props) {
           <button
             className="nav-pin-btn w-7 h-7 grid place-items-center rounded-md text-faint hover:text-ink hover:bg-paper shrink-0"
             title={props.collapsed ? "Dock sidebar (⌘B)" : "Collapse sidebar (⌘B)"}
-            aria-label={props.collapsed ? t("sbDock") : t("sbCollapse")}
+            aria-label={props.collapsed ? t("sidebar.dock") : t("sidebar.collapse")}
             onClick={props.onCollapse}
           >
             <Icon name="sidebar" size={16} />
           </button>
         )}
-        <div className="brand-wordmark text-[15px]">Marlo<span className="beta-tag">{t("beta")}</span></div>
+        <div className="brand-wordmark text-[15px]">Marlo<span className="beta-tag">{t("app.beta")}</span></div>
       </div>
 
-      {/* New session: split button — primary starts the last-used persona; ▾ picks a specific one. */}
-      <NewSessionSplit
-        personas={personas}
-        current={props.agent}
-        onNew={props.onNewSession}
-        onManage={props.onManagePersonas}
-      />
+      {/* New session: 上游 UX-029 把「挑一个角色」从这里挪到了 composer —— 两处都留
+          就是两个入口做同一件事。跟上游走，改成一个普通按钮。 */}
+      <div className="px-2.5 pt-2">
+        <button
+          className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] text-left font-medium text-ink hover:bg-chromeHover"
+          onClick={() => props.onNewSession(props.agent)}
+        >
+          <Icon name="plus" size={15} className="shrink-0" /> {t("sidebar.new_session")}
+        </button>
+      </div>
 
       {/* Search: a borderless nav-style entry (not a boxed input) that opens the command-palette
           SearchModal over the whole app. Matches the bottom-nav rows to reduce the boxy look. */}
@@ -967,7 +974,7 @@ export function Sidebar(props: Props) {
           className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] text-left text-muted hover:bg-paper hover:text-ink"
           onClick={() => setSearchModalOpen(true)}
         >
-          <Icon name="search" size={15} className="shrink-0" /> {t("search")}
+          <Icon name="search" size={15} className="shrink-0" /> {t("sidebar.search")}
         </button>
       </div>
 
@@ -983,7 +990,7 @@ export function Sidebar(props: Props) {
           onClick={props.onOpenScheduled}
         >
           <Icon name="clock" size={15} className="shrink-0" />
-          <span className="flex-1">{t("automations")}</span>
+          <span className="flex-1">{t("sidebar.automations")}</span>
         </button>
       </div>
 
@@ -1044,7 +1051,7 @@ export function Sidebar(props: Props) {
             <div className="space-y-0.5">
               {recentSessions.length === 0 ? (
                 <div className="px-2 py-1.5 text-[12px] text-faint leading-snug">
-                  {normalizedQuery ? t("noMatchingConversations") : t("noConversations")}
+                  {normalizedQuery ? t("sidebar.no_matching") : t("sidebar.no_conversations")}
                 </div>
               ) : (
                 <>
@@ -1058,8 +1065,8 @@ export function Sidebar(props: Props) {
                       onClick={() => setRecentExpanded((v) => !v)}
                     >
                       {recentExpanded
-                        ? t("showLess")
-                        : t("showMore")(recentSessions.length - RECENT_PEEK)}
+                        ? t("sidebar.show_less")
+                        : t("sidebar.show_n_more", { n: recentSessions.length - RECENT_PEEK })}
                     </button>
                   )}
                 </>
@@ -1078,8 +1085,6 @@ export function Sidebar(props: Props) {
         integrationsActive={!!props.integrationsActive}
         skillsActive={!!props.skillsActive}
         onManage={props.onManage}
-        onOpenScheduled={props.onOpenScheduled}
-        scheduledActive={!!props.scheduledActive}
         onOpenAudit={props.onOpenAudit}
         auditActive={!!props.auditActive}
         totalAttention={totalAttention}
@@ -1105,92 +1110,3 @@ export function Sidebar(props: Props) {
 // New-session split button (§8): the primary action starts a session with the last-used persona
 // (`current`); the ▾ opens a menu of the enabled personas (from /v1/personas) plus a "Manage
 // personas…" entry. A plain custom split control — the pill-shaped Dropdown doesn't fit this shape.
-function NewSessionSplit({
-  personas,
-  current,
-  onNew,
-  onManage,
-}: {
-  personas: Persona[] | null;
-  current: string;
-  onNew: (agent: string) => void;
-  onManage: () => void;
-}) {
-  const t = useT();
-  const [open, setOpen] = useState(false);
-  const enabled = (personas || []).filter((p) => p.enabled);
-  // With a single enabled persona there is nothing to pick — the split collapses to a plain
-  // button (owner ask 2026-07-09). `personas === null` (still loading) keeps the split so the
-  // control doesn't visibly change shape once the list arrives with 2+.
-  const solo = personas !== null && enabled.length <= 1;
-  return (
-    <div className="px-3 pt-2 relative">
-      <div className="flex">
-        <button
-          className={
-            "newsplit-primary flex-1 text-left px-3 py-2 bg-accent text-white text-[13px] font-medium hover:opacity-95 flex items-center gap-2 " +
-            (solo ? "rounded-lg" : "rounded-l-lg")
-          }
-          onClick={() => onNew(solo && enabled.length === 1 ? enabled[0].id : current)}
-        >
-          <Icon name="plus" size={15} className="shrink-0" /> {t("newSession")}
-        </button>
-        {!solo && (
-          <button
-            className="px-2.5 rounded-r-lg bg-accent text-white border-l border-white/25 hover:opacity-95 flex items-center"
-            title={t("startWithPersona")}
-            aria-label={t("uiChoosePersona")}
-            onClick={() => setOpen((v) => !v)}
-          >
-            <Icon name="chevronDown" size={13} />
-          </button>
-        )}
-      </div>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
-          <div className="newsplit-menu absolute left-3 right-3 mt-1 z-30 bg-panel border border-line rounded-xl2 shadow-xl p-1">
-            <div className="px-2 py-1 text-[10.5px] uppercase tracking-[0.06em] text-faint font-semibold">
-              {t("sbStartSessionAs")}
-            </div>
-            {enabled.map((p) => (
-              <button
-                key={p.id}
-                className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-paper text-left"
-                onClick={() => {
-                  setOpen(false);
-                  onNew(p.id);
-                }}
-              >
-                <span className="w-6 h-6 rounded-md bg-paper border border-line grid place-items-center text-muted shrink-0">
-                  <PersonaGlyph icon={p.icon} family={p.family} size={12} />
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-[13px] font-medium truncate">
-                    {shortPersonaName(p.name, p.id)}
-                  </span>
-                  {p.tagline && (
-                    <span className="block text-[11px] text-muted truncate">{p.tagline}</span>
-                  )}
-                </span>
-              </button>
-            ))}
-            {showPersonas() && (
-              <div className="border-t border-line mt-1 pt-1">
-                <button
-                  className="w-full px-2 py-1.5 rounded-lg hover:bg-paper text-left text-[12.5px] text-muted"
-                  onClick={() => {
-                    setOpen(false);
-                    onManage();
-                  }}
-                >
-                  {t("sbManagePersonas")}
-                </button>
-              </div>
-            )}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}

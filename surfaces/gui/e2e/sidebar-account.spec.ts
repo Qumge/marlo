@@ -33,7 +33,8 @@ test("the account menu: Inbox + Connectors always listed; Settings carries the s
   await expect(menu.getByRole("button", { name: "Inbox" })).toBeVisible();
   await expect(menu.getByRole("button", { name: "Connectors", exact: true })).toBeVisible();
   await expect(menu.getByRole("button", { name: /Settings/ })).toContainText("⌘");
-  await expect(menu.getByRole("button", { name: "Automations", exact: true })).toBeVisible();
+  // Automations left the menu (owner 2026-08-21) — the sidebar nav row carries it.
+  await expect(menu.getByRole("button", { name: "Automations", exact: true })).toHaveCount(0);
   await expect(menu.getByRole("button", { name: "Activity", exact: true })).toBeVisible();
 });
 
@@ -50,7 +51,8 @@ test("Activity in the menu is the audit log; Unrouted lives under Inbox ▸ Conf
   await page.getByTestId("account-row").click();
   await page.getByTestId("account-menu").getByRole("button", { name: "Connectors", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Connections" })).toBeVisible();
-  await expect(page.getByTestId("advanced-tool-servers")).toBeVisible();
+  // MCP 内联在连接列表里（上游 UX-034），不再是一个折叠区。
+  await expect(page.getByTestId("custom-mcp-group")).toBeVisible();
   await expect(page.getByRole("button", { name: "MCP servers", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Messaging routing/ })).toHaveCount(0);
   // The old fourth sub-nav tab is gone — exactly one page is named Activity now.

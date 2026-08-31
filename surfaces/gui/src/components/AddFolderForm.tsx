@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useT } from "../i18n";
+import { useTranslation } from "react-i18next";
 import { chooseFolder } from "../tauri";
 import { Icon } from "./Icon";
 
@@ -21,7 +21,7 @@ export function AddFolderForm({
   startOpen?: boolean;
   onDismiss?: () => void;
 }) {
-  const t = useT();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(!!startOpen);
   const [path, setPath] = useState("");
   const [writable, setWritable] = useState(false);
@@ -47,7 +47,7 @@ export function AddFolderForm({
   if (!open) {
     return (
       <button className={"addfolder-trigger" + (compact ? " compact" : "")} onClick={() => setOpen(true)}>
-        <Icon name="folderPlus" size={15} /> Give access to a folder
+        <Icon name="folderPlus" size={15} /> {t("access.give_folder")}
       </button>
     );
   }
@@ -58,7 +58,7 @@ export function AddFolderForm({
         <input
           className="addfolder-path"
           autoFocus
-          placeholder={t("uiFolderPathPlaceholder")}
+          placeholder={t("access.addfolder_path_placeholder")}
           value={path}
           spellCheck={false}
           onChange={(e) => setPath(e.target.value)}
@@ -67,21 +67,21 @@ export function AddFolderForm({
             else if (e.key === "Escape") reset();
           }}
         />
-        <button className="btn icon-only" onClick={browse} title={t("uiChooseLocation")} aria-label={t("uiChooseLocation")}>
+        <button className="btn icon-only" onClick={browse} title={t("access.choose_location")} aria-label={t("access.choose_location")}>
           <Icon name="folder" size={15} />
         </button>
       </div>
       <div className="addfolder-actions">
-        <label className="addfolder-write" title={t("uiWriteToggle")}>
+        <label className="addfolder-write" title={t("access.allow_writes_help")}>
           <input type="checkbox" checked={writable} onChange={(e) => setWritable(e.target.checked)} />
-          {t("acAllowWrites")}
+          {t("access.allow_writes")}
         </label>
         <span className="spacer" />
         <button className="btn" onClick={reset}>
-          {t("uiCancel")}
+          {t("access.cancel")}
         </button>
         <button className="btn primary" disabled={busy || !path.trim()} onClick={submit}>
-          {t("uiAdd")}
+          {t("access.add_btn")}
         </button>
       </div>
     </div>

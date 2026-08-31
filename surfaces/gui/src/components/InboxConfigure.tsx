@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useT } from "../i18n";
+import { useTranslation } from "react-i18next";
 import {
   getConnectors,
   getDmRoute,
@@ -40,7 +40,7 @@ const BTN_ACCENT_SM =
   "bg-accent text-white disabled:opacity-50";
 
 export function InboxConfigure() {
-  const t = useT();
+  const { t } = useTranslation();
   return (
     <div data-testid="inbox-configure">
       <div className="grid grid-cols-2 gap-4 mb-4">
@@ -51,10 +51,9 @@ export function InboxConfigure() {
       {/* Unrouted = delivery FAILURES ("messages that never reached you"), so it lives with
           the Inbox now (§28; previously with routing under Connectors, §26). */}
       <div className="mt-6" data-testid="unrouted-section">
-        <h3 className="text-[14px] font-semibold mb-1">{t("uiUnrouted")}</h3>
-        <p className="text-[12.5px] text-muted mb-3">
-          Inbound messages and background-turn failures nothing claimed — nothing vanishes
-          silently.
+        <h3 className="text-[14px] font-semibold mb-1">{t("inbox.unrouted_title")}</h3>
+        <p className="text-[13px] text-muted mb-3">
+          {t("inbox.unrouted_sub")}
         </p>
         <UnroutedTable />
       </div>
@@ -65,7 +64,7 @@ export function InboxConfigure() {
 // Where an Unattended session's approvals/questions get mirrored as interactive buttons. Targets
 // the "default" route (sessions fall back to it); pick a channel separate from any you subscribe to.
 function InboxRoutingCard() {
-  const t = useT();
+  const { t } = useTranslation();
   const [recent, setRecent] = useState<RecentChannel[]>([]);
   const [connectors, setConnectors] = useState<Connector[]>([]);
   const [target, setTarget] = useState(""); // current default-binding address, e.g. "slack:C0123"
@@ -95,7 +94,7 @@ function InboxRoutingCard() {
     const [platform, id] = addr.includes(":") ? addr.split(":", 2) : ["slack", addr];
     const result = await setInboxBinding("default", platform, id);
     if (!result.ok) {
-      setError(result.error || t("ibUpdateFailed"));
+      setError(result.error || t("inbox.routing_update_failed"));
       return;
     }
     setError(null);
@@ -105,7 +104,7 @@ function InboxRoutingCard() {
   const clear = async () => {
     const result = await setInboxBinding("default", null, "");
     if (!result.ok) {
-      setError(result.error || t("ibClearFailed"));
+      setError(result.error || t("inbox.routing_clear_failed"));
       return;
     }
     setError(null);
@@ -135,13 +134,13 @@ function InboxRoutingCard() {
 
   return (
     <div className={CARD + " p-4"} data-testid="inbox-mirror-card">
-      <div className="font-semibold text-[13.5px] mb-1">{t("uiUnattendedApprovals")}</div>
+      <div className="font-semibold text-[13px] mb-1">{t("inbox.unattended_approvals")}</div>
       <p className="text-[12px] text-muted mb-3">
-        Channel where an Unattended session posts Approve/Deny buttons. Currently mirroring to{" "}
+        {t("inbox.mirror_desc_prefix")}{" "}
         <strong className="text-ink font-medium" title={target || undefined}>
-          {known ? `#${known}` : target || t("ibInAppOnly")}
+          {known ? `#${known}` : target || t("inbox.in_app_inbox_only")}
         </strong>
-        .
+        {t("inbox.mirror_desc_suffix")}
       </p>
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-muted shrink-0">
@@ -153,27 +152,27 @@ function InboxRoutingCard() {
           disabled={!draft.trim() || missingSlackOwner}
           onClick={save}
         >
-          {t("uiSet")}
+          {t("inbox.set")}
         </button>
         {target && (
           <button className="text-[12px] text-danger/80 hover:text-danger" onClick={clear}>
-            clear
+            {t("inbox.clear")}
           </button>
         )}
       </div>
       {missingSlackOwner && (
-        <p className="text-[11.5px] text-warnInk mt-2">
-          {t("ibPickOwner")}
+        <p className="text-[12px] text-warnInk mt-2">
+          {t("inbox.missing_slack_owner")}
         </p>
       )}
-      {error && <p className="text-[11.5px] text-warnInk mt-2">{error}</p>}
+      {error && <p className="text-[12px] text-warnInk mt-2">{error}</p>}
     </div>
   );
 }
 
 // Which session handles incoming DMs to the bot. None → DMs park in the Unrouted section below.
 function DmRouteCard() {
-  const t = useT();
+  const { t } = useTranslation();
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [dm, setDm] = useState<string>("");
 
@@ -196,16 +195,16 @@ function DmRouteCard() {
 
   return (
     <div className={CARD + " p-4"}>
-      <div className="font-semibold text-[13.5px] mb-1">{t("ibDirectMessages")}</div>
+      <div className="font-semibold text-[13px] mb-1">{t("inbox.direct_messages")}</div>
       <p className="text-[12px] text-muted mb-3">
-        {t("ibDmSession")}
+        {t("inbox.dm_desc")}
       </p>
       <div className="flex items-center gap-2">
         <span className="text-muted shrink-0">
           <Icon name="chat" size={16} />
         </span>
         <select className={"flex-1 " + SELECT} value={dm} onChange={(e) => choose(e.target.value)}>
-          <option value="">No session — park DMs</option>
+          <option value="">{t("inbox.dm_no_session")}</option>
           {real.map((s) => (
             <option key={s.session_id} value={s.session_id}>
               {s.title || s.session_id}
@@ -220,7 +219,7 @@ function DmRouteCard() {
 // Which sessions listen to which channels (inbound), and where each routes its Inbox (outbound).
 // Subscriptions can be created by the agent (it asks you via ask_user) or added here directly.
 function SubscriptionsCard() {
-  const t = useT();
+  const { t } = useTranslation();
   const [subs, setSubs] = useState<Subscription[] | null>(null);
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [recent, setRecent] = useState<RecentChannel[]>([]);
@@ -256,17 +255,17 @@ function SubscriptionsCard() {
         <span className="text-muted shrink-0">
           <Icon name="plug" size={15} />
         </span>
-        <span className="font-semibold text-[13.5px]">{t("uiChannelSubs")}</span>
-        <span className="text-[12px] text-muted">— sessions that listen to a channel (inbound)</span>
+        <span className="font-semibold text-[13px]">{t("inbox.channel_subscriptions")}</span>
+        <span className="text-[12px] text-muted">{t("inbox.subscriptions_sub")}</span>
       </div>
 
       {subs && subs.length > 0 ? (
         <table className="w-full text-[13px]">
           <thead className="text-[11px] uppercase tracking-[0.04em] text-faint">
             <tr className="text-left">
-              <th className="font-medium px-4 py-2">{t("uiSession")}</th>
-              <th className="font-medium px-4 py-2">{t("uiListensTo")}</th>
-              <th className="font-medium px-4 py-2">{t("uiInboxRoutes")}</th>
+              <th className="font-medium px-4 py-2">{t("inbox.col_session")}</th>
+              <th className="font-medium px-4 py-2">{t("inbox.col_listens_to")}</th>
+              <th className="font-medium px-4 py-2">{t("inbox.col_inbox_routes_to")}</th>
               <th className="px-4 py-2" />
             </tr>
           </thead>
@@ -289,9 +288,9 @@ function SubscriptionsCard() {
                   {s.collision && (
                     <span
                       className="ml-1.5 text-[11px] text-warnInk bg-warnSoft/70 border border-warnInk/15 rounded px-1.5 py-0.5"
-                      title={t("ibChannelConflict2")}
+                      title={t("inbox.collision_title")}
                     >
-                      ⚠ collides
+                      {t("inbox.collides")}
                     </span>
                   )}
                 </td>
@@ -299,7 +298,7 @@ function SubscriptionsCard() {
                 <td className="px-4 py-2.5 text-right">
                   <button
                     className="text-faint hover:text-danger"
-                    title={t("uiUnsubscribe")}
+                    title={t("inbox.unsubscribe")}
                     onClick={() => remove(s.session_id, s.channel)}
                   >
                     ×
@@ -310,8 +309,8 @@ function SubscriptionsCard() {
           </tbody>
         </table>
       ) : (
-        <div className="px-4 py-3 text-[12.5px] text-muted">
-          {t("ibNoSubs")}
+        <div className="px-4 py-3 text-[13px] text-muted">
+          {t("inbox.no_subscriptions")}
         </div>
       )}
 
@@ -321,7 +320,7 @@ function SubscriptionsCard() {
           value={addSession}
           onChange={(e) => setAddSession(e.target.value)}
         >
-          <option value="">Choose a session…</option>
+          <option value="">{t("inbox.choose_session")}</option>
           {real.map((s) => (
             <option key={s.session_id} value={s.session_id}>
               {s.title || s.session_id}
@@ -330,7 +329,7 @@ function SubscriptionsCard() {
         </select>
         <ChannelPicker value={addChannel} onChange={setAddChannel} recent={recent} onSubmit={add} />
         <button className={BTN_ACCENT_SM} disabled={!addSession || !addChannel.trim()} onClick={add}>
-          + Subscribe
+          {t("inbox.subscribe")}
         </button>
       </div>
     </div>
@@ -340,7 +339,7 @@ function SubscriptionsCard() {
 // Dead-letter view: inbound messages that had no destination (e.g. a DM with no session designated)
 // and background turns that failed (e.g. a dead model). Read-only — for visibility/debugging.
 function UnroutedTable() {
-  const t = useT();
+  const { t } = useTranslation();
   const [items, setItems] = useState<UnroutedItem[] | null>(null);
 
   useEffect(() => {
@@ -353,7 +352,7 @@ function UnroutedTable() {
   if (items && items.length === 0)
     return (
       <div className={CARD + " p-4 text-[13px] text-muted"}>
-        {t("ibNothingHere")}
+        {t("inbox.unrouted_empty")}
       </div>
     );
 
@@ -362,10 +361,10 @@ function UnroutedTable() {
       <table className="w-full text-[13px]">
         <thead className="text-[11px] uppercase tracking-[0.04em] text-faint">
           <tr className="text-left">
-            <th className="font-medium px-4 py-2">{t("uiWhen")}</th>
-            <th className="font-medium px-4 py-2">{t("uiSource")}</th>
-            <th className="font-medium px-4 py-2">{t("uiReason")}</th>
-            <th className="font-medium px-4 py-2">{t("uiMessage")}</th>
+            <th className="font-medium px-4 py-2">{t("inbox.col_when")}</th>
+            <th className="font-medium px-4 py-2">{t("inbox.col_source")}</th>
+            <th className="font-medium px-4 py-2">{t("inbox.col_reason")}</th>
+            <th className="font-medium px-4 py-2">{t("inbox.col_message")}</th>
           </tr>
         </thead>
         <tbody>

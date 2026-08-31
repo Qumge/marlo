@@ -69,7 +69,12 @@ EXCLUDE_DIRS = {"dist", "build", "node_modules", "__pycache__"}
 # through five releases: a system prompt asking for your Documents folder on
 # behalf of a product you never installed is what malware looks like, and no
 # check reached the file.
-SUFFIXES = {".ts", ".tsx", ".css", ".rs", ".py", ".plist"}
+# .json 是 2026-08-31 补的。i18n 迁到上游的 locales/*.json 之后，界面上每一条文案
+# 都住在 JSON 里，而这个后缀表当时不含 .json —— 上游那两份各带 38 处 OpenWorker，
+# 会一路绿灯发给用户。我们原来的 en.ts / zh.ts 是 .ts，一直被扫着：这份覆盖是
+# 【迁移静默弄丢的】，不是本来就没有。和 .plist 那条是同一类错误 —— 判据停在了
+# 文件格式的边界上，而用户读到的字符串不认识那条边界。
+SUFFIXES = {".ts", ".tsx", ".css", ".rs", ".py", ".plist", ".json"}
 
 
 def _is_self(path: Path) -> bool:
@@ -117,7 +122,15 @@ EXEMPT_DIRS = {"connectors"}
 # 【残余风险，以及它是怎么被堵住的】有人可能在【译文】里写进一个原文没有的品牌名。
 # check_i18n_text.mjs 因此同时检查【反方向】：表里的键必须在源码里真实存在。
 # 键都是真的，值就是那个键的译文，而不是一段没人看过的新文案。
-EXEMPT_FILES = {"zh-text.ts"}
+# tauri.conf.json 是 2026-08-31 和 .json 一起进来的，理由和 zh-text.ts 相反：
+# 那份【必须】留着上游的名字。品牌走 overlay（tauri.marlo.conf.json，见 21cd141），
+# 上游那份保持字节相同，本文件末尾的 check_tauri_overlay() 正是在守这一条。把它
+# 改名会让那个检查红，而且下次合并会平白多出一处冲突 —— 两个检查会打起来。
+# locales/{en,zh}.json 和 tauri.conf.json 同理：它们【必须】和上游字节相同，品牌走
+# locales/*.marlo.json overlay（见 src/localeOverlay.ts）。逐行扫它们只会报出上游
+# 自己的文案，而用户看到的是【合并之后】的结果 —— 那个由下面的
+# check_locale_overlay() 管，它报的是"这条上游文案带产品名，overlay 却没覆盖"。
+EXEMPT_FILES = {"zh-text.ts", "tauri.conf.json", "en.json", "zh.json"}
 
 # 白名单管不到的一类：字符串本身合法，但【用错了地方】。
 #
@@ -129,6 +142,11 @@ EXEMPT_FILES = {"zh-text.ts"}
 # 路径/命令/常量独立出现。
 SENTENCE_LEAKS = [
     re.compile(r"[a-z]{3,}\s+openworker-(?:server|desktop)\s+[a-z]{2,}"),
+    # 【第二条是 CJK 盲区，2026-08-31 补】上面那条要求进程名两边是英文单词，所以
+    # 它只看得见英文那一句。同一条文案的中文版（"仅在 openworker-server 运行时执行"）
+    # 从 0.4.0 中文界面上线起就一直在，而守卫一路是绿的 —— 判据停在了语言边界上，
+    # 而用户读到的句子不认识那条边界。和 .json 那条是同一类错误。
+    re.compile(r"[\u4e00-\u9fff]\s*openworker-(?:server|desktop)\s*[\u4e00-\u9fff]"),
 ]
 
 # 两个检查器互查会打起来：check_i18n.py 的白名单里列着一串专名（含 OpenWorker），
@@ -136,6 +154,10 @@ SENTENCE_LEAKS = [
 SELF_CHECKS = {"check_i18n.py", "check_branding.py"}
 
 ALLOWED = [
+    # 标识符里的产品名，不是给人读的字符串：上游 2026-08 新增的 onOpenWorker prop
+    # （BoardPanel / RightRail / App 一路传下去）。判据是【前后紧挨着标识符字符】——
+    # 用户读到的字符串两边不会是 on/= 这种。改名它等于改上游的 API。
+    re.compile(r"[A-Za-z0-9_]OpenWorker|OpenWorker[A-Za-z0-9_]"),
     re.compile(r"OpenWorker Cloud"),
     re.compile(r"openworker\.com"),
     re.compile(r"X-OpenWorker-Token"),
@@ -195,7 +217,7 @@ def main() -> int:
             _scan(path, src, offenders)
 
     rc = _report(scanned, offenders)
-    return check_tauri_overlay() or rc
+    return check_tauri_overlay() or check_locale_overlay() or rc
 
 
 # tauri.conf.json 现在【和上游字节相同】，品牌值全部搬进 tauri.marlo.conf.json，构建时
@@ -260,6 +282,59 @@ def check_tauri_overlay() -> int:
         return 1
 
     print(f"branding: tauri 品牌 overlay 就位（{conf.name} 与上游一致）")
+    return 0
+
+
+def check_locale_overlay() -> int:
+    """上游文案里的产品名，overlay 都盖住了吗？
+
+    locales/{en,zh}.json 与上游字节相同（冲突恒为 0，见 localeOverlay.ts），所以
+    逐行扫它们没有意义 —— 用户看到的是叠加之后的结果。这里判的就是叠加之后：上游
+    某条文案带 OpenWorker 而 overlay 没覆盖它，那句就会原样显示给用户。
+
+    这条检查是 2026-08-31 跟着 overlay 一起加的。在它之前，把 zh.json 恢复成上游
+    原样的那一刻，52 条产品名【瞬间回到了界面上】，而普通扫描把它们报成了 52 条
+    违规——方向对，位置错：该修的不是那两个文件，是 overlay 漏了。
+    """
+    import json
+
+    loc = ROOT / "surfaces/gui/src/locales"
+    missing = []
+    for lang in ("en", "zh"):
+        base_f, over_f = loc / f"{lang}.json", loc / f"{lang}.marlo.json"
+        if not base_f.is_file() or not over_f.is_file():
+            print(f"locales/{lang}.json 或它的 overlay 不见了", file=sys.stderr)
+            return 1
+
+        def flat(d, prefix=""):
+            out = {}
+            for k, v in d.items():
+                key = f"{prefix}{k}"
+                out.update(flat(v, key + ".")) if isinstance(v, dict) else out.setdefault(key, v)
+            return out
+
+        base = flat(json.loads(base_f.read_text(encoding="utf-8")))
+        over = flat(json.loads(over_f.read_text(encoding="utf-8")))
+        for key, val in base.items():
+            if not isinstance(val, str):
+                continue
+            merged = over.get(key, val)
+            if not isinstance(merged, str):
+                continue
+            if any(p.search(merged) for p in SENTENCE_LEAKS):
+                missing.append(f"  {lang}.json:{key}  [内部名字出现在句子里] {merged}")
+                continue
+            if "OpenWorker" not in merged or any(p.search(merged) for p in ALLOWED):
+                continue
+            missing.append(f"  {lang}.json:{key}  {merged}")
+
+    if missing:
+        print(f"{len(missing)} 条上游文案带着产品名，而 locales/*.marlo.json 没有覆盖："
+              f"\n" + "\n".join(missing), file=sys.stderr)
+        print("\n改 overlay，不要改 locales/{en,zh}.json —— 那两份要和上游字节相同。",
+              file=sys.stderr)
+        return 1
+    print("branding: locales overlay 盖住了上游文案里的产品名")
     return 0
 
 

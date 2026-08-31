@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { getLocale, useT } from "../i18n";
+import { getLocale, useT } from "../legacyI18n";
 import {
   pollQumgeDevice,
   startQumgeDevice,
