@@ -782,6 +782,29 @@ surfaces/gui/package-lock.json       Task 3 装了 i18next / react-i18next
 功能冲突。指不出来的那个，就是漏迁了。数字只是让你知道该不该停下来 ——
 还剩 40+ 就**停下来问 owner**。
 
+- [x] **Step 2b: 实测结果（2026-08-31 完成）**
+
+Phase A 做完之后，按【冲突块】而不是文件数量的结果：
+
+```
+                        块数    文件数
+迁移前（e79bd74）        671      72
+Phase A 之后             366      65      -45%
+
+那 49 个「因 i18n 而冲突」的文件：585 -> 323 块
+其中降幅最大的几个：
+  RightRail        26 -> 8      ManageTabs      35 -> 16
+  Transcript       15 -> 5      Sidebar         28 -> 15
+  SlackDetail      27 -> 12     App             30 -> 14
+  GmailDetail      16 -> 2      HubSpotDetail   14 -> 2
+```
+
+**文件数只从 72 降到 65，这是对的，不是没做完。** Tier 1 那种整份取上游的文件会
+彻底掉出冲突清单；Tier 2/3 保留我们的文件，只把 i18n 那些行对齐 —— 文件仍然冲突，
+但冲突的【内容】只剩我们真正的功能改动。所以验收看块数。
+
+locales 那两个文件的冲突是 **0**，而且是永久的 0（overlay，见 `localeOverlay.ts`）。
+
 - [ ] **Step 3: 跑全量验证并提交报告**
 
 ```bash
