@@ -85,7 +85,7 @@
     "activity": "活动",
     "inbox": "收件箱",
     "automations": "自动化",
-    "connectors": "连接器",
+    "connectors": "外部连接",
     "settings": "设置"
   },
   "hero": {
@@ -191,7 +191,7 @@
     "plan_proposed": "已提出计划",
     "plan_rejected": "已退回并附上反馈",
     "mcp_details": "详情",
-    "mcp_open_connectors": "打开连接器",
+    "mcp_open_connectors": "打开外部连接",
     "user_more": "更多…",
     "user_less": "收起…",
     "reviewer": {
@@ -380,7 +380,7 @@
     "context_bar_desc": "一个小指示条，显示模型上下文窗口的占用程度。关闭后将改为以数字形式显示。"
   },
   "cloud": {
-    "check_browser": "请查看你的浏览器…",
+    "check_browser": "去浏览器里看看…",
     "sign_in": "登录 OpenWorker Cloud",
     "checking": "正在检查 OpenWorker Cloud 登录状态…",
     "sign_in_first": "请先登录 OpenWorker Cloud",
@@ -620,10 +620,10 @@
     "recent": "最近的会话"
   },
   "integrations": {
-    "nav_title": "连接器",
-    "tab_connectors": "连接器",
+    "nav_title": "外部连接",
+    "tab_connectors": "外部连接",
     "tab_mcp": "MCP 服务器",
-    "connectors_title": "连接器",
+    "connectors_title": "外部连接",
     "connectors_sub": "同事可以使用的应用和工具，已连接的排在前面。",
     "mcp_title": "MCP 服务器",
     "mcp_sub": "外部工具服务器（stdio 或 HTTP），所有 agent 共享。"
@@ -829,7 +829,7 @@
     "connected_count": "已连接 · {{count}}",
     "built_in": "内置",
     "loading": "加载中…",
-    "back_to_connectors": "‹ 连接器",
+    "back_to_connectors": "‹ 外部连接",
     "search": "搜索",
     "available": "可用",
     "nothing_matches": "没有匹配项。",

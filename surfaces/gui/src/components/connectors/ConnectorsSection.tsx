@@ -20,7 +20,7 @@ import { HubSpotDetail } from "./HubSpotDetail";
 import { SlackDetail } from "./SlackDetail";
 import { GRP } from "./ui";
 
-import { useT } from "../../legacyI18n";
+import { useTranslation } from "react-i18next";
 // Connectors surface = LIST ⇄ per-connector DETAIL SUBPAGE (UX-DECISIONS §21). The
 // Integrations sub-nav never grows per-connector items; detail pages live behind a
 // `‹ Connectors` breadcrumb. Connectors without a bespoke page get GenericDetail so
@@ -51,6 +51,7 @@ const DETAIL_PAGES: Record<string, (p: DetailProps) => JSX.Element> = {
 };
 
 export function ConnectorsSection() {
+  const { t } = useTranslation();
   const [detail, setDetail] = useState<string | null>(null);
   const [connectors, setConnectors] = useState<Connector[]>([]);
   const [cloud, setCloud] = useState<CloudStatus | null>(null);
@@ -79,10 +80,10 @@ export function ConnectorsSection() {
           data-testid="connectors-breadcrumb"
           onClick={() => setDetail(null)}
         >
-          ‹ Connectors
+          {t("connector.back_to_connectors")}
         </button>
         {!c ? (
-          <div className="text-[13px] text-muted">Loading…</div>
+          <div className="text-[13px] text-muted">{t("connector.loading")}</div>
         ) : !c.connected ? (
           /* Pre-connect page (§38). When a connect completes, the poll flips
              c.connected and this same route re-renders as the connected page. */
@@ -123,7 +124,7 @@ function GenericDetail({
   onChanged,
   onGone,
 }: DetailProps & { onGone: () => void }) {
-  const t = useT();
+  const { t } = useTranslation();
   return (
     <div>
       <div className="flex items-center gap-3.5 mb-5">
@@ -132,7 +133,7 @@ function GenericDetail({
           <h2 className="text-[20px] font-semibold tracking-tight leading-tight">{c.title}</h2>
           <div className="text-[12.5px] text-muted flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-ok" />
-            {c.account || (c.auth === "none" ? t("cxBuiltIn") : "Connected")}
+            {c.account || (c.auth === "none" ? t("connector.built_in") : t("connector.connected"))}
           </div>
         </div>
         {c.auth !== "none" && (
@@ -144,7 +145,7 @@ function GenericDetail({
               onGone();
             }}
           >
-            {t("cxDisconnect")}
+            {t("connector.disconnect")}
           </button>
         )}
       </div>
