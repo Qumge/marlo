@@ -9,7 +9,7 @@
 // Enabling/disabling POSTs /v1/personas/{id}/enable.
 
 import { useEffect, useState } from "react";
-import { useT } from "../legacyI18n";
+import { useTranslation } from "react-i18next";
 import {
   getConnectors,
   getPersonaDetail,
@@ -42,7 +42,7 @@ export function PersonaView({
   onBack?: () => void;
   onOpenIntegrations?: () => void;
 }) {
-  const t = useT();
+  const { t } = useTranslation();
   const [detail, setDetail] = useState<PersonaDetail | null>(null);
   const [byName, setByName] = useState<ConnectorMap>({});
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +53,7 @@ export function PersonaView({
     setError(null);
     getPersonaDetail(personaId)
       .then((d) => live && setDetail(d))
-      .catch(() => live && setError(t("pvLoadFailed")));
+      .catch(() => live && setError(t("persona.load_error")));
     getConnectors()
       .then((list) => live && setByName(indexConnectors(list)))
       .catch(() => {});
@@ -85,12 +85,12 @@ export function PersonaView({
             className="inline-flex items-center gap-1 text-[12.5px] text-muted hover:text-ink"
             onClick={onBack}
           >
-            <Icon name="arrowLeft" size={15} /> {t("uiBack")}
+            <Icon name="arrowLeft" size={15} /> {t("rail.back")}
           </button>
           <span className="text-faint">·</span>
         </>
       )}
-      <span className="text-[13px] font-semibold">{t("uiPersona")}</span>
+      <span className="text-[13px] font-semibold">{t("persona.persona")}</span>
     </div>
   );
 
@@ -120,15 +120,15 @@ export function PersonaView({
               <p className="text-[13px] text-muted mt-0.5">{detail.tagline}</p>
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <span className="text-[12px] text-muted">{detail.enabled ? t("uiEnabled") : "Disabled"}</span>
-              <Toggle checked={detail.enabled} onChange={toggleEnabled} title={t("uiEnablePersona")} />
+              <span className="text-[12px] text-muted">{detail.enabled ? t("persona.enabled") : "Disabled"}</span>
+              <Toggle checked={detail.enabled} onChange={toggleEnabled} title={t("persona.enable_title")} />
             </div>
           </header>
 
           {/* about */}
           {detail.description && (
             <section>
-              <div className={`${SEC_H} mb-1.5`}>{t("uiAbout")}</div>
+              <div className={`${SEC_H} mb-1.5`}>{t("persona.about")}</div>
               <p className="text-[14px] leading-relaxed text-ink/90">{detail.description}</p>
             </section>
           )}
@@ -153,7 +153,7 @@ export function PersonaView({
           {/* connections for full benefit (manifest recommends) */}
           {detail.recommends.length > 0 && (
             <section>
-              <div className={`${SEC_H} mb-1`}>{t("uiConnectionsBenefit")}</div>
+              <div className={`${SEC_H} mb-1`}>{t("persona.connections_full_benefit")}</div>
               <p className="text-[12.5px] text-muted mb-2.5">
                 Declared by the persona — wire {shortPersonaName(detail.name, personaId)} into these
                 to unlock its full workflow.
@@ -190,7 +190,7 @@ export function PersonaView({
                           className={r.tier === "core" && !isMcp ? BTN_ACCENT : BTN_BORDERED}
                           onClick={onOpenIntegrations}
                         >
-                          {isMcp ? t("uiAdd") : t("uiConnect")}
+                          {isMcp ? t("access.add_btn") : t("automations.connect")}
                         </button>
                       )}
                     </div>
@@ -203,7 +203,7 @@ export function PersonaView({
           {/* persona-default connections (persona → session default) */}
           {detail.default_connections.length > 0 && (
             <section>
-              <div className={`${SEC_H} mb-1`}>{t("uiDefaultForNew")}</div>
+              <div className={`${SEC_H} mb-1`}>{t("persona.new_sessions_default")}</div>
               <p className="text-[12.5px] text-muted mb-2.5">
                 When you start a {shortPersonaName(detail.name, personaId)} session these are enabled
                 automatically. You can still mute any of them per session.
@@ -228,7 +228,7 @@ export function PersonaView({
                       checked={c.enabled}
                       disabled={!c.connected}
                       onChange={(next) => toggleDefault(c.connector, next)}
-                      title={c.connected ? t("pvOnByDefault") : t("pvConnectFirst")}
+                      title={c.connected ? t("persona.on_by_default") : t("persona.connect_this_first")}
                     />
                   </div>
                 ))}
@@ -240,7 +240,7 @@ export function PersonaView({
           <section className="flex flex-wrap gap-x-8 gap-y-2 text-[12.5px]">
             {detail.recommended_models.length > 0 && (
               <div>
-                <span className="text-faint">{t("uiModels")}</span> ·{" "}
+                <span className="text-faint">{t("settings.tab.models")}</span> ·{" "}
                 {detail.recommended_models.map((m, i) => (
                   <span key={m}>
                     <span className="font-mono">{m}</span>
@@ -251,12 +251,12 @@ export function PersonaView({
             )}
             {detail.default_permission_mode && (
               <div>
-                <span className="text-faint">{t("uiDefaultMode")}</span> · {detail.default_permission_mode}
+                <span className="text-faint">{t("persona.default_mode_label")}</span> · {detail.default_permission_mode}
               </div>
             )}
             {detail.workspace && (
               <div>
-                <span className="text-faint">{t("uiWorkspace")}</span> · {detail.workspace}
+                <span className="text-faint">{t("slack.hiw_workspace")}</span> · {detail.workspace}
               </div>
             )}
           </section>

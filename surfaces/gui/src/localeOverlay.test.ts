@@ -130,6 +130,7 @@ const ADDITIONS = new Set([
   "settings.voice_record_phrase",
   "manage.granola_label", // Granola 连接器：上游没有
   "manage.granola_blurb",
+  "personas.installed_n", // 「已安装 N 个」那条：上游没有
 ]);
 
 const flatEnBase = flatten(enBase as Tree);

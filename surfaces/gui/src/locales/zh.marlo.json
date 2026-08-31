@@ -103,7 +103,8 @@
     "checking": "校验中…",
     "tab": {
       "personas": "角色"
-    }
+    },
+    "gallery_title": "角色库"
   },
   "cloud": {
     "check_browser": "去浏览器里完成…",
@@ -355,7 +356,20 @@
     "slack_manual_pause_note": "一次只能开一种模式 —— 这会暂停所有中继工作区。"
   },
   "gallery": {
-    "filter_brand": "来自 Marlo"
+    "filter_brand": "来自 Marlo",
+    "all_personas": "全部角色",
+    "empty_search": "没有匹配的角色。",
+    "empty_none": "还没有发布任何角色。",
+    "team_teaser": "来自你的团队 —— 目前还没有共享。把角色发布给同事的功能即将开放。",
+    "can_message": "· 可以使用消息功能",
+    "search_placeholder": "搜索角色",
+    "unreachable": "现在连不上这个库 —— 过一会儿再试。",
+    "empty_team": "团队里还没有共享任何东西。",
+    "installed_waiting": "已安装 —— 它在「角色」里等着，你批准并启用前保持停用。",
+    "capabilities_title": "它能做什么 —— 依据它的清单核对过",
+    "subtitle": "精选同事 · 装上后先处于停用状态，等你批准",
+    "close_aria": "关闭",
+    "signin_title": "登录后才能浏览角色库"
   },
   "manage": {
     "tools_exposed": "向 Marlo 提供的工具",
@@ -552,5 +566,22 @@
     "family_openweight": "开放权重",
     "default_locked": "默认模型始终显示 —— 先把别的模型设为默认",
     "add_placeholder": "再加一个模型…"
+  },
+  "persona": {
+    "load_error": "这个角色加载失败。",
+    "persona": "角色",
+    "enable_title": "启用这个角色",
+    "connections_full_benefit": "连上之后才好用",
+    "new_sessions_default": "新会话默认用这个",
+    "connect_this_first": "先连这个",
+    "default_for_new": "新会话的默认"
+  },
+  "personas": {
+    "mode_local": "本机目录",
+    "installed_n": "已安装 {{count}} 个角色 —— 在下面查看并启用。",
+    "consent_recommended_mode": "推荐模式：{{mode}}。在上面启用后才能使用。",
+    "in_picker": "在选择器里",
+    "delete_tooltip": "删除这个角色",
+    "disable": "停用"
   }
 }

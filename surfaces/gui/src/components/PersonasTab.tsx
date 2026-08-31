@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useT } from "../legacyI18n";
+import { useTranslation } from "react-i18next";
 import {
   deletePersona,
   getPersonas,
@@ -27,7 +27,7 @@ const BTN_BORDERED =
   "text-[12.5px] px-2.5 py-1.5 rounded-lg border border-line bg-paper hover:border-lineStrong shrink-0 disabled:opacity-40 disabled:hover:border-line";
 
 export function PersonasTab({ onOpenPersona }: { onOpenPersona?: (id: string) => void }) {
-  const t = useT();
+  const { t } = useTranslation();
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [mode, setMode] = useState<"git" | "dir">("git");
   const [src, setSrc] = useState("");
@@ -92,7 +92,7 @@ export function PersonasTab({ onOpenPersona }: { onOpenPersona?: (id: string) =>
     }
     setConsent(r.consent || []);
     if (r.personas) setPersonas(r.personas);
-    setMsg(t("tplInstalledPersonas")((r.consent || []).length));
+    setMsg(t("personas.installed_n", { count: (r.consent || []).length }));
     setSrc("");
   };
 
@@ -110,7 +110,7 @@ export function PersonasTab({ onOpenPersona }: { onOpenPersona?: (id: string) =>
             <div className="min-w-0 flex-1">
               <div className="text-[13.5px] font-medium flex items-center gap-1.5">
                 <span className="truncate">{p.name}</span>
-                {p.default && <span className="text-accent" title={t("uiDefaultForNewSessions")}>★</span>}
+                {p.default && <span className="text-accent" title={t("persona.default_for_new")}>★</span>}
                 {p.builtin && <span className="text-[11px] text-faint font-normal">· built-in</span>}
               </div>
               <div className="text-[12px] text-muted truncate">{p.tagline}</div>
@@ -123,7 +123,7 @@ export function PersonasTab({ onOpenPersona }: { onOpenPersona?: (id: string) =>
                   e.target.checked ? toggle(p.id, { enabled: true }) : requestDisable(p)
                 }
               />
-              {t("uiEnabled")}
+              {t("persona.enabled")}
             </label>
             <label className={CHECK + (p.enabled ? "" : " opacity-40")}>
               <input
@@ -132,20 +132,20 @@ export function PersonasTab({ onOpenPersona }: { onOpenPersona?: (id: string) =>
                 disabled={!p.enabled}
                 onChange={(e) => toggle(p.id, { surfaced: e.target.checked })}
               />
-              {t("psInPicker")}
+              {t("personas.in_picker")}
             </label>
             <button
               className={BTN_BORDERED}
               disabled={p.default || !p.enabled}
               onClick={() => toggle(p.id, { default: true })}
             >
-              {t("psSetDefault")}
+              {t("personas.set_default")}
             </button>
             {onOpenPersona && (
               <button
                 className="text-faint hover:text-ink shrink-0 p-1"
-                title={t("tplConfigureName")(p.name)}
-                aria-label={t("tplConfigureName")(p.name)}
+                title={t("personas.configure_title", { name: p.name })}
+                aria-label={t("personas.configure_title", { name: p.name })}
                 data-testid={`persona-configure-${p.id}`}
                 onClick={() => onOpenPersona(p.id)}
               >
@@ -160,16 +160,16 @@ export function PersonasTab({ onOpenPersona }: { onOpenPersona?: (id: string) =>
                     data-testid={`persona-delete-confirm-${p.id}`}
                     onClick={() => remove(p.id)}
                   >
-                    {t("uiDelete")}
+                    {t("sidebar.delete")}
                   </button>
                   <button className={BTN_BORDERED} onClick={() => setConfirmDel(null)}>
-                    {t("uiKeep")}
+                    {t("persona.keep")}
                   </button>
                 </span>
               ) : (
                 <button
                   className="text-faint hover:text-danger shrink-0 p-1"
-                  title={t("uiDeletePersona")}
+                  title={t("personas.delete_tooltip")}
                   aria-label={`Delete ${p.name}`}
                   data-testid={`persona-delete-${p.id}`}
                   onClick={() => setConfirmDel(p.id)}
@@ -196,10 +196,10 @@ export function PersonasTab({ onOpenPersona }: { onOpenPersona?: (id: string) =>
                     toggle(p.id, { enabled: false });
                   }}
                 >
-                  {t("uiDisable")}
+                  {t("personas.disable")}
                 </button>
                 <button className={BTN_BORDERED} onClick={() => setConfirmOff(null)}>
-                  {t("psKeepEnabled")}
+                  {t("personas.keep_enabled")}
                 </button>
               </div>
             )}
@@ -207,7 +207,7 @@ export function PersonasTab({ onOpenPersona }: { onOpenPersona?: (id: string) =>
         ))}
       </div>
 
-      <div className={SEC_H + " mb-1.5"}>{t("uiAddPersonas")}</div>
+      <div className={SEC_H + " mb-1.5"}>{t("personas.add_section")}</div>
       <p className="text-[12px] text-muted mb-3 leading-relaxed">
         Load from a local directory or a public GitHub repo. Files are copied into a managed area (a
         snapshot), so the persona stays stable even if the source changes. No code runs — a persona only
@@ -216,7 +216,7 @@ export function PersonasTab({ onOpenPersona }: { onOpenPersona?: (id: string) =>
       <div className="flex items-center gap-2">
         <select className={SELECT} value={mode} onChange={(e) => setMode(e.target.value as "git" | "dir")}>
           <option value="git">GitHub URL</option>
-          <option value="dir">{t("uiLocalDirectory")}</option>
+          <option value="dir">{t("personas.mode_local")}</option>
         </select>
         <input
           className={INPUT}
@@ -245,7 +245,7 @@ export function PersonasTab({ onOpenPersona }: { onOpenPersona?: (id: string) =>
                 {c.mcp.length ? ` · mcp: ${c.mcp.join(", ")}` : ""}
               </div>
               <div className="text-[12px] text-faint mt-1">
-                {t("psRecommendedMode")(c.recommended_mode)}
+                {t("personas.consent_recommended_mode", { mode: c.recommended_mode })}
               </div>
             </div>
           ))}

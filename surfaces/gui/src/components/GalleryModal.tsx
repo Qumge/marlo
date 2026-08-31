@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useT } from "../legacyI18n";
+import { useTranslation } from "react-i18next";
 import {
   cloudLogin,
   getCloudGallery,
@@ -53,7 +53,7 @@ export function GalleryModal({
   onClose: () => void;
   onInstalled?: () => void;
 }) {
-  const t = useT();
+  const { t } = useTranslation();
   const [cloud, setCloud] = useState<CloudStatus | null>(null);
   const [cards, setCards] = useState<GalleryPersona[]>([]);
   const [installed, setInstalled] = useState<Set<string>>(new Set());
@@ -147,7 +147,7 @@ export function GalleryModal({
           [
             ["all", "All"],
             ["openworker", "From OpenWorker"],
-            ["team", t("glFromTeam")],
+            ["team", t("gallery.filter_team")],
           ] as [Source, string][]
         ).map(([key, label]) => (
           <button
@@ -167,14 +167,14 @@ export function GalleryModal({
 
       {unavailable && cloud?.signed_in && (
         <div className="text-[12.5px] text-muted">
-          {t("glUnreachable")}
+          {t("gallery.unreachable")}
         </div>
       )}
 
       {featured.length > 0 && (
         <>
           <div className="text-[11px] uppercase tracking-[0.05em] text-faint font-semibold mb-2">
-            {t("glFeatured")}
+            {t("gallery.featured")}
           </div>
           <div className="flex gap-3 overflow-x-auto hairline-scroll pb-2 mb-5" data-testid="gallery-featured">
             {featured.map((p) => (
@@ -200,7 +200,7 @@ export function GalleryModal({
       )}
 
       <div className="text-[11px] uppercase tracking-[0.05em] text-faint font-semibold mb-2">
-        {t("glAllPersonas")}
+        {t("gallery.all_personas")}
       </div>
       <div className="space-y-2">
         {visible.map((p) => {
@@ -231,7 +231,7 @@ export function GalleryModal({
               </div>
               <div className="shrink-0 flex items-center">
                 {isInstalled ? (
-                  <span className="text-[12px] text-muted">{t("uiInstalled")}</span>
+                  <span className="text-[12px] text-muted">{t("gallery.installed")}</span>
                 ) : (
                   <span className="text-[12.5px] text-accent">View & install →</span>
                 )}
@@ -242,17 +242,17 @@ export function GalleryModal({
         {visible.length === 0 && !unavailable && (
           <div className="text-[12.5px] text-muted py-4">
             {source === "team"
-              ? t("glNoneShared")
+              ? t("gallery.empty_team")
               : q
-              ? t("glNoMatch")
-              : t("glNonePublished")}
+              ? t("gallery.empty_search")
+              : t("gallery.empty_none")}
           </div>
         )}
       </div>
 
       {source !== "team" && teamCount === 0 && (
         <div className="mt-5 pt-3 border-t border-line text-[12px] text-faint" data-testid="gallery-team-teaser">
-          {t("glTeamEmpty")}
+          {t("gallery.team_teaser")}
         </div>
       )}
     </div>
@@ -287,7 +287,7 @@ export function GalleryModal({
             </div>
             <div className="shrink-0">
               {installed.has(detailSlug) ? (
-                <span className="text-[12.5px] text-muted">{t("uiInstalled")}</span>
+                <span className="text-[12.5px] text-muted">{t("gallery.installed")}</span>
               ) : (
                 <button className={BTN_ACCENT} onClick={() => install(detailSlug)} disabled={busy}>
                   {busy ? "Installing…" : "Install"}
@@ -300,10 +300,10 @@ export function GalleryModal({
           {justInstalled && (
             <div className="rounded-lg border border-okLine bg-okSoft px-3.5 py-2.5 flex items-center gap-3">
               <span className="flex-1 text-[12.5px] text-ok">
-                {t("glInstalled")}
+                {t("gallery.installed_waiting")}
               </span>
               <button className={BTN_ACCENT} onClick={onClose}>
-                {t("uiDone")}
+                {t("gallery.done")}
               </button>
             </div>
           )}
@@ -319,7 +319,7 @@ export function GalleryModal({
           {caps && (
             <div className={CARD + " p-4"} data-testid="gallery-capabilities">
               <div className="text-[13px] font-semibold mb-2">
-                {t("glWhatItCanDo")}
+                {t("gallery.capabilities_title")}
               </div>
               <div className="text-[12px] text-faint mb-3">
                 Read by this app&rsquo;s own parser, so it matches exactly what the install
@@ -336,7 +336,7 @@ export function GalleryModal({
                 <div>
                   <span className="text-muted">Permissions: </span>
                   {caps.recommended_mode} mode
-                  {caps.messaging ? t("glCanMsg") : ""}
+                  {caps.messaging ? t("gallery.can_message") : ""}
                   {caps.mcp.length > 0 ? ` · MCP: ${caps.mcp.join(", ")}` : ""}
                 </div>
                 {(detail.recommends?.length ?? 0) > 0 && (
@@ -374,23 +374,23 @@ export function GalleryModal({
       <div className="absolute left-1/2 top-[6vh] -translate-x-1/2 w-[720px] max-w-[94vw] max-h-[88vh] rounded-xl2 border border-line bg-panel shadow-2xl overflow-hidden flex flex-col">
         <div className="px-5 pt-4 pb-3 border-b border-line flex items-center gap-3 shrink-0">
           <div className="min-w-0 flex-1">
-            <div className="text-[15px] font-semibold">{t("uiPersonaGallery")}</div>
+            <div className="text-[15px] font-semibold">{t("settings.gallery_title")}</div>
             <div className="text-[12px] text-muted">
-              {t("glCuratedNote")}
+              {t("gallery.subtitle")}
             </div>
           </div>
           {cloud?.signed_in && !detailSlug && (
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={t("uiSearchPersonas")}
+              placeholder={t("gallery.search_placeholder")}
               className="w-[180px] px-3 py-1.5 rounded-lg border border-line bg-paper text-[12.5px] text-ink outline-none focus:border-accent"
             />
           )}
           <button
             className="text-faint hover:text-ink shrink-0"
             onClick={onClose}
-            aria-label={t("uiCloseGallery")}
+            aria-label={t("gallery.close_aria")}
             data-testid="gallery-close"
           >
             <Icon name="x" size={16} />
@@ -411,7 +411,7 @@ export function GalleryModal({
           ) : cloud && !cloud.signed_in ? (
             <div className={CARD + " p-5 flex items-center gap-4"} data-testid="gallery-signin">
               <div className="min-w-0 flex-1">
-                <div className="font-semibold text-[14px] mb-1">{t("uiSignInGallery")}</div>
+                <div className="font-semibold text-[14px] mb-1">{t("gallery.signin_title")}</div>
                 <div className="text-[12.5px] text-muted leading-relaxed">
                   The Gallery is a curated set of coworkers from OpenWorker Cloud and needs a
                   (free) cloud sign-in. Installing personas from a folder or Git URL — on the
@@ -419,7 +419,7 @@ export function GalleryModal({
                 </div>
               </div>
               <button className={BTN_ACCENT} onClick={signIn} disabled={signingIn}>
-                {signingIn ? t("connCheckBrowser2") : t("glSignIn")}
+                {signingIn ? t("cloud.check_browser") : t("gallery.sign_in")}
               </button>
             </div>
           ) : detailSlug ? (

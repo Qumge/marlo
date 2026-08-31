@@ -69,7 +69,13 @@
     "github_blurb": "Opens GitHub in your browser — approve Marlo there. An existing @ocw-agent App installation links right up; otherwise you'll pick an account and repos. No tokens typed; the agent acts as ocw-agent[bot]."
   },
   "gallery": {
-    "filter_brand": "From Marlo"
+    "filter_brand": "From Marlo",
+    "all_personas": "All personas",
+    "empty_search": "No personas match your search.",
+    "empty_none": "No personas published yet.",
+    "team_teaser": "From your team — nothing shared yet. Publishing a persona to your teammates is coming soon.",
+    "can_message": "· can use messaging",
+    "search_placeholder": "Search personas"
   },
   "manage": {
     "tools_exposed": "Tools exposed to Marlo",
@@ -183,5 +189,15 @@
     "family_other": "Other models",
     "family_gemini": "Gemini family",
     "family_openweight": "Open-weight"
+  },
+  "persona": {
+    "load_error": "Could not load this persona.",
+    "persona": "Persona",
+    "enable_title": "Enable this persona"
+  },
+  "personas": {
+    "mode_local": "Local directory",
+    "installed_n": "Installed {{count}} persona(s) — review and enable below.",
+    "consent_recommended_mode": "Recommended mode: {{mode}}. Enable it above to use it."
   }
 }
