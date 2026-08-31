@@ -43,7 +43,9 @@ describe("i18n", () => {
 
   it("the choice is remembered, and t() outside React follows it", () => {
     act(() => setLocale("zh"));
-    expect(localStorage.getItem("marlo.locale")).toBe("zh");
+    // 键名跟着上游那套走了（"openworker.lang"）—— 迁移期两套 i18n 必须落在同一个
+    // 键上，否则会半英半中。跨两套的同步由 langSync.test.ts 单独量。
+    expect(localStorage.getItem("openworker.lang")).toBe("zh");
     expect(getLocale()).toBe("zh");
     expect(t("newSession")).toBe(zh.newSession);
 
