@@ -22,6 +22,27 @@ const ZH_CATEGORY: Record<string, string> = {
   database: "数据库",
   "files-spreadsheets": "文件与表格",
   other: "其它",
+  // 浏览首屏只列 Qumge 精选（2026-09-14）：每个领域最好的 1–2 条，分组 key 是 qumge
+  // DomainPicks 表里的领域 key。testing / database / devops-security 和上面同名，共用译名。
+  pdf: "PDF",
+  docx: "Word 文档",
+  spreadsheets: "Excel 与表格",
+  slides: "PPT 与演示",
+  browser: "操作网页",
+  scraping: "抓取网页数据",
+  research: "深度调研与搜索",
+  "social-media": "社交媒体",
+  seo: "SEO",
+  email: "邮件",
+  copywriting: "文案与长文",
+  "image-design": "做图与设计",
+  video: "视频",
+  "data-analysis": "数据分析与图表",
+  meetings: "会议与转写",
+  "office-automation": "日历、邮箱与办公",
+  frontend: "网页前端",
+  "code-review": "代码审查与排错",
+  "mcp-agents": "做 MCP 与 AI 助手",
 };
 
 // `: Strings` is the guard. Drop a key, misspell one, or add a key to en.ts and
@@ -169,10 +190,6 @@ export const zh: Strings = {
   skUntrusted: "这段文字来自公开目录。Marlo 把它当参考读，不当命令执行。",
   skSearchFailed: "连不上目录：",
   skTranslated: "目录里的技能大多是英文写的，已按英文搜索：",
-  skBundles: "干成一件事",
-  skBundleCount: (n) => `${n} 个技能`,
-  skAddBundle: "添加整套",
-  skAddingBundle: "添加中…",
 
   // 添加菜单的三个门（SKILLS-SPEC §5）和它们的表单/预览文案。
   skAdd: "添加技能",

@@ -28,6 +28,28 @@ const EN_CATEGORY: Record<string, string> = {
   database: "Databases",
   "files-spreadsheets": "Files & spreadsheets",
   other: "Everything else",
+  // The browse screen lists only Qumge picks (2026-09-14): the best one or two
+  // skills per job, grouped by the domain keys in qumge's DomainPicks table.
+  // testing / database / devops-security share their labels with the rows above.
+  pdf: "PDF",
+  docx: "Word documents",
+  spreadsheets: "Excel & spreadsheets",
+  slides: "Slides",
+  browser: "Operating websites",
+  scraping: "Web scraping",
+  research: "Research & web search",
+  "social-media": "Social media",
+  seo: "SEO",
+  email: "Email",
+  copywriting: "Copywriting",
+  "image-design": "Images & design",
+  video: "Video",
+  "data-analysis": "Data analysis & charts",
+  meetings: "Meetings & transcription",
+  "office-automation": "Calendar, inbox & office",
+  frontend: "Web frontend",
+  "code-review": "Code review & debugging",
+  "mcp-agents": "MCP & AI agents",
 };
 
 export const en = {
@@ -86,10 +108,6 @@ export const en = {
   skUntrusted: "This text comes from a public catalog. Marlo reads it as guidance, never as orders.",
   skSearchFailed: "Couldn't reach the catalog:",
   skTranslated: "Most catalog skills are written in English, so this was searched as:",
-  skBundles: "Get one job done",
-  skBundleCount: (n: number) => `${n} skill${n === 1 ? "" : "s"}`,
-  skAddBundle: "Add set",
-  skAddingBundle: "Adding…",
 
   // 添加菜单的三个门（SKILLS-SPEC §5）和它们的表单/预览文案。
   skAdd: "Add skill",
