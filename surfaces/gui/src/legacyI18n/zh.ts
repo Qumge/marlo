@@ -5,7 +5,7 @@ import { platformOS } from "../tauri";
 // 显示它等于把实现细节摊给用户看。译名按【用户想干的事】说，不按开发术语说：
 // devops-security 是「运维与安全」不是「DevOps」，ai-agent-dev 才保留 AI ——
 // 那个词中文用户本来就这么说。
-const ZH_CATEGORY: Record<string, string> = {
+export const ZH_CATEGORY: Record<string, string> = {
   "automation-workflow": "自动化与流程",
   "data-analytics": "数据分析",
   "code-write-refactor": "写代码与重构",
@@ -43,6 +43,18 @@ const ZH_CATEGORY: Record<string, string> = {
   frontend: "网页前端",
   "code-review": "代码审查与排错",
   "mcp-agents": "做 MCP 与 AI 助手",
+  // 下面是 qumge 预留给每周精选更新自动补的空领域（DomainPicks::DOMAINS 后半段）。
+  translation: "翻译与本地化",
+  "customer-support": "客服",
+  "sales-crm": "销售与客户管理",
+  ecommerce: "电商与网店",
+  finance: "财务与记账",
+  legal: "法务与合同",
+  "hr-recruiting": "招聘与人事",
+  education: "教学与学习",
+  "project-management": "项目管理",
+  "mobile-dev": "手机应用开发",
+  audio: "音频、配音与音乐",
 };
 
 // `: Strings` is the guard. Drop a key, misspell one, or add a key to en.ts and
@@ -181,7 +193,9 @@ export const zh: Strings = {
   skNoResults: "没搜到。试试直接说你要做的事，而不是工具的名字。",
   skVetted: "Qumge 精选",
   skAll: "全部",
-  skCategory: (slug) => ZH_CATEGORY[slug] ?? slug,
+  // 表里没有的 key（qumge 新开了领域、这个版本还没来得及译）不原样露出 kebab-case：
+  // 退成可读的英文词组，比一个 `sales-crm` 好读，也不会看起来像坏了。
+  skCategory: (slug) => ZH_CATEGORY[slug] ?? slug.replace(/-/g, " ").replace(/^\w/, (c) => c.toUpperCase()),
   skMore: "加载更多",
   skLoading: "加载中…",
   skLoadingCatalog: "正在读取技能目录…",

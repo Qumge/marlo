@@ -11,7 +11,7 @@
 // "video-editing" reads worse than English, but far better than blank.
 import { platformOS } from "../tauri";
 
-const EN_CATEGORY: Record<string, string> = {
+export const EN_CATEGORY: Record<string, string> = {
   "automation-workflow": "Automation & workflow",
   "data-analytics": "Data & analytics",
   "code-write-refactor": "Writing & refactoring code",
@@ -50,6 +50,19 @@ const EN_CATEGORY: Record<string, string> = {
   frontend: "Web frontend",
   "code-review": "Code review & debugging",
   "mcp-agents": "MCP & AI agents",
+  // Domains qumge keeps in reserve for the weekly picks update to fill
+  // (the second half of DomainPicks::DOMAINS).
+  translation: "Translation & localization",
+  "customer-support": "Customer support",
+  "sales-crm": "Sales & CRM",
+  ecommerce: "E-commerce",
+  finance: "Finance & accounting",
+  legal: "Legal & contracts",
+  "hr-recruiting": "HR & recruiting",
+  education: "Teaching & learning",
+  "project-management": "Project management",
+  "mobile-dev": "Mobile apps",
+  audio: "Audio, voice & music",
 };
 
 export const en = {
@@ -97,7 +110,10 @@ export const en = {
   // Catalog categories, as tabs. The slug is the catalog's own spelling and
   // never belongs on screen — see EN_CATEGORY above.
   skAll: "All",
-  skCategory: (slug: string) => EN_CATEGORY[slug] ?? slug,
+  // A key missing from the table (qumge opened a new domain after this build)
+  // falls back to readable words instead of raw kebab-case.
+  skCategory: (slug: string) =>
+    EN_CATEGORY[slug] ?? slug.replace(/-/g, " ").replace(/^\w/, (c) => c.toUpperCase()),
   skMore: "Load more",
   skLoading: "Loading…",
   // 【不复用 skLoading】用户的原话是「以为什么也没有」—— 这句话必须点名在等的是

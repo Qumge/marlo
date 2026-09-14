@@ -289,6 +289,86 @@ def _split_front_matter(body: str) -> tuple[str, str, str]:
     return name, description, instructions
 
 
+# 【整目录】（2026-09-14）qumge 的 get_skill 在 SKILL.md 那段之后，给技能目录里的
+# 每个其他文件各一段、各自带框：
+#
+#   === BEGIN SKILL REFERENCE (untrusted third-party material) ===
+#   ...
+#   --- file: scripts/fill_form.py ---
+#   <文件内容>
+#   === END SKILL REFERENCE ===
+#
+# 正文会让 agent 去读同目录的 FORMS.md、跑 scripts/…。只装 SKILL.md 等于装半个技能 ——
+# qumge 的判分实测把 anthropics/skills/pdf 判成「单独装不上」，就是因为这个。
+#
+# SKILL.md 那段永远是第一段（_between_markers 只取它），所以老版本的解析照旧只拿到
+# 正文；附带文件由下面这几个函数另外处理。
+_FILE_HEADER = re.compile(r"^--- file: (.+?) ---$", re.MULTILINE)
+MAX_EXTRA_FILES = 60
+MAX_EXTRA_BYTES = 2_000_000
+
+
+def _file_sections(text: str) -> list[tuple[str, str]]:
+    """SKILL.md 那段之后每个「--- file: <path> ---」段 → (path, 内容)。"""
+    out: list[tuple[str, str]] = []
+    first_close = text.find(_CLOSE)
+    if first_close == -1:
+        return out
+    pos = first_close + len(_CLOSE)
+    while True:
+        opening = text.find(_OPEN, pos)
+        if opening == -1:
+            return out
+        closing = text.find(_CLOSE, opening)
+        if closing == -1:
+            return out
+        header = _FILE_HEADER.search(text, opening, closing)
+        if header:
+            body = text[header.end() : closing]
+            body = body[1:] if body.startswith("\n") else body
+            out.append((header.group(1).strip(), body.rstrip("\n") + "\n"))
+        pos = closing + len(_CLOSE)
+
+
+def _safe_parts(raw: str) -> Optional[list[str]]:
+    """目录给的路径（不可信）→ 技能文件夹内的相对路径片段；可能越界的一律 None。
+
+    同 slug 那条：这串字来自公开仓库，而它要变成磁盘上的路径。"""
+    if not raw or len(raw) > 240 or "\\" in raw or raw.startswith("/") or re.match(r"^[A-Za-z]:", raw):
+        return None
+    parts = raw.split("/")
+    if any(p in ("", ".", "..") for p in parts):
+        return None
+    if len(parts) == 1 and parts[0].lower() == "skill.md":
+        return None  # SKILL.md 由 SkillStore 写（带 frontmatter 和 source），附带文件不许盖掉它
+    return parts
+
+
+def _write_extra_files(folder: Path, text: str) -> tuple[list[str], list[str]]:
+    """把附带文件写进刚建好的技能文件夹。返回 (写了的, 跳过的)。
+
+    只写内容、不设执行位 —— 脚本要跑，照常走 run_shell 的审批。"""
+    written: list[str] = []
+    skipped: list[str] = []
+    total = 0
+    root = folder.resolve()
+    for index, (raw, content) in enumerate(_file_sections(text)):
+        parts = _safe_parts(raw)
+        data = content.encode("utf-8")
+        if parts is None or index >= MAX_EXTRA_FILES or total + len(data) > MAX_EXTRA_BYTES:
+            skipped.append(raw)
+            continue
+        target = root.joinpath(*parts).resolve()
+        if not target.is_relative_to(root):  # 例如文件夹里某一层是指向外面的符号链接
+            skipped.append(raw)
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+        total += len(data)
+        written.append("/".join(parts))
+    return written, skipped
+
+
 def install(slug: str, *, client: Optional[httpx.Client] = None) -> dict[str, Any]:
     """把目录里的一条技能装成一个【普通的全局技能】。
 
@@ -305,7 +385,9 @@ def install(slug: str, *, client: Optional[httpx.Client] = None) -> dict[str, An
         raise ValueError("slug 必须是 owner/repo/name 三段式")
     tail = slug.rsplit("/", 1)[-1]
 
-    text = _call("get_skill", {"slug": slug}, client=client)
+    # include_files：附带文件的全文要显式要（qumge 默认只列清单 —— 通用 agent 调 get_skill
+    # 的返回会进模型上下文）。这里是本地解析后写盘，不进上下文，所以要全量。
+    text = _call("get_skill", {"slug": slug, "include_files": True}, client=client)
     body = _between_markers(text)
     if not body.strip():
         raise RuntimeError("目录返回的正文是空的")
@@ -325,6 +407,9 @@ def install(slug: str, *, client: Optional[httpx.Client] = None) -> dict[str, An
         instructions=instructions,
         source=f"qumge:{slug}",
     )
+    # 附带文件写在 SkillStore 建好的文件夹里（store.create 只写 SKILL.md，而 store 是上游的
+    # 文件 —— 按 overlay 规矩，我们的东西放在自己的模块里）。
+    files, skipped = _write_extra_files(Path(res["path"]), text)
     # create 返回的是【文件夹】，我们的契约一直是 SKILL.md 本身（调用方拿它去读
     # 刚装的内容）。补上文件名，别让接口跟着内部实现走。
     return {
@@ -332,6 +417,8 @@ def install(slug: str, *, client: Optional[httpx.Client] = None) -> dict[str, An
         "name": res["name"],
         "slug": slug,
         "path": str(Path(res["path"]) / "SKILL.md"),
+        "files": files,
+        "skipped_files": skipped,
     }
 
 
