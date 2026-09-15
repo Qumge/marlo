@@ -60,7 +60,12 @@ class Config:
     # Auto-Approve mode's feature flag (spec §1.5): when true, sessions get an LLM reviewer
     # that judges would-be approval cards in Mode.AUTO_APPROVE. Off by default; user-global
     # only — a cloned repo must not be able to hand itself a looser reviewer.
-    auto_approve: bool = False
+    # Marlo：默认打开（owner 2026-09-15）—— 这个开关只决定模式菜单里有没有「自动审批」这一项、
+    # 以及会话是否挂上审阅器；审阅器【只在会话真的切到 AUTO_APPROVE 且有人在场时】才调模型
+    # （TurnEngine._reviewer_active），默认的完全放手和需审批模式不会多一次调用、多一分钱。
+    # 打开的依据：审阅器评测经 Qumge 网关 DeepSeek v4 flash 两次全过门槛（含 holdout，
+    # reports/reviewer-eval-2026-09-15-deepseek-v4-flash*.md）。仍然只允许用户全局设置。
+    auto_approve: bool = True
     # Shadow evaluation (spec Part 6 step 3): the reviewer records what it WOULD have
     # decided on every approval card while the human still decides. Verdicts land in the
     # audit log next to the human's outcome and nothing else changes — this is how the ship
