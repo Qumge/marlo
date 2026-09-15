@@ -184,5 +184,70 @@
     "mode_local": "Local directory",
     "installed_n": "{{count}} installed — review and enable them below.",
     "consent_recommended_mode": "Recommended mode: {{mode}}. Enable it above to use it."
+  },
+  "humanize": {
+    "sep": " — ",
+    "a_file": "a file",
+    "files": "files",
+    "step": {
+      "ran": "Ran ",
+      "started_background": "Started in the background: ",
+      "checked_background": "Checked on a background command",
+      "stopped_background": "Stopped a background command",
+      "read": "Read ",
+      "wrote": "Wrote ",
+      "edited": "Edited ",
+      "searched_code": "Searched the code for ",
+      "git_history": "Looked through recent git history",
+      "plan_updated": "Updated the plan — ",
+      "plan_updated_n": "Updated the plan — {{n}} items",
+      "todo_status": {
+        "pending": "pending",
+        "in_progress": "in progress",
+        "done": "done",
+        "completed": "completed"
+      },
+      "sent_message": "Sent a message",
+      "sent_platform_message_to": "Sent a {{platform}} message to ",
+      "searched_web": "Searched the web — ",
+      "read_web_page": "Read a web page — ",
+      "explore": "Sent a sub-agent to explore — ",
+      "used_skill": "Used skill: ",
+      "asked_you": "Asked you a question",
+      "proposed_plan": "Proposed a plan",
+      "asked_folder": "Asked for folder access — ",
+      "used_tool": "Used "
+    },
+    "title": {
+      "write": "Write ",
+      "edit": "Edit ",
+      "send_message_to": "Send a message to ",
+      "send_file_to": "Send a file to ",
+      "create_automation_named": "Create the automation ",
+      "create_automation": "Create an automation",
+      "add_skill_pre": "Add skill ",
+      "add_skill_post": " to your skills",
+      "add_a_skill": "Add a skill to your skills",
+      "fetch_from": "Fetch from ",
+      "fetch_page": "Fetch a web page",
+      "search_web": "Search the web",
+      "use_tool": "Use "
+    },
+    "ask": {
+      "run": "Wanted to run ",
+      "write": "Wanted to write ",
+      "edit": "Wanted to edit ",
+      "send_message": "Wanted to send a message",
+      "message_pre": "Wanted to message ",
+      "message_post": " on {{platform}}",
+      "use_tool": "Wanted to use "
+    },
+    "provenance": {
+      "created": " was created by the agent {{when}}",
+      "downloaded": " was downloaded by the agent {{when}}",
+      "just_now": "just now",
+      "steps_ago_one": "{{count}} step ago",
+      "steps_ago_other": "{{count}} steps ago"
+    }
   }
 }

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { getI18n, useTranslation } from "react-i18next";
 import type { ApprovalDecision, Item } from "../types";
 import { humanizeApprovalTitle, type HumanLine } from "../humanize";
+import { provenanceText } from "../provenanceText";
 import { Icon } from "./Icon";
 
 import type { ParseKeys } from "i18next";
@@ -445,7 +446,7 @@ export function ApprovalCard({
   const provenance = item.provenance ? (
     <div className="approval-provenance">
       <Icon name="warning" size={13} />
-      <span>{item.provenance}</span>
+      <span>{provenanceText(item.provenance)}</span>
     </div>
   ) : null;
   // Quiet, not a warning: the reviewer hesitating is context, not danger.
