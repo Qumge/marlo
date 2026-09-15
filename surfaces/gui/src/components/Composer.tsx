@@ -38,9 +38,12 @@ type ModeOption = Omit<Option, "label" | "description"> & {
   gated?: boolean;
 };
 
-// "auto" is the legacy wire value for Bypass approvals (server: Mode.BYPASS_APPROVALS).
-// Auto-approve is `gated`: shown only when getSettings().auto_approve is true (the feature
-// flag, off by default).
+// Bypass approvals uses the server's CANONICAL value "bypass-approvals" (Mode.BYPASS_APPROVALS).
+// Marlo 2026-09-15：这里原来是旧写法 "auto"。服务端认 "auto"（Mode._missing_ 映射过去），但
+// ready 事件回传的是 Mode.value = "bypass-approvals" —— 按钮按 value 查不到选项，就把原始值
+// 原样显示成 "bypass-approvals"。0.8.3 里用户切到完全放手再重连就会看到；对话默认改成完全放手
+// 之后，每个新会话都会看到。用服务端回传的那个值，两边就只有一种写法。
+// Auto-approve is `gated`: shown only when getSettings().auto_approve is true (Marlo: on by default).
 // Labels/descriptions are i18n keys (resolved at render via t()); kept as keys here so the
 // module-level constant stays outside the component without losing translation.
 const PERMISSION_OPTIONS: ModeOption[] = [
@@ -53,17 +56,27 @@ const PERMISSION_OPTIONS: ModeOption[] = [
     gated: true,
   },
   {
-    value: "auto",
+    value: "bypass-approvals",
     label: "composer.mode.auto",
     description: "composer.mode.auto_desc",
     caution: true,
   },
 ];
 
+// 旧写法 → 标准写法。存量会话、计划卡片（PlanCard 批准并执行发的是 "auto"）、历史里的模式标记
+// 都可能带着 "auto"；查选项之前先归一，免得它们又显示成原始值。
+const MODE_ALIASES: Record<string, string> = { auto: "bypass-approvals" };
+
+/** The picker's option for a mode value, legacy spellings included. */
+export function modeOption(value: string): ModeOption | undefined {
+  const canonical = MODE_ALIASES[value] ?? value;
+  return PERMISSION_OPTIONS.find((o) => o.value === canonical);
+}
+
 /** The picker's label for a mode value ("auto-approve" -> "Auto-approve"). Exported so the
  * transcript's mode markers read the same names the user just chose from. */
 export function modeLabel(value: string): string {
-  const option = PERMISSION_OPTIONS.find((o) => o.value === value);
+  const option = modeOption(value);
   return option ? getI18n().t(option.label) : value;
 }
 
@@ -1012,7 +1025,7 @@ function ModeMenu({
   const options = PERMISSION_OPTIONS.filter(
     (o) => !o.gated || autoApproveEnabled || o.value === mode,
   );
-  const current = PERMISSION_OPTIONS.find((o) => o.value === mode);
+  const current = modeOption(mode);
   return (
     <div className="relative">
       {/* Borderless, and it names the CHOSEN mode (owner ask 2026-07-11, competitor composer
