@@ -1229,6 +1229,7 @@ class SessionManager(QumgeManagerMixin):
         )
 
         from ..mcp import oauth as mcp_oauth
+        from ..qumge import skills_mcp
 
         ws = self.engine_workspace(session_id, workspace=workspace, agent=agent)
         loop = asyncio.get_running_loop()
@@ -1343,6 +1344,16 @@ class SessionManager(QumgeManagerMixin):
                     fn.__aisuite_tool_metadata__.requires_approval = approval_for_tool(
                         fn.__aisuite_tool_metadata__.name, default=True
                     )
+                    fn.__aisuite_tool_metadata__.category = "connector"
+            elif skills_mcp.is_first_party(server.name, server.url):
+                # Marlo：内置的 Qumge 技能目录是【自家】服务，和上面的 backed 连接器同一个
+                # 理由出 MCP 地板 —— 那道地板防的是「陌生服务器自称只读」，而 qumge.com/mcp
+                # 是我们自己的端点，四个工具（search/get/list_categories/list_models）全是
+                # 只读查询，这是第一手知道的事。不重标的话：Discuss/Plan 里搜不了技能、
+                # 自动审批里每次搜都要过一遍审阅器（owner 2026-09-15 定：不问也不拦）。
+                # 判据是名字【和】地址都对：用户把它指到自己的镜像，或者一个自定义服务器
+                # 恰好也叫这个名字，都照旧落在地板上。
+                for fn in callables:
                     fn.__aisuite_tool_metadata__.category = "connector"
             out.extend(callables)
         return out
@@ -1634,10 +1645,15 @@ class SessionManager(QumgeManagerMixin):
         store = self._override_store()
         tools = [p[len(prefix):] for p in store.trust_patterns() if p.startswith(prefix)]
         raw = read_global().get(name) or {}
+        from ..qumge import skills_mcp
+
         return {
             "ok": True,
             "tools": tools,
-            "legacy_dont_ask": raw.get("requires_approval") is False,
+            # 内置的 Qumge 技能目录不算「遗留的全服务器免问开关」：它按自家服务处理
+            # （见 prepare_mcp_tools），迁移横幅对它只会让用户以为出了什么问题。
+            "legacy_dont_ask": raw.get("requires_approval") is False
+            and not skills_mcp.is_first_party(name, raw.get("url")),
         }
 
     def revoke_mcp_trust(self, name: str, tool: str) -> dict[str, Any]:
