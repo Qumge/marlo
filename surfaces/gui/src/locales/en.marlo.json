@@ -84,7 +84,8 @@
     "connect_qumge": "Connect to Qumge",
     "signed_in": "You&rsquo;re signed in",
     "this_mac": "this Mac",
-    "this_computer": "this computer"
+    "this_computer": "this computer",
+    "qumge_signin_http_error": "Qumge sign-in request failed (HTTP {{status}})."
   },
   "workspace_trust": {
     "sub": "This project asks Marlo to run the commands below without individual approval. Trust applies to future configuration changes at this exact folder until you revoke it in Settings."
@@ -104,12 +105,16 @@
       "no_credit": "Your Qumge balance is empty — add credit to keep going. The amount and the top-up link are in the account row at the bottom of the sidebar.",
       "rate_limited": "The model is busy right now — wait a moment and send again, or pick another model.",
       "blocked": "Part of this conversation was blocked by Qumge's network protection — this can happen when a chat contains shell commands or secrets. Start a new chat to continue."
-    }
+    },
+    "mcp_failed_generic": "An MCP server failed to start",
+    "mcp_failed_pre": "MCP server “",
+    "mcp_failed_post": "” didn’t start — its tools are unavailable here"
   },
   "access": {
     "n_folders": "{{count}} folders",
     "n_folders_one": "{{count}} folder",
-    "enabled_tap_mute": "Enabled for this session — tap to mute here"
+    "enabled_tap_mute": "Enabled for this session — tap to mute here",
+    "roots_update_failed": "could not update directories"
   },
   "approval": {
     "scope": {
@@ -117,7 +122,11 @@
     }
   },
   "app": {
-    "beta": "BETA"
+    "beta": "BETA",
+    "notice": {
+      "reviewer_paused": "Auto-approve paused for the rest of this turn.",
+      "auto_approve_on": "Auto-approve is on."
+    }
   },
   "connector": {
     "use_imap_instead": "Use Email (IMAP) →",

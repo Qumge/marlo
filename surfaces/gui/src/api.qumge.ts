@@ -6,6 +6,7 @@
 //
 // 只从 api.ts 借两样：httpBase 和带鉴权头的 fetch。借得越少，上游改
 // api.ts 时我们越安全。
+import { getI18n } from "react-i18next";
 import { httpBase, fetch as authedFetch } from "./api";
 
 // 技能包（bundles / installBundle）2026-09-14 撤掉：qumge 的「一组技能干成一件事」
@@ -130,7 +131,10 @@ export async function startQumgeDevice(
   // check can't misfire on one.
   if (!res.ok || data?.status === "error") {
     throw new QumgeSignInError(
-      data?.error || `Qumge sign-in request failed (HTTP ${res.status}).`,
+      // 没带 error 的非 2xx（sidecar 自己 500、FastAPI 的 {detail}）会落到这句兜底，而 QumgeConnect
+      // 认不出 kind 时直接显示 message —— 所以它要跟着界面语言。调用时才取 fixed-T（同 humanize.ts）。
+      data?.error ||
+        getI18n().getFixedT(null, "translation")("onboarding.qumge_signin_http_error", { status: res.status }),
       data?.kind,
       typeof data?.status_code === "number" ? data.status_code : undefined,
     );
