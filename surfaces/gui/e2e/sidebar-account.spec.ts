@@ -52,7 +52,14 @@ test("Activity in the menu is the audit log; Unrouted lives under Inbox ▸ Conf
   await page.getByTestId("account-menu").getByRole("button", { name: "Connectors", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Connections" })).toBeVisible();
   // MCP 内联在连接列表里（上游 UX-034），不再是一个折叠区。
-  await expect(page.getByTestId("custom-mcp-group")).toBeVisible();
+  //
+  // 原来这里断言 custom-mcp-group 可见。上游 OPE-136 之后那一组只放「你自己拥有的服务器」，
+  // 一个都没有就不渲染（fixture 里就是一个都没有）；精选的快速添加挪进了「可用」连接器
+  // 里 —— 我们没有上游那份平铺列表，挂在「其他」分组末尾（合并提交 615affa）。
+  // 所以「MCP 就在这一页上」现在由这两样来证明：添加入口在，快速添加那一行也在。
+  await expect(page.getByTestId("add-custom-server")).toBeVisible();
+  await expect(page.getByTestId("mcp-preset-granola")).toBeVisible();
+  await expect(page.getByTestId("custom-mcp-group")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "MCP servers", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Messaging routing/ })).toHaveCount(0);
   // The old fourth sub-nav tab is gone — exactly one page is named Activity now.
