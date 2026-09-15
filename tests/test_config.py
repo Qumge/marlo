@@ -10,7 +10,8 @@ from coworker.config import load_config
 def test_defaults_when_no_files(tmp_path):
     cfg = load_config(global_path=tmp_path / "nope.toml")
     assert cfg.model == "qumge:deepseek/deepseek-v4-flash"
-    assert cfg.mode == "interactive"
+    # Marlo：对话默认「完全放手」（owner 2026-09-15，见 config.py 的注释）
+    assert cfg.mode == "bypass-approvals"
     assert cfg.max_iterations == 150
     assert cfg.allowed_commands == []
 

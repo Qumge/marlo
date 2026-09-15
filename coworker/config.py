@@ -37,7 +37,15 @@ DEFAULT_MODEL = "qumge:deepseek/deepseek-v4-flash"
 @dataclass
 class Config:
     model: str = DEFAULT_MODEL
-    mode: str = "interactive"
+    # Marlo：对话会话默认「完全放手」（owner 2026-09-15）。Marlo 面向不写代码的人，
+    # 一个接一个的审批卡片被判定为比注入风险更伤产品；风险当面讲过（命令、改删文件、
+    # 访问网站、经已连接的邮箱/Slack 替用户发消息都不再问），owner 仍选这个默认。
+    # 硬底线不随模式变：设置文件、工作文件夹外的写入、.git/hooks、保存技能照样拦
+    # （permissions.evaluate 里 bypass 分支之上的那几道）。
+    # 只管【对话】：定时任务的引擎写死 Mode.INTERACTIVE（manager._build_task_engine），
+    # 无人值守时的审批照旧进收件箱 —— owner 同日定「自动化照旧」。
+    # 用户在全局 config.toml 里写了 mode 的，照旧以他写的为准。
+    mode: str = "bypass-approvals"
     max_iterations: int = 150
     allowed_commands: list[str] = field(
         default_factory=lambda: list(DEFAULT_ALLOWED_COMMANDS)
