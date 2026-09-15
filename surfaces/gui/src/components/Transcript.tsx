@@ -9,6 +9,18 @@ import { BoardWakeCard } from "./BoardWakeCard";
 import { ConnectorMessageCard } from "./ConnectorMessageCard";
 import { Icon } from "./Icon";
 import { openExternal } from "../tauri";
+import type { ParseKeys } from "i18next";
+
+// Marlo：报错通知按 cause 换成本地化文案。服务端 providers/errors.py 那几句是英文，
+// 中文用户原来看到的是 "Error: The model is busy…" 或者干脆是原始的 429 JSON。
+// cause 由服务端按【身份】给出（error_cause），这里只认这张表里的值，其余原样显示。
+const ERROR_CAUSE_KEYS: Record<string, ParseKeys> = {
+  no_credit: "transcript.error_cause.no_credit",
+  rate_limited: "transcript.error_cause.rate_limited",
+  blocked: "transcript.error_cause.blocked",
+};
+// errorNoticeItem 拼的固定前缀（itemsFromMessages.ts）。
+const ERROR_PREFIX = "Error: ";
 
 // Long user pastes swallow the transcript (owner ask 2026-07-30): clamp past a generous
 // threshold with a more…/less… toggle. Normal typed messages never see the control; the
@@ -680,10 +692,16 @@ export function Transcript({ items, running, streamingText, onRetry, onOpenConne
                 </div>
               );
             }
+            const causeKey = item.cause ? ERROR_CAUSE_KEYS[item.cause] : undefined;
             return (
               <div className={"notice " + (item.tone === "warn" ? "warn" : "")} key={bi}>
-                {item.text}
-                {item.retriable && !running && onRetry && block.i === retryAnchor(items) && (
+                {causeKey
+                  ? t("transcript.error_prefix") + t(causeKey)
+                  : item.text.startsWith(ERROR_PREFIX)
+                    ? t("transcript.error_prefix") + item.text.slice(ERROR_PREFIX.length)
+                    : item.text}
+                {/* 被边缘防护拦下的会话，重试会原样再被拦一次（历史整段重发）—— 不给一个必然失败的按钮 */}
+                {item.retriable && item.cause !== "blocked" && !running && onRetry && block.i === retryAnchor(items) && (
                   <button className="btn ml-2" data-testid="notice-retry" onClick={onRetry}>
                     {t("transcript.retry")}
                   </button>

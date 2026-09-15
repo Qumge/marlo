@@ -32,6 +32,12 @@
   "transcript": {
     "mcp_open_connectors": "打开外部连接",
     "add_credit": "去充值",
+    "error_prefix": "出错了：",
+    "error_cause": {
+      "no_credit": "Qumge 余额用完了 —— 充值之后就能接着用。",
+      "rate_limited": "模型这会儿太忙了 —— 稍等一下再发一次，或者换一个模型。",
+      "blocked": "这段对话里有内容被 Qumge 的网络防护拦下了（对话里出现命令或密钥时可能发生）。新开一个对话就能继续。"
+    },
     "step": {
       "tried_skill_pre": "尝试使用技能：",
       "hidden_tip": "在助手看到结果之前就被你的隐私过滤器移除了 —— 助手看不到任何痕迹。"

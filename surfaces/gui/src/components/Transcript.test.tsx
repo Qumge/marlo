@@ -3,6 +3,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { Transcript } from "./Transcript";
 import { humanizeTool } from "../humanize";
 import type { Item } from "../types";
+import { act } from "@testing-library/react";
+import { setTestLocale } from "../testLocale";
 
 // Transcript reads the account balance for the no-credit notice's top-up button
 // (Task 5) — the same store the sidebar row and composer gate already poll.
@@ -313,6 +315,61 @@ describe("no-credit notice top-up button (Task 5)", () => {
   });
   // "renders nothing when neither source has a URL" is already covered above by
   // "does not render the top-up button when balance is unknown ...".
+});
+
+// 2026-09-15：报错通知按 cause 本地化。服务端给的是英文句子（providers/errors.py），
+// 截图里中文用户看到的是原始的 429 JSON。断言的是【屏幕上的字】，不是"表里有键"。
+describe("error notices localize by cause", () => {
+  afterEach(async () => {
+    cleanup();
+    await act(async () => {
+      await setTestLocale("en");
+    });
+  });
+
+  const notice = (cause?: string, text = "Error: server sentence"): Item[] => [
+    { kind: "notice", tone: "warn", text, retriable: true, ...(cause ? { cause } : {}) },
+  ];
+
+  it("zh: rate_limited reads as busy, not the server's English", async () => {
+    await act(async () => {
+      await setTestLocale("zh");
+    });
+    render(<Transcript items={notice("rate_limited")} onApprove={vi.fn()} onRetry={vi.fn()} />);
+    expect(screen.getByText(/出错了：模型这会儿太忙了/)).toBeTruthy();
+    expect(screen.queryByText(/server sentence/)).toBeNull();
+    // 忙是暂时的：重试有意义，按钮留着
+    expect(screen.getByTestId("notice-retry")).toBeTruthy();
+  });
+
+  it("zh: blocked says start a new chat, and offers no Retry (it would be blocked again)", async () => {
+    await act(async () => {
+      await setTestLocale("zh");
+    });
+    render(<Transcript items={notice("blocked")} onApprove={vi.fn()} onRetry={vi.fn()} />);
+    expect(screen.getByText(/新开一个对话/)).toBeTruthy();
+    expect(screen.queryByTestId("notice-retry")).toBeNull();
+  });
+
+  it("zh: an uncaused raw error keeps its text but localizes the prefix", async () => {
+    await act(async () => {
+      await setTestLocale("zh");
+    });
+    render(<Transcript items={notice(undefined, "Error: connection reset")} onApprove={vi.fn()} />);
+    expect(screen.getByText("出错了：connection reset")).toBeTruthy();
+  });
+
+  it("en: output is unchanged from the server's sentence (e2e and existing copy rely on it)", async () => {
+    render(<Transcript items={notice("no_credit")} onApprove={vi.fn()} />);
+    expect(
+      screen.getByText(/^Error: Your Qumge balance is empty — add credit to keep going\./),
+    ).toBeTruthy();
+  });
+
+  it("an unknown cause falls back to the notice's own text", async () => {
+    render(<Transcript items={notice("something_new", "Error: as sent")} onApprove={vi.fn()} />);
+    expect(screen.getByText("Error: as sent")).toBeTruthy();
+  });
 });
 
 // MEMORY-SPEC §5.1 — the save notice lives IN the conversation (a corner toast vanished

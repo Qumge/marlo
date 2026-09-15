@@ -98,7 +98,13 @@
     "door_ai": "Create with Marlo"
   },
   "transcript": {
-    "add_credit": "Add credit"
+    "add_credit": "Add credit",
+    "error_prefix": "Error: ",
+    "error_cause": {
+      "no_credit": "Your Qumge balance is empty — add credit to keep going. The amount and the top-up link are in the account row at the bottom of the sidebar.",
+      "rate_limited": "The model is busy right now — wait a moment and send again, or pick another model.",
+      "blocked": "Part of this conversation was blocked by Qumge's network protection — this can happen when a chat contains shell commands or secrets. Start a new chat to continue."
+    }
   },
   "access": {
     "n_folders": "{{count}} folders",
