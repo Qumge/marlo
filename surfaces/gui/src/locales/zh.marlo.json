@@ -43,7 +43,10 @@
       "hidden_tip": "在助手看到结果之前就被你的隐私过滤器移除了 —— 助手看不到任何痕迹。"
     },
     "dir_granted": "已授予文件夹访问",
-    "plan_rejected": "已带反馈退回"
+    "plan_rejected": "已带反馈退回",
+    "mcp_failed_generic": "有个 MCP 服务器没能启动",
+    "mcp_failed_pre": "MCP 服务器“",
+    "mcp_failed_post": "”没能启动 —— 这里用不了它的工具"
   },
   "rail": {
     "empty_state": "对于较长的多步任务，进度会显示在这里：Marlo 规划、调用工具、等待批准并产出文件。",
@@ -195,7 +198,8 @@
     "no_connectors": "这个会话没有启用任何连接。",
     "search_placeholder": "搜索连接…",
     "no_match": "没有匹配 —— 到下面的「连接」页看全部。",
-    "collision_title": "这个频道同时也是本会话的收件箱转发目标 —— 收和发会撞车。"
+    "collision_title": "这个频道同时也是本会话的收件箱转发目标 —— 收和发会撞车。",
+    "roots_update_failed": "文件夹权限没能更新"
   },
   "root": {
     "main": "主",
@@ -413,7 +417,8 @@
     "cta_automation_desc": "每周简报、每日晨报 —— 挑个模板，两分钟就能跑起来。",
     "cta_work_title": "开始和你的同事干活",
     "cta_work_desc": "开一个会话直接说 —— 分析文件、起草、查资料、动手做。",
-    "replay_hint": "想重看这套引导：设置 ▸ 外观 ▸ 重新运行设置。"
+    "replay_hint": "想重看这套引导：设置 ▸ 外观 ▸ 重新运行设置。",
+    "qumge_signin_http_error": "Qumge 登录请求失败（HTTP {{status}}）。"
   },
   "workspace_trust": {
     "title": "信任这个工作区的命令吗？",
@@ -480,7 +485,9 @@
     "notice": {
       "max_iterations": "已停止：达到最大轮次。",
       "model_switched": "已切换模型",
-      "input_rejected": "这条消息被拒绝了。"
+      "input_rejected": "这条消息被拒绝了。",
+      "reviewer_paused": "本回合剩下的部分暂停自动批准。",
+      "auto_approve_on": "自动批准已开启。"
     },
     "build_skill_prefill_empty": "帮我做一个新技能：（说说这个技能要做什么）",
     "waiting_for_agent": "等它回话…"

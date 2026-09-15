@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { getI18n } from "react-i18next";
 import { addRoot, getRoots, removeRoot, type RootInfo } from "./api";
 
 // Shared roots state for a session — used by the Session settings drawer's Working-directories
@@ -35,7 +36,10 @@ export function useRoots(sessionId: string, reloadKey?: number) {
       window.dispatchEvent(new CustomEvent("coworker:roots-changed", { detail: sessionId }));
       return true;
     }
-    setError(res.error || "could not update directories");
+    // 兜底会直接显示在文件夹面板上（SessionIntro / AccessSection），所以走 t()。调用时才取 fixed-T：
+    // add / toggleAccess / remove 的 useCallback 只依赖 sessionId，闭包里的 apply 是第一次渲染那份，
+    // 用 hook 给的 t 的话，切了语言它还是旧语言。
+    setError(res.error || getI18n().getFixedT(null, "translation")("access.roots_update_failed"));
     reload();
     return false;
   };
