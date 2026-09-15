@@ -260,8 +260,7 @@
     "group_files": "文件与网盘",
     "group_web": "网页",
     "group_other": "其他",
-    "nothing_matches": "没有匹配的。",
-    "asks_first": "会先问过你"
+    "nothing_matches": "没有匹配的。"
   },
   "github": {
     "relay_live": "在线 · 托管中继",
@@ -334,7 +333,9 @@
   "available": {
     "access": "访问权限",
     "access_foot": "密钥和令牌只存在这台电脑上。随时可以断开。",
-    "hide": "收起",
+    "hide": "收起"
+  },
+  "tools": {
     "asks_first": "会先问过你"
   },
   "modal": {
