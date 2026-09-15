@@ -863,7 +863,11 @@ def test_allow_anyway_cannot_unlock_a_hard_deny(tmp_path):
 # whether it created that file moments ago. These pin how that fact travels.
 
 
-def test_running_an_agent_written_script_tells_the_reviewer_so(tmp_path):
+def test_running_an_agent_written_script_goes_to_a_human_in_auto_approve(tmp_path):
+    # Marlo（owner 2026-09-15）：上游这里原本是「写出来的文件只是一条事实，审阅器照旧决定」，
+    # 这条测试钉的也是那个行为。改掉是有意的：审阅器在这一类上靠不住 —— 评测 danger-033
+    # 经 Qumge 网关 DeepSeek / GLM-5.2 各误放一次，GLM-5.2 连跑 6 次放行 2 次，temperature=0
+    # 也是 3 次放 2 次。命令本身看不出脚本会做什么，这件事不该靠采样运气。
     engine, rows, approvals = _engine(
         tmp_path,
         [
@@ -873,13 +877,35 @@ def test_running_an_agent_written_script_tells_the_reviewer_so(tmp_path):
         ],
     )
     engine.reviewer = _FakeReviewer({"write_file": "allow", "run_shell": "allow"})
-    _run(engine, "write a setup script and run it")
+    events = _run(engine, "write a setup script and run it")
 
-    shell = [p for (name, _), p in zip(engine.reviewer.asked, engine.reviewer.provenance) if name == "run_shell"]
-    assert shell and "setup.py was created by the agent" in shell[0]
-    # Written (not downloaded) is a FACT, not a floor: the reviewer still decides, so
-    # "write this script and run it" stays a single uninterrupted flow.
+    # 写文件照旧由审阅器放行；运行它的那一步审阅器根本没被问到 —— 哪怕它会说 allow
+    assert [name for name, _ in engine.reviewer.asked] == ["write_file"]
+    assert approvals == ["run_shell"]
+    cards = [ev for ev in events if ev.type == EventType.PERMISSION_REQUIRED]
+    assert len(cards) == 1
+    # 卡片上照样带着这条事实，人是在知道「这是 agent 刚写的」的情况下点头的
+    assert "setup.py was created by the agent" in cards[0].data["provenance"]
+
+
+def test_written_script_rule_leaves_bypass_alone(tmp_path):
+    # 这条规则只动审阅器那一条路。对话默认是「完全放手」（config.py，owner 同日定），
+    # 截图里那种「运行 agent 刚写的脚本」在 bypass 下必须照旧不弹卡片 —— 否则规则
+    # 就把默认模式的承诺悄悄收回去了。和下载文件那道连 bypass 都拦的地板不是一回事。
+    engine, rows, approvals = _engine(
+        tmp_path,
+        [
+            _tool_turn(("write_file", {"path": "make_rows.py", "content": "x"})),
+            _tool_turn(("run_shell", {"command": "python3 make_rows.py"})),
+            AssistantTurn(text="done", finish_reason="stop"),
+        ],
+        mode=Mode.BYPASS_APPROVALS,
+    )
+    engine.reviewer = _FakeReviewer({})
+    events = _run(engine, "write a script and run it")
+
     assert approvals == []
+    assert EventType.PERMISSION_REQUIRED not in [ev.type for ev in events]
 
 
 def test_a_pre_existing_script_carries_no_fact(tmp_path):
