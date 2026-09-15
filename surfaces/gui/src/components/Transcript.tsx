@@ -9,6 +9,18 @@ import { BoardWakeCard } from "./BoardWakeCard";
 import { ConnectorMessageCard } from "./ConnectorMessageCard";
 import { Icon } from "./Icon";
 import { openExternal } from "../tauri";
+import type { ParseKeys } from "i18next";
+
+// Marlo：报错通知按 cause 换成本地化文案。服务端 providers/errors.py 那几句是英文，
+// 中文用户原来看到的是 "Error: The model is busy…" 或者干脆是原始的 429 JSON。
+// cause 由服务端按【身份】给出（error_cause），这里只认这张表里的值，其余原样显示。
+const ERROR_CAUSE_KEYS: Record<string, ParseKeys> = {
+  no_credit: "transcript.error_cause.no_credit",
+  rate_limited: "transcript.error_cause.rate_limited",
+  blocked: "transcript.error_cause.blocked",
+};
+// errorNoticeItem 拼的固定前缀（itemsFromMessages.ts）。
+const ERROR_PREFIX = "Error: ";
 
 // Long user pastes swallow the transcript (owner ask 2026-07-30): clamp past a generous
 // threshold with a more…/less… toggle. Normal typed messages never see the control; the
@@ -181,7 +193,20 @@ function originChip(origin: string | undefined, note: string | undefined, grant?
       </span>
     );
   }
-  if (origin !== "reviewer" && origin !== "bypass") return null;
+  // Two DIFFERENT standing sources can waive an MCP card, and the chip must name the
+  // right one: a per-tool rule the USER minted ("Always allow this tool" — undo lives
+  // on the server's tool page) vs the legacy server-wide don't-ask flag (undo lives in
+  // mcp.json / the Convert banner). One generic label misled a real user into thinking
+  // the server had marked their own rule (owner-hit 2026-08-30). Plain "trusted" is
+  // the pre-split origin persisted in old transcripts — kept as a generic fallback.
+  const TRUST_ORIGINS = new Set(["trusted", "trusted_rule", "trusted_server"]);
+  if (
+    origin !== "reviewer" &&
+    origin !== "bypass" &&
+    origin !== "run_grant" &&
+    !TRUST_ORIGINS.has(origin ?? "")
+  )
+    return null;
   return (
     <span
       className="text-[11px] text-faint shrink-0"
@@ -189,10 +214,28 @@ function originChip(origin: string | undefined, note: string | undefined, grant?
       title={
         origin === "reviewer"
           ? note || t("transcript.approval.reviewer_allowed_title")
-          : t("transcript.approval.bypass_title")
+          : origin === "trusted_rule"
+            ? t("transcript.approval.trusted_rule_title")
+            : origin === "trusted_server"
+              ? t("transcript.approval.trusted_title")
+              : origin === "trusted"
+                ? t("transcript.approval.trusted_generic_title")
+                : origin === "run_grant"
+                  ? t("transcript.approval.run_grant_title")
+                  : t("transcript.approval.bypass_title")
       }
     >
-      {origin === "reviewer" ? t("transcript.approval.auto_approved") : t("transcript.approval.bypassed")}
+      {origin === "reviewer"
+        ? t("transcript.approval.auto_approved")
+        : origin === "trusted_rule"
+          ? t("transcript.approval.trusted_rule")
+          : origin === "trusted_server"
+            ? t("transcript.approval.trusted")
+            : origin === "trusted"
+              ? t("transcript.approval.trusted_generic")
+              : origin === "run_grant"
+                ? t("transcript.approval.run_grant")
+                : t("transcript.approval.bypassed")}
     </span>
   );
 }
@@ -649,10 +692,16 @@ export function Transcript({ items, running, streamingText, onRetry, onOpenConne
                 </div>
               );
             }
+            const causeKey = item.cause ? ERROR_CAUSE_KEYS[item.cause] : undefined;
             return (
               <div className={"notice " + (item.tone === "warn" ? "warn" : "")} key={bi}>
-                {item.text}
-                {item.retriable && !running && onRetry && block.i === retryAnchor(items) && (
+                {causeKey
+                  ? t("transcript.error_prefix") + t(causeKey)
+                  : item.text.startsWith(ERROR_PREFIX)
+                    ? t("transcript.error_prefix") + item.text.slice(ERROR_PREFIX.length)
+                    : item.text}
+                {/* 被边缘防护拦下的会话，重试会原样再被拦一次（历史整段重发）—— 不给一个必然失败的按钮 */}
+                {item.retriable && item.cause !== "blocked" && !running && onRetry && block.i === retryAnchor(items) && (
                   <button className="btn ml-2" data-testid="notice-retry" onClick={onRetry}>
                     {t("transcript.retry")}
                   </button>

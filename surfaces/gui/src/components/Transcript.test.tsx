@@ -3,6 +3,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { Transcript } from "./Transcript";
 import { humanizeTool } from "../humanize";
 import type { Item } from "../types";
+import { act } from "@testing-library/react";
+import { setTestLocale } from "../testLocale";
 
 // Transcript reads the account balance for the no-credit notice's top-up button
 // (Task 5) — the same store the sidebar row and composer gate already poll.
@@ -100,6 +102,53 @@ describe("TurnGroup (Transcript §33)", () => {
     const { container } = render(<Transcript items={items} onApprove={vi.fn()} />);
     expect(container.querySelector("details.stepgroup")).toBeNull();
     expect(screen.getByText("Hello there.")).toBeTruthy();
+  });
+});
+
+// OPE-136: two DIFFERENT standing sources can waive an MCP card, and the chip must
+// name the right one — a user's own trust rule was being described as the server's
+// mcp.json flag (owner-hit 2026-08-30).
+describe("origin chips — standing MCP trust names its source", () => {
+  const toolWith = (origin: string): Item[] => [
+    { kind: "user", text: "search jira" },
+    { kind: "tool", id: "t1", name: "mcp__jira__search", args: { jql: "x" }, status: "ok", approvalOrigin: origin },
+  ];
+  const chipFor = (origin: string) => {
+    const { container } = render(<Transcript items={toolWith(origin)} onApprove={vi.fn()} />);
+    fireEvent.click(container.querySelector("summary.stepgroup-head")!);
+    const chip = screen.getByTestId("tool-approval-origin");
+    return { text: chip.textContent, title: chip.getAttribute("title") };
+  };
+
+  it("a user trust rule says so, and points at the tool page to revoke", () => {
+    const chip = chipFor("trusted_rule");
+    expect(chip.text).toBe("allowed by your trust rule");
+    expect(chip.title).toContain("Always allow this tool");
+    expect(chip.title).toContain("Connectors page");
+  });
+
+  it("the legacy server flag keeps the server-trust label pointing at mcp.json", () => {
+    cleanup();
+    const chip = chipFor("trusted_server");
+    expect(chip.text).toBe("allowed by server trust");
+    expect(chip.title).toContain("mcp.json");
+  });
+
+  it("pre-split transcripts (origin 'trusted') fall back to a generic honest label", () => {
+    cleanup();
+    const chip = chipFor("trusted");
+    expect(chip.text).toBe("allowed by standing trust");
+    expect(chip.title).not.toContain("mcp.json"); // never claims the wrong source
+  });
+
+  it("a run-grant covered call says so, and names the expiry", () => {
+    // OPE-136 "Allow for this request": covered calls run cardless but never
+    // invisible — the chip names the user's own in-run click as the source.
+    cleanup();
+    const chip = chipFor("run_grant");
+    expect(chip.text).toBe("allowed for this request");
+    expect(chip.title).toContain("Allow for this request");
+    expect(chip.title).toContain("expired when the answer finished");
   });
 });
 
@@ -266,6 +315,61 @@ describe("no-credit notice top-up button (Task 5)", () => {
   });
   // "renders nothing when neither source has a URL" is already covered above by
   // "does not render the top-up button when balance is unknown ...".
+});
+
+// 2026-09-15：报错通知按 cause 本地化。服务端给的是英文句子（providers/errors.py），
+// 截图里中文用户看到的是原始的 429 JSON。断言的是【屏幕上的字】，不是"表里有键"。
+describe("error notices localize by cause", () => {
+  afterEach(async () => {
+    cleanup();
+    await act(async () => {
+      await setTestLocale("en");
+    });
+  });
+
+  const notice = (cause?: string, text = "Error: server sentence"): Item[] => [
+    { kind: "notice", tone: "warn", text, retriable: true, ...(cause ? { cause } : {}) },
+  ];
+
+  it("zh: rate_limited reads as busy, not the server's English", async () => {
+    await act(async () => {
+      await setTestLocale("zh");
+    });
+    render(<Transcript items={notice("rate_limited")} onApprove={vi.fn()} onRetry={vi.fn()} />);
+    expect(screen.getByText(/出错了：模型这会儿太忙了/)).toBeTruthy();
+    expect(screen.queryByText(/server sentence/)).toBeNull();
+    // 忙是暂时的：重试有意义，按钮留着
+    expect(screen.getByTestId("notice-retry")).toBeTruthy();
+  });
+
+  it("zh: blocked says start a new chat, and offers no Retry (it would be blocked again)", async () => {
+    await act(async () => {
+      await setTestLocale("zh");
+    });
+    render(<Transcript items={notice("blocked")} onApprove={vi.fn()} onRetry={vi.fn()} />);
+    expect(screen.getByText(/新开一个对话/)).toBeTruthy();
+    expect(screen.queryByTestId("notice-retry")).toBeNull();
+  });
+
+  it("zh: an uncaused raw error keeps its text but localizes the prefix", async () => {
+    await act(async () => {
+      await setTestLocale("zh");
+    });
+    render(<Transcript items={notice(undefined, "Error: connection reset")} onApprove={vi.fn()} />);
+    expect(screen.getByText("出错了：connection reset")).toBeTruthy();
+  });
+
+  it("en: output is unchanged from the server's sentence (e2e and existing copy rely on it)", async () => {
+    render(<Transcript items={notice("no_credit")} onApprove={vi.fn()} />);
+    expect(
+      screen.getByText(/^Error: Your Qumge balance is empty — add credit to keep going\./),
+    ).toBeTruthy();
+  });
+
+  it("an unknown cause falls back to the notice's own text", async () => {
+    render(<Transcript items={notice("something_new", "Error: as sent")} onApprove={vi.fn()} />);
+    expect(screen.getByText("Error: as sent")).toBeTruthy();
+  });
 });
 
 // MEMORY-SPEC §5.1 — the save notice lives IN the conversation (a corner toast vanished

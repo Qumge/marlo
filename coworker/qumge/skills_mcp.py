@@ -21,9 +21,24 @@ disabled — reconnecting is not consent to re-enable something they turned off.
 """
 from __future__ import annotations
 
+from typing import Optional
+
 from ..mcp.config import put_global_server, read_global
+from .device_flow import base_url as _qumge_base_url
 
 SERVER_NAME = "qumge-skills"
+
+
+def is_first_party(name: str, url: Optional[str]) -> bool:
+    """This entry is OUR catalog, not a third-party server that happens to share the name.
+
+    Both halves must hold: the name we install under AND the endpoint we serve. A user who
+    points the entry at their own mirror, or a custom server that reuses the name, is a
+    stranger's claim again and stays on upstream's MCP floor (OPE-136). The tools behind
+    the real endpoint are all read-only lookups — first-hand knowledge, which is what lets
+    them skip the floor (see SessionManager.prepare_mcp_tools).
+    """
+    return name == SERVER_NAME and (url or "").rstrip("/") == f"{_qumge_base_url()}/mcp"
 
 
 def default_config(base_url: str) -> dict:

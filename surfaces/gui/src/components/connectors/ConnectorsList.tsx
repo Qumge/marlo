@@ -4,8 +4,8 @@ import type { TFunction } from "i18next";
 import { type CloudStatus, type Connector, type McpServer, type SlackStatus } from "../../api";
 import { ConnectorBadge } from "../../connectors/ConnectorIcon";
 import { AddConnectionModal } from "./AddConnectionModal";
-import { AddMcpModal, CustomMcpGroup } from "./CustomMcp";
-import { CHIP_OK, CHIP_OFF, CHIP_WARN, GRP, GRP_H, PILL_QUIET, FOOT, ROW } from "./ui";
+import { AddMcpModal, CustomMcpGroup, McpPresetRows, mcpPresetOffers } from "./CustomMcp";
+import { CHIP_OK, CHIP_OFF, CHIP_WARN, GRP, GRP_H, FOOT, PILL_QUIET, ROW } from "./ui";
 
 // The Connectors LIST (UX-DECISIONS §21): connected first in their own inset group —
 // rows navigate to the connector's detail subpage; problems surface as a chip in the
@@ -59,6 +59,9 @@ export function ConnectorsList({
   const customMcp = mcpServers.filter((s) => !q || s.name.toLowerCase().includes(q));
   const [showAll, setShowAll] = useState(false);
   const shown = showAll || q ? available : available.slice(0, AVAILABLE_FOLD);
+  // 精选 MCP 的快速添加（上游 OPE-136 从 Custom · MCP 挪到了「可用」里）。挂在「其他」
+  // 分组末尾，理由见下面删掉平铺列表那段注释。
+  const presets = mcpPresetOffers(mcpServers, filter);
   const connectingC = connecting ? connectors.find((c) => c.name === connecting) : null;
 
   return (
@@ -78,6 +81,10 @@ export function ConnectorsList({
           className="w-44 px-3.5 py-1.5 rounded-full border border-line bg-panel text-[13px] outline-none focus:border-accent"
         />
       </div>
+
+      {/* No legend, no tooltips (owner call 2026-08-30): with only Ready and
+          Connect the vocabulary is self-explanatory — the earlier legend existed
+          to explain a Live/Ready split that has been deleted. */}
 
       {/* No cloud strip here anymore (§26): the sidebar's account row is the permanent
           sign-in home, and the connect modals keep their inline sign-in panes. */}
@@ -110,7 +117,8 @@ export function ConnectorsList({
           邮件/日历/聊天在前，因为白领的活先落在这几样上。 */}
       {GROUP_ORDER.map((g) => {
         const rows = shown.filter((c) => (c.group || "other") === g);
-        if (rows.length === 0) return null;
+        const groupPresets = g === "other" ? presets : [];
+        if (rows.length === 0 && groupPresets.length === 0) return null;
         return (
           <div key={g}>
             <div className={GRP_H}>{t(GROUP_LABELS[g])}</div>
@@ -167,11 +175,18 @@ export function ConnectorsList({
                   )}
                 </button>
               ))}
+              {groupPresets.length > 0 && (
+                <McpPresetRows
+                  presets={groupPresets}
+                  onOpen={(name) => onOpen("mcp:" + name)}
+                  onChanged={onChanged}
+                />
+              )}
             </div>
           </div>
         );
       })}
-      {shown.length === 0 && (
+      {shown.length === 0 && presets.length === 0 && (
         <div className={ROW + " text-[12.5px] text-muted"}>{t("connector.nothing_matches")}</div>
       )}
       <CustomMcpGroup
@@ -182,7 +197,10 @@ export function ConnectorsList({
 
       {/* 上游在这里还有一份平铺的 Available 列表。我们的分组列表（上面 GROUP_ORDER
           那段，ac6f51a：按用户认得的东西分组）已经把同一批连接器渲染过一遍了 ——
-          两份都留会让每个连接器出现两次，e2e 的 strict mode 当场报重复元素。 */}
+          两份都留会让每个连接器出现两次，e2e 的 strict mode 当场报重复元素。
+          上游 OPE-136 把精选 MCP 的快速添加（McpPresetRows）从 Custom · MCP 挪进了
+          那份平铺列表；我们没有那份列表，所以它们挂在「其他」分组的末尾 —— 不挂的话
+          它们会从页面上整个消失（CustomMcpGroup 已经不再渲染它们）。 */}
 
       {/* 展开入口：分组列表默认只铺前 AVAILABLE_FOLD 个。上游把它放在自己那份
           平铺列表的末尾，删那份的时候连它一起删了 —— 结果 36 个连接器里只看得见
@@ -204,7 +222,13 @@ export function ConnectorsList({
           onChanged={onChanged}
         />
       )}
-      {addingMcp && <AddMcpModal onClose={() => setAddingMcp(false)} onChanged={onChanged} />}
+      {addingMcp && (
+        <AddMcpModal
+          onClose={() => setAddingMcp(false)}
+          onChanged={onChanged}
+          onAdded={(name) => onOpen("mcp:" + name)}
+        />
+      )}
     </div>
   );
 }
@@ -231,8 +255,12 @@ function healthChip(c: Connector, slack: SlackStatus | null, t: TFunction) {
       return <span className={CHIP_WARN}>{"● " + t("connector.reconnecting")}</span>;
     if (Object.values(slack.teams).some((tm) => !tm.token_ok))
       return <span className={CHIP_WARN}>{"⚠ " + t("connector.token")}</span>;
-    return <span className={CHIP_OK}>{"● " + t("connector.live")}</span>;
+    return <span className={CHIP_OK}>{"● " + t("connector.ready")}</span>;
   }
-  if (c.two_way && c.connected) return <span className={CHIP_OK}>{"● " + t("connector.live")}</span>;
+  // ONE healthy word (owner call 2026-08-30): Live-vs-Ready distinguished the
+  // plumbing (standing socket vs on-demand), not anything the user would DO
+  // differently — and MCP's "Live" wasn't heartbeat-monitored anyway. The
+  // runtime difference shows where it matters: the problem chips above
+  // (Reconnecting / Offline / Needs sign-in / Error) are per-transport honest.
   return <span className={CHIP_OK}>{"● " + t("connector.ready")}</span>;
 }

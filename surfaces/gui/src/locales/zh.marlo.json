@@ -32,6 +32,12 @@
   "transcript": {
     "mcp_open_connectors": "打开外部连接",
     "add_credit": "去充值",
+    "error_prefix": "出错了：",
+    "error_cause": {
+      "no_credit": "Qumge 余额用完了 —— 充值之后就能接着用。",
+      "rate_limited": "模型这会儿太忙了 —— 稍等一下再发一次，或者换一个模型。",
+      "blocked": "这段对话里有内容被 Qumge 的网络防护拦下了（对话里出现命令或密钥时可能发生）。新开一个对话就能继续。"
+    },
     "step": {
       "tried_skill_pre": "尝试使用技能：",
       "hidden_tip": "在助手看到结果之前就被你的隐私过滤器移除了 —— 助手看不到任何痕迹。"
@@ -260,8 +266,7 @@
     "group_files": "文件与网盘",
     "group_web": "网页",
     "group_other": "其他",
-    "nothing_matches": "没有匹配的。",
-    "asks_first": "会先问过你"
+    "nothing_matches": "没有匹配的。"
   },
   "github": {
     "relay_live": "在线 · 托管中继",
@@ -334,7 +339,9 @@
   "available": {
     "access": "访问权限",
     "access_foot": "密钥和令牌只存在这台电脑上。随时可以断开。",
-    "hide": "收起",
+    "hide": "收起"
+  },
+  "tools": {
     "asks_first": "会先问过你"
   },
   "modal": {
@@ -567,5 +574,69 @@
     "in_picker": "在选择器里",
     "delete_tooltip": "删除这个角色",
     "disable": "停用"
+  },
+  "humanize": {
+    "sep": " —— ",
+    "a_file": "一个文件",
+    "files": "一些文件",
+    "step": {
+      "ran": "执行了 ",
+      "started_background": "在后台启动了 ",
+      "checked_background": "查看了一条后台命令的进展",
+      "stopped_background": "停止了一条后台命令",
+      "read": "读取了 ",
+      "wrote": "写入了 ",
+      "edited": "编辑了 ",
+      "searched_code": "在代码里搜索了 ",
+      "git_history": "查看了最近的代码提交记录",
+      "plan_updated": "更新了计划 —— ",
+      "plan_updated_n": "更新了计划 —— 共 {{n}} 项",
+      "todo_status": {
+        "pending": "待办",
+        "in_progress": "进行中",
+        "done": "已完成",
+        "completed": "已完成"
+      },
+      "sent_message": "发送了一条消息",
+      "sent_platform_message_to": "发送了一条 {{platform}} 消息给 ",
+      "searched_web": "上网搜索了 ",
+      "read_web_page": "读取了网页 ",
+      "explore": "另派了一个助手去调查 ",
+      "used_skill": "使用了技能：",
+      "asked_you": "向你提了一个问题",
+      "proposed_plan": "提出了一个计划",
+      "asked_folder": "申请访问文件夹 ",
+      "used_tool": "使用了 "
+    },
+    "title": {
+      "write": "写入 ",
+      "edit": "编辑 ",
+      "send_message_to": "发送一条消息给 ",
+      "send_file_to": "发送一个文件给 ",
+      "create_automation_named": "创建自动化 ",
+      "create_automation": "创建一个自动化",
+      "add_skill_pre": "把技能 ",
+      "add_skill_post": " 加进你的技能",
+      "add_a_skill": "把一个新技能加进你的技能",
+      "fetch_from": "访问 ",
+      "fetch_page": "访问一个网页",
+      "search_web": "上网搜索",
+      "use_tool": "使用 "
+    },
+    "ask": {
+      "run": "想执行 ",
+      "write": "想写入 ",
+      "edit": "想编辑 ",
+      "send_message": "想发送一条消息",
+      "message_pre": "想给 ",
+      "message_post": " 发送一条 {{platform}} 消息",
+      "use_tool": "想使用 "
+    },
+    "provenance": {
+      "created": " 是助手{{when}}自己创建的",
+      "downloaded": " 是助手{{when}}自己下载的",
+      "just_now": "刚才",
+      "steps_ago_other": " {{count}} 步之前"
+    }
   }
 }

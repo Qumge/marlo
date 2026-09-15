@@ -35,6 +35,11 @@ const ADDITIONS = new Set([
   "rail.open_board", // 看板 chip 的 title：上游这句没包进 t()
   "cloud.signin_unlocks_default", // 没有 blurb 时的默认说明：同上
   "transcript.add_credit", // 零余额充值入口：我们 fork 的功能，上游没有
+  // 报错通知按 cause 换成本地化文案（服务端 providers/errors.py 那几句是英文）
+  "transcript.error_prefix",
+  "transcript.error_cause.no_credit",
+  "transcript.error_cause.rate_limited", // 网关 429：模型忙
+  "transcript.error_cause.blocked", // qumge.com 边缘防护拦截：只能新开对话
   "access.n_folders", // 文件夹计数：上游这一处不显示数量
   "access.n_folders_one",
   "access.enabled_tap_mute", // 会话内静音的提示：上游措辞不同且没有单独的键
@@ -132,6 +137,62 @@ const ADDITIONS = new Set([
   "manage.granola_label", // Granola 连接器：上游没有
   "manage.granola_blurb",
   "personas.installed_n", // 「已安装 N 个」那条：上游没有
+  // humanize.ts 的步骤行 / 审批标题 / 被拒的请求：上游这三个函数写死英文、没进 t()，
+  // 中文界面上审批卡片一直显示 "Run a command — …"（check_i18n.py 只扫 .tsx 看不见）
+  "humanize.sep",
+  "humanize.a_file",
+  "humanize.files",
+  "humanize.step.ran",
+  "humanize.step.started_background",
+  "humanize.step.checked_background",
+  "humanize.step.stopped_background",
+  "humanize.step.read",
+  "humanize.step.wrote",
+  "humanize.step.edited",
+  "humanize.step.searched_code",
+  "humanize.step.git_history",
+  "humanize.step.plan_updated",
+  "humanize.step.plan_updated_n",
+  "humanize.step.todo_status.pending",
+  "humanize.step.todo_status.in_progress",
+  "humanize.step.todo_status.done",
+  "humanize.step.todo_status.completed",
+  "humanize.step.sent_message",
+  "humanize.step.sent_platform_message_to",
+  "humanize.step.searched_web",
+  "humanize.step.read_web_page",
+  "humanize.step.explore",
+  "humanize.step.used_skill",
+  "humanize.step.asked_you",
+  "humanize.step.proposed_plan",
+  "humanize.step.asked_folder",
+  "humanize.step.used_tool",
+  "humanize.title.write",
+  "humanize.title.edit",
+  "humanize.title.send_message_to",
+  "humanize.title.send_file_to",
+  "humanize.title.create_automation_named",
+  "humanize.title.create_automation",
+  "humanize.title.add_skill_pre",
+  "humanize.title.add_skill_post",
+  "humanize.title.add_a_skill",
+  "humanize.title.fetch_from",
+  "humanize.title.fetch_page",
+  "humanize.title.search_web",
+  "humanize.title.use_tool",
+  "humanize.ask.run",
+  "humanize.ask.write",
+  "humanize.ask.edit",
+  "humanize.ask.send_message",
+  "humanize.ask.message_pre",
+  "humanize.ask.message_post",
+  "humanize.ask.use_tool",
+  // 审批卡片的来源警告：服务端 provenance.py 吐固定词汇的英文，GUI 认出来再翻（provenanceText.ts）
+  "humanize.provenance.created",
+  "humanize.provenance.downloaded",
+  "humanize.provenance.just_now",
+  "humanize.provenance.steps_ago_one",
+  "humanize.provenance.steps_ago_other",
 ]);
 
 const flatEnBase = flatten(enBase as Tree);
