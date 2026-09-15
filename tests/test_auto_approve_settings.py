@@ -21,10 +21,33 @@ def client(tmp_path, monkeypatch):
     return TestClient(create_app(SessionManager(data_dir=tmp_path / "data")))
 
 
-def test_flags_default_off(client):
+def test_flags_default(client):
+    # Marlo（owner 2026-09-15）：auto_approve 默认开 —— 模式菜单里出现「自动审批」这一项。
+    # 上游这里原本钉的是默认关；改掉是有意的，依据见 config.py 注释。影子评测照旧默认关
+    # （它在任何模式下都会给每张卡片多一次模型调用）。
     s = client.get("/v1/settings").json()
-    assert s["auto_approve"] is False
+    assert s["auto_approve"] is True
     assert s["auto_approve_shadow"] is False
+
+
+def test_flag_on_by_default_costs_nothing_outside_auto_approve(tmp_path, monkeypatch):
+    # 开关默认开会给每个会话挂上审阅器；这条钉住「挂上 ≠ 调用」：默认的完全放手、
+    # 需审批模式下审阅器永远不被咨询，用户不会因为这个默认值多花一分钱。
+    monkeypatch.setenv("COWORKER_STATE_DIR", str(tmp_path / "state"))
+    from coworker.agent import build_engine
+    from coworker.agents.chat import chat_agent
+    from coworker.permissions import Mode
+
+    for mode in (Mode.BYPASS_APPROVALS, Mode.INTERACTIVE):
+        engine = build_engine(agent=chat_agent(), mode=mode, auto_approve=None, auto_approve_shadow=None)
+        engine.is_attended = lambda: True
+        assert engine.reviewer is not None, "默认值没生效：审阅器没挂上"
+        assert engine._reviewer_active() is False, f"{mode.value} 下审阅器被激活了"
+        assert engine.reviewer_shadow is False
+
+    engine = build_engine(agent=chat_agent(), mode=Mode.AUTO_APPROVE, auto_approve=None, auto_approve_shadow=None)
+    engine.is_attended = lambda: True
+    assert engine._reviewer_active() is True, "切到自动审批之后审阅器应该在岗"
 
 
 def test_set_auto_approve_roundtrip(client):
@@ -39,7 +62,7 @@ def test_set_auto_approve_roundtrip(client):
 def test_shadow_is_independent_of_the_live_flag(client):
     client.post("/v1/settings/auto-approve-shadow", json={"auto_approve_shadow": True})
     s = client.get("/v1/settings").json()
-    assert s["auto_approve"] is False  # untouched
+    assert s["auto_approve"] is True  # untouched —— 仍是默认值（Marlo 默认开，见 test_flags_default）
     assert s["auto_approve_shadow"] is True
 
 

@@ -193,6 +193,16 @@ const ADDITIONS = new Set([
   "humanize.provenance.just_now",
   "humanize.provenance.steps_ago_one",
   "humanize.provenance.steps_ago_other",
+  // 回放出来的通知（itemsFromMessages.ts）：实时路径早就走 t()，回放这条写死英文 —— 刷新之后
+  // 「已中断。」变回 "Interrupted."。check_i18n.py 开始扫 .ts 之后逮到的
+  "app.notice.reviewer_paused",
+  "app.notice.auto_approve_on",
+  "transcript.mcp_failed_generic",
+  "transcript.mcp_failed_pre",
+  "transcript.mcp_failed_post",
+  // 同一批：文件夹权限没更新成功的兜底（useRoots.ts）、Qumge 登录请求失败的兜底（api.qumge.ts）
+  "access.roots_update_failed",
+  "onboarding.qumge_signin_http_error",
 ]);
 
 const flatEnBase = flatten(enBase as Tree);

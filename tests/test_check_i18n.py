@@ -243,6 +243,96 @@ def test_it_sees_multiline_text_that_contains_an_expression():
     assert not any("host" in f for f in found), found
 
 
+def _scan_fixture(files: dict[str, str]) -> list[str]:
+    """把样本写进一个临时 SRC，走【真实的 scan()】，返回完整记录（带文件名）。"""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as d:
+        src = Path(d)
+        for name, body in files.items():
+            (src / name).write_text(body, encoding="utf-8")
+        original = mod.SRC
+        try:
+            mod.SRC = src
+            return mod.scan()
+        finally:
+            mod.SRC = original
+
+
+def test_it_sees_english_in_ts_files():
+    """.ts 整类文件都在盲区里 —— 0.8.2 的 humanize.ts 就藏在那里。
+
+    它返回 { pre: "Run a command" }、{ pre: "Read ", obj: file }、{ pre: `Used ${name}` }
+    这样的对象，审批卡片和执行步骤直接渲染；约 37 句英文发给了中文用户，守卫报
+    「基线 0 条，无新增」—— 那时 scan() 只 rglob("*.tsx")。
+
+    【走 scan() 不走辅助函数】单测 _scan_ts 的话，把它从 scan() 里摘掉测试照样绿，
+    而"写了但没接上"正是守卫变弱最便宜的方式。
+
+    样本里的 setError(… || "…") 是专门放的：_TS_UI_CALL 第一版写成 set[A-Z]\\w*?Error，
+    [A-Z] 吃掉了 E，于是最常见的 setError 恰好配不上。
+    """
+    sample = (
+        "export function humanizeAsk(name: string, a: any): HumanLine {\n"
+        "  switch (name) {\n"
+        '    case "run_shell":\n'
+        '      return { pre: "Wanted to run ", obj: a.command };\n'   # UI 字段，多个词
+        '    case "read_file":\n'
+        '      return { pre: "Read ", obj: a.path };\n'               # UI 字段，一个词也算
+        "    default:\n"
+        "      return { pre: `Used ${name}` };\n"                     # 模板串，一个词
+        "  }\n"
+        "}\n"
+        'const apply = (res: any) => setError(res.error || "could not update directories");\n'
+        'const n = { kind: "notice", text: m.text || "Model switched" };\n'  # || 后面的兜底
+    )
+    # 一个都不该报：这些是 .ts 里最常见的字面量，第一眼看都含英文。
+    noise = (
+        'import { shortArgs } from "./components/ApprovalCard";\n'
+        "const url = `${httpBase()}/v1/sessions/${id}/messages`;\n"
+        'const h = { "Content-Type": "application/json" };\n'
+        'const k = { pre: t("humanize.step.read"), status: "in_progress", label: "gmail" };\n'
+        'window.open(url, "_blank", "noopener,noreferrer");\n'
+        'const ROW = "flex items-center gap-3 px-4 py-2.5";\n'
+        '// return { pre: "Commented out English" };\n'
+        'const x = fetch("https://example.com/a"); // "Trailing comment words"\n'
+        'const names = { slack: "Slack", telegram: "Telegram" };\n'
+        'console.warn("Debug output for developers");\n'
+    )
+    found = _scan_fixture({
+        "Fixture.ts": sample,
+        "Noise.ts": noise,
+        "Fixture.test.ts": 'it("renders the English label", () => {});\n',
+        "types.d.ts": 'declare const x: "Some Words Here";\n',
+    })
+    for expected in (
+        "Fixture.ts: Wanted to run",
+        "Fixture.ts: Read",
+        "Fixture.ts: `Used ${name}`",
+        "Fixture.ts: could not update directories",
+        "Fixture.ts: Model switched",
+    ):
+        assert expected in found, (expected, found)
+    assert not [f for f in found if not f.startswith("Fixture.ts: ")], found
+
+
+def test_ts_exemptions_are_live_and_reasoned():
+    """TS_NOT_RENDERED 里每一条都要【今天还扫得到】，并且写着理由。
+
+    这张表的价值在于"便宜不起来"（文件头那段）。一条过时的豁免 —— 字面量早就改掉了、
+    条目还躺着 —— 不会让任何东西变红，却会让下一个人以为"这里有先例，加一条就行"。
+    """
+    original = mod.TS_NOT_RENDERED
+    try:
+        mod.TS_NOT_RENDERED = {}
+        raw = set(mod._scan_ts())
+    finally:
+        mod.TS_NOT_RENDERED = original
+    for entry, reason in original.items():
+        assert entry in raw, f"豁免已经过时（源码里扫不到了），删掉：{entry}"
+        assert len(reason.strip()) >= 10, f"豁免没写理由：{entry}"
+
+
 def test_it_still_ignores_type_signatures_across_lines():
     # 跨行匹配放宽了边界，别把 `=> Promise<void>` 这类又收回来（基线里躺过 5 条）。
     for src in ("const f = () =>\n  doThing<void>\n", "type A = Map<\n  string\n>\n"):

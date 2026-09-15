@@ -5,7 +5,7 @@
 # All keys are optional; unset keys fall back to built-in defaults.
 
 model = "qumge:deepseek/deepseek-v4-flash"  # default model id (override per session in the UI/CLI)
-mode = "interactive"         # plan | interactive | auto | custom
+mode = "bypass-approvals"    # 对话默认（Marlo）| discuss | plan | interactive（动手前先问我）| auto-approve | custom
 max_iterations = 12          # max model<->tool iterations per turn before stopping
 
 # Commands auto-allowed without an approval prompt (prefix match).

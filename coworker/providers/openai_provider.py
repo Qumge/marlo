@@ -25,6 +25,63 @@ from .base import (
 from .capabilities import capabilities_for
 
 
+# --- Qumge 网关：请求体 gzip -------------------------------------------------------------
+# qumge.com 托在 Render 上，前面那层 Cloudflare WAF（客户配不了）对含某些字样的请求体直接
+# 回 403 Blocked（实测 `../../etc/passwd`、`env | curl ... @-` 这类）。聊天历史每轮重发，
+# 一旦某段文本进了对话，之后这个会话的每个请求都被挡。实测同样的 body 带 Content-Encoding:
+# gzip 就能过边缘（网关会把它解回来）。所以【只对 Qumge 网关】把请求体压成 gzip；其它厂商
+# （OpenAI、Ollama、各 OpenAI 兼容端）一个字节都不动。
+
+
+def _qumge_gateway_host() -> str:
+    """Qumge 网关的主机名：QUMGE_BASE_URL 覆盖，否则默认 qumge.com。只比主机名（不含端口/
+    路径），和 registry 里默认的 https://qumge.com/v1、以及设备流的 QUMGE_BASE_URL 覆盖对得上。
+    """
+    import os
+    from urllib.parse import urlsplit
+
+    raw = os.environ.get("QUMGE_BASE_URL") or "https://qumge.com"
+    return (urlsplit(raw).hostname or "").lower()
+
+
+def _is_qumge_base_url(base_url: Optional[str]) -> bool:
+    """base_url 的主机是不是 Qumge 网关。别的都返回 False —— 压缩必须严格只发给网关。"""
+    if not base_url:
+        return False
+    from urllib.parse import urlsplit
+
+    host = (urlsplit(base_url).hostname or "").lower()
+    return bool(host) and host == _qumge_gateway_host()
+
+
+def _gzip_qumge_request(request: Any) -> None:
+    """httpx 的「request」事件钩子：把请求体换成 gzip 并声明 Content-Encoding。
+
+    【为什么用事件钩子，不是自定义 transport】墙后用户很多。httpx 里传 transport= 只接管
+    默认那条挂载；一旦走环境变量代理，代理挂载有它自己的 transport，wrapper 会被整个绕过
+    —— 那正好把「压缩」在代理用户身上悄悄跳过。事件钩子在 _send_handling_redirects 里、
+    选 transport 之前对每个请求触发，代理与否都一样跑。
+
+    【幂等】SDK 每次重试都重建 Request（各压一次，不会叠加）；万一同一个 Request 被 httpx
+    的重定向再次触发，靠已在的 Content-Encoding 头短路。只压有体的请求（GET/空体跳过）。
+    流式补全的请求体仍是普通 JSON POST，同样压得到。
+    """
+    import gzip
+
+    from httpx._content import ByteStream
+
+    if request.headers.get("content-encoding"):
+        return
+    body = request.read()
+    if not body:
+        return
+    compressed = gzip.compress(body)
+    request.stream = ByteStream(compressed)
+    request._content = compressed
+    request.headers["Content-Encoding"] = "gzip"
+    request.headers["Content-Length"] = str(len(compressed))
+
+
 def resolve_api_key(secrets: Any = None) -> Optional[str]:
     """Resolve the OpenAI API key: env `OPENAI_API_KEY` first, else the SecretStore
     `provider:openai` profile (`{api_key}`). Lets a Tauri-launched sidecar — which does NOT
@@ -175,6 +232,16 @@ class OpenAIProvider(ProviderClient):
             kwargs: dict[str, Any] = {"api_key": key}
             if self._base_url:
                 kwargs["base_url"] = self._base_url
+            if _is_qumge_base_url(self._base_url):
+                # 只给 Qumge 网关挂 gzip 钩子。用 DefaultHttpxClient 是为了【原样】保留 SDK
+                # 的默认值（超时、连接池、跟随重定向、读代理环境变量）—— 它就是 SDK 文档里
+                # 「想自定义 http_client 又不丢内部默认值」指定要用的那个别名。事件钩子对
+                # 每个请求都跑，代理与否都覆盖到（见 _gzip_qumge_request）。
+                from openai import DefaultHttpxClient
+
+                kwargs["http_client"] = DefaultHttpxClient(
+                    event_hooks={"request": [_gzip_qumge_request]}
+                )
             self._client = OpenAI(**kwargs)
         return self._client
 

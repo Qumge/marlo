@@ -37,7 +37,15 @@ DEFAULT_MODEL = "qumge:deepseek/deepseek-v4-flash"
 @dataclass
 class Config:
     model: str = DEFAULT_MODEL
-    mode: str = "interactive"
+    # Marlo：对话会话默认「完全放手」（owner 2026-09-15）。Marlo 面向不写代码的人，
+    # 一个接一个的审批卡片被判定为比注入风险更伤产品；风险当面讲过（命令、改删文件、
+    # 访问网站、经已连接的邮箱/Slack 替用户发消息都不再问），owner 仍选这个默认。
+    # 硬底线不随模式变：设置文件、工作文件夹外的写入、.git/hooks、保存技能照样拦
+    # （permissions.evaluate 里 bypass 分支之上的那几道）。
+    # 只管【对话】：定时任务的引擎写死 Mode.INTERACTIVE（manager._build_task_engine），
+    # 无人值守时的审批照旧进收件箱 —— owner 同日定「自动化照旧」。
+    # 用户在全局 config.toml 里写了 mode 的，照旧以他写的为准。
+    mode: str = "bypass-approvals"
     max_iterations: int = 150
     allowed_commands: list[str] = field(
         default_factory=lambda: list(DEFAULT_ALLOWED_COMMANDS)
@@ -52,7 +60,12 @@ class Config:
     # Auto-Approve mode's feature flag (spec §1.5): when true, sessions get an LLM reviewer
     # that judges would-be approval cards in Mode.AUTO_APPROVE. Off by default; user-global
     # only — a cloned repo must not be able to hand itself a looser reviewer.
-    auto_approve: bool = False
+    # Marlo：默认打开（owner 2026-09-15）—— 这个开关只决定模式菜单里有没有「自动审批」这一项、
+    # 以及会话是否挂上审阅器；审阅器【只在会话真的切到 AUTO_APPROVE 且有人在场时】才调模型
+    # （TurnEngine._reviewer_active），默认的完全放手和需审批模式不会多一次调用、多一分钱。
+    # 打开的依据：审阅器评测经 Qumge 网关 DeepSeek v4 flash 两次全过门槛（含 holdout，
+    # reports/reviewer-eval-2026-09-15-deepseek-v4-flash*.md）。仍然只允许用户全局设置。
+    auto_approve: bool = True
     # Shadow evaluation (spec Part 6 step 3): the reviewer records what it WOULD have
     # decided on every approval card while the human still decides. Verdicts land in the
     # audit log next to the human's outcome and nothing else changes — this is how the ship

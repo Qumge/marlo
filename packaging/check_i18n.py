@@ -127,6 +127,10 @@ def _looks_like_prose(s: str) -> bool:
     # 逗号分隔的扩展名/mime 列表（<input accept=…>）
     if re.fullmatch(r"[\w*/.,\s-]+", s) and s.count(",") >= 2:
         return False
+    # 逗号连着、没有空格的小写词表：window.open 的 features（"noopener,noreferrer"）。
+    # 扫 .ts 之后第一次撞到 —— 上面那条要两个逗号，挡不住只有两项的。
+    if re.fullmatch(r"[a-z0-9_-]+(,[a-z0-9_-]+)+", s):
+        return False
     # npm 包名
     if s.startswith("@") and "/" in s:
         return False
@@ -179,10 +183,10 @@ _BRANDS = re.compile(
 )
 
 
-def _brands_only(s: str) -> bool:
+def _brands_only(s: str, min_words: int = 2) -> bool:
     """抠掉所有专名之后，还剩下句子吗？"""
     rest = _BRANDS.sub(" ", s)
-    return len(re.findall(r"\b[A-Za-z]{2,}\b", rest)) < 2
+    return len(re.findall(r"\b[A-Za-z]{2,}\b", rest)) < min_words
 
 
 ALLOWED = [
@@ -262,8 +266,12 @@ def _by_text_translated() -> set[str]:
 _BY_TEXT = _by_text_translated()
 
 
-def _allowed(s: str) -> bool:
-    """豁免吗？专名【组成的】字符串豁免；以专名【开头的句子】不豁免。"""
+def _allowed(s: str, min_words: int = 2) -> bool:
+    """豁免吗？专名【组成的】字符串豁免；以专名【开头的句子】不豁免。
+
+    min_words：抠掉专名后少于几个英文词算"只有专名"。默认 2 是 .tsx 那几条的老门槛；
+    .ts 的 UI 字段传 1（见 _scan_ts 上面的注释）。
+    """
     if s in _BY_TEXT:
         return True
     # 【第十一类假阳性】JSX 文本被 {expr} 截断时，这把尺子报的是【整段】
@@ -300,7 +308,7 @@ def _allowed(s: str) -> bool:
     # 当场变红。判据要同时满足：是模板串，且括号不配对。
     if "${" in s and s.count("${") != s.count("}"):
         return True
-    if _brands_only(s):
+    if _brands_only(s, min_words):
         return True
     return any(a.match(s) for a in ALLOWED[1:])
 
@@ -323,8 +331,174 @@ def _is_test(p: Path) -> bool:
 _JSX_COMMENT = re.compile(r"\{\s*/\*.*?\*/\s*\}", re.S)
 
 
-def scan() -> list[str]:
+# 【盲区是整类文件：.ts】
+#
+# 上面所有规则只跑在 *.tsx 上，而界面文字不只在组件里。0.8.2 的 humanize.ts 返回了
+# 约 37 句写死的英文：
+#
+#   return { pre: "Run a command", ... };          ← 审批卡片的标题
+#   return { pre: "Wanted to run ", obj: cmd };    ← 被拒的请求
+#   return { pre: `Used ${name}` };                ← 执行步骤
+#
+# 中文用户在审批卡片上读到「Run a command — 生成带可执行性标注的清单行」，守卫报的是
+# "基线 0 条，无新增"。又一次虚假的安心 —— 这次漏的不是某种形状，是【整类文件】。
+#
+# .ts 里没有 JSX，上面的 >…< 和属性规则搬过来只会误报（`a > B && c < d`），所以单独
+# 一套，按"位置能不能说明它会被读到"分三条：
+#   1. UI 字段的值：pre / title / text / message… 冒号后面【整个表达式】里的字面量
+#      （`text: m.text || "Model switched"` 的兜底值也算）。
+#   2. 设置文案的调用：setError(…) / setToast(…) 的参数。
+#   3. 其余位置的字面量：和 .tsx 的 _BARE / _TPL 同一套判据（至少两个词）。
+#
+# 前两条【一个词也算】（"Read "、"Interrupted."）。位置已经说明它是文案；而
+# _brands_only 那条"不足两个词就豁免"会把 humanize.ts 一半的分支放过去 —— "Read "、
+# "Wrote "、"Ran " 全是一个词。check_i18n_text.mjs 在 .tsx 那边撞过同一个门槛。
+# 全小写的单个词（"files"、"unknown"）仍然看不见：它和 id 长得一模一样，这是已知的边界。
+#
+# 【不跳过 Error() 的消息】这个代码库里 err.message 常常直接上屏：QumgeConnect 认不出
+# kind 就显示 err.message，设置页的语音报错、更新检查失败也是。"报错不渲染"不能按
+# 形状假设，只能逐条确认 —— 确认过不上屏的写进 TS_NOT_RENDERED，带理由。
+#
+# 逐行跑（和上面一致），所以 Prettier 把值折到下一行的 `text:\n  "…"` 看不见第 1、2
+# 条；多词的仍会被第 3 条接住。
+_TS_LIT = re.compile(r'"((?:[^"\\\n]|\\.)*)"|\'((?:[^\'\\\n]|\\.)*)\'|`((?:[^`\\\n]|\\.)*)`')
+# body 不在里面：api.ts 里 `body: JSON.stringify({...})` 是请求体，那一百多处全是给服务端的。
+_TS_UI_KEY = re.compile(
+    r"\b(?:pre|post|obj|label|title|text|message|description|placeholder|tooltip|hint|"
+    r"summary|blurb|detail|caption|heading|subtitle|error|reason)\s*:(?!:)"
+)
+# `set(?:[A-Z]\w*?)?Error`：第一版写的是 set[A-Z]\w*?Error —— [A-Z] 吃掉了 setError
+# 的 E，剩下 "rror" 配不上，于是【最常见的那一个】setError(… || "could not update
+# directories") 恰好看不见。测试里专门有这一条。
+_TS_UI_CALL = re.compile(
+    r"\bset(?:[A-Z]\w*?)?(?:Error|Err|Message|Msg|Toast|Notice|Title|Label|Text|Hint)\s*\("
+)
+
+# 不扫的 .ts：只有【译文表本身】—— en.ts 满屏英文是它的职责，zh.ts / zh-text.ts 里的
+# 英文是键和原文索引。按文件列，不按 legacyI18n/ 整个目录放行：同目录的 index.ts /
+# tx.ts / no-english.ts 今天扫出来是 0 条，没理由让它们以后也看不见。*.d.ts 只有类型。
+_TS_SKIP = {"legacyI18n/en.ts", "legacyI18n/zh.ts", "legacyI18n/zh-text.ts"}
+
+# 【确认过不会上屏的 .ts 字面量】—— 整条记录精确匹配，不是按文件放行：同一个文件里
+# 再写一句新的英文照样会报。改了措辞也会重新报，逼人重看一遍它还是不是不上屏。
+# 值是理由；没有理由的条目不该出现在这里。
+TS_NOT_RENDERED: dict[str, str] = {
+    "api.qumge.ts: `Qumge poll request failed (HTTP ${res.status}).`":
+        "QumgeConnect.tsx 的 poll() 用 .catch(() => ({ status: \"error\", error: t(\"qcCantReachServer\") }))"
+        " 接住它：message 被丢掉，上屏的是已经翻译的那句",
+    "api.ts: `media ${name}: ${res.status}`":
+        "PersonaView.tsx 里 getPersonaMediaUrl(…).catch(() => null)：截图拿不到就不显示那张图，报错不上屏",
+    "itemsFromMessages.ts: Error:":
+        "\"Error: \" 是【协议前缀】不是文案：Transcript.tsx 认 ERROR_PREFIX 这个前缀，渲染时换成"
+        " t(\"transcript.error_prefix\")。在这里翻了，那边就认不出，英文前缀反而原样漏出去",
+    "tauri.ts: This feature is available in the desktop app.":
+        "只在没有 __TAURI__ 时抛出。桌面版的 tauri.conf.json 开着 withGlobalTauri，永远有；"
+        "sidecar 也不给浏览器提供界面 —— 只有开发时用浏览器打开 vite dev 才碰得到",
+}
+
+
+def _code_part(line: str) -> str:
+    """切掉行尾 // 注释 —— 但不切字符串里的 //（"https://…"）。
+
+    .tsx 那边直接 line.find("//")，会把 URL 字符串切成半截；.ts 里 URL 多，
+    切坏之后引号配错对，后面真正的文案就被吞了。
+    """
+    i = 0
+    while i < len(line):
+        if line[i] in "\"'`":
+            m = _TS_LIT.match(line, i)
+            if not m:  # 没闭合（跨行的模板串、正则里的引号）：不再往后猜
+                return line
+            i = m.end()
+            continue
+        if line.startswith("//", i):
+            return line[:i]
+        i += 1
+    return line
+
+
+def _value_literals(line: str, i: int) -> list[tuple[str, str]]:
+    """从 i 读一个表达式，到同层的 , ; 或闭括号为止，返回其中的 (引号, 字面量)。"""
+    out: list[tuple[str, str]] = []
+    depth = 0
+    while i < len(line):
+        c = line[i]
+        if c in "\"'`":
+            m = _TS_LIT.match(line, i)
+            if not m:
+                break
+            out.append((c, next(g for g in m.groups() if g is not None)))
+            i = m.end()
+            continue
+        if c in "([{":
+            depth += 1
+        elif c in ")]}":
+            if depth == 0:
+                break
+            depth -= 1
+        elif c in ",;" and depth == 0:
+            break
+        i += 1
+    return out
+
+
+def _ts_entry(rel: str, quote: str, body: str) -> str:
+    # 和 .tsx 的格式一致：模板串带反引号，其余不带。两条规则命中同一个字面量时靠它去重。
+    if quote == "`":
+        return f"{rel}: `{' '.join(body.split())}`"
+    return f"{rel}: {body.strip()}"
+
+
+def _ts_ui_text(body: str) -> bool:
+    """UI 字段里的值是不是文案：一个词也算，id / 路径 / 纯插值不算。"""
+    plain = " ".join(re.sub(r"\$\{[^}]*\}", " ", body).split())
+    if not re.search(r"[A-Za-z]{2}", plain):
+        return False
+    if plain.startswith(("http", "/", "./", "../", "#")):
+        return False
+    # 全小写的单个 token：连接器 id、状态值、事件名（"pending"、"run_shell"）
+    if " " not in plain and re.fullmatch(r"[a-z0-9_\-./:]+", plain):
+        return False
+    return not _allowed(plain, min_words=1)
+
+
+def _scan_ts() -> list[str]:
     found: list[str] = []
+    for path in sorted(SRC.rglob("*.ts")):
+        rel = path.relative_to(SRC).as_posix()
+        if _is_test(path) or path.name.endswith(".d.ts") or rel in _TS_SKIP:
+            continue
+        for line in path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if stripped.startswith(("//", "*", "/*", "import ")) or "console." in line:
+                continue
+            if stripped.startswith("export ") and " from " in stripped:
+                continue
+            code = _code_part(line)
+            hits: set[str] = set()
+            # 1 + 2：位置说明它是文案
+            for rx in (_TS_UI_KEY, _TS_UI_CALL):
+                for m in rx.finditer(code):
+                    for quote, body in _value_literals(code, m.end()):
+                        if _ts_ui_text(body):
+                            hits.add(_ts_entry(rel, quote, body))
+            # 3：其余位置，门槛和 .tsx 相同
+            for m in _TS_LIT.finditer(code):
+                quote = code[m.start()]
+                body = next(g for g in m.groups() if g is not None)
+                if quote == "`" and "${" in body:
+                    plain = re.sub(r"\$\{[^}]*\}", " ", body)
+                    if (_TPL_WORD.search(plain) and not _TPL_BAD.search(code)
+                            and 't("' not in body and not _allowed(" ".join(body.split()))):
+                        hits.add(_ts_entry(rel, quote, body))
+                elif _looks_like_prose(body) and not _allowed(body.strip()):
+                    hits.add(_ts_entry(rel, quote, body))
+            found.extend(h for h in hits if h not in TS_NOT_RENDERED)
+    return found
+
+
+def scan() -> list[str]:
+    found: list[str] = _scan_ts()
     for path in sorted(SRC.rglob("*.tsx")):
         if _is_test(path):
             continue
@@ -396,6 +570,11 @@ def main() -> int:
     if len(files) < 50:
         print(f"只扫到 {len(files)} 个 .tsx —— 路径大概不对（SRC={SRC}）", file=sys.stderr)
         return 1
+    # .ts 同理：glob 写错成只匹配 .tsx 时，那一整类文件又会静默地回到盲区。
+    ts_files = [p for p in SRC.rglob("*.ts") if not _is_test(p)]
+    if len(ts_files) < 10:
+        print(f"只扫到 {len(ts_files)} 个 .ts —— 路径大概不对（SRC={SRC}）", file=sys.stderr)
+        return 1
 
     found = scan()
 
@@ -411,8 +590,10 @@ def main() -> int:
     if new:
         print(f"{len(new)} 条新的写死英文（界面文案要走 i18n）：", file=sys.stderr)
         print("\n".join(f"  {n}" for n in new[:20]), file=sys.stderr)
-        print("\n翻译它：加进 i18n/en.ts 和 zh.ts，用 t(\"key\")。"
-              "\n如果它真的不是界面文案（专名、协议词），加进这个文件的 ALLOWED。"
+        print("\n翻译它：键加进 locales/en.marlo.json 和 zh.marlo.json（新键同时进 localeOverlay.test.ts"
+              " 的 ADDITIONS），用 t(\"key\")。"
+              "\n如果它真的不是界面文案（专名、协议词），加进这个文件的 ALLOWED；"
+              ".ts 里确认不上屏的，加进 TS_NOT_RENDERED 并写理由。"
               f"\n【不要】把它加进 {BASELINE.name} —— 那张表只减不增。", file=sys.stderr)
         return 1
 
