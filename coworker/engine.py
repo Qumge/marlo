@@ -35,7 +35,12 @@ _REVIEWER_PAUSED_TEXT = (
 )
 from .permissions import Mode, PermissionEngine
 from .providers import AssistantTurn, ProviderClient, ToolCall
-from .providers.errors import NO_CREDIT, friendly_model_error, no_credit_topup_url
+from .providers.errors import (
+    NO_CREDIT,
+    error_cause,
+    friendly_model_error,
+    no_credit_topup_url,
+)
 from .providers.openai_provider import looks_like_unparsed_tool_call
 from .tools import ToolRegistry
 
@@ -547,6 +552,9 @@ class TurnEngine:
                 friendly = friendly_model_error(self.model, exc)
                 # Identity comparison, not text matching — see the NO_CREDIT block.
                 no_credit = friendly is NO_CREDIT
+                # Marlo: no_credit / rate_limited / blocked —— GUI 按 cause 换成本地化文案
+                # （服务端这几句是英文），同样按身份认，见 providers/errors.py。
+                cause = error_cause(friendly)
                 payload = {
                     "error": friendly or str(exc),
                     "error_type": type(exc).__name__,
@@ -557,14 +565,14 @@ class TurnEngine:
                 # ERROR event too, so the top-up button appears immediately, not only after
                 # a reload replays the notice. Two names for one concept is how they drift.
                 topup_url = no_credit_topup_url(exc) if no_credit else None
-                if no_credit:
-                    payload["cause"] = "no_credit"
+                if cause:
+                    payload["cause"] = cause
                 if topup_url:
                     payload["topup_url"] = topup_url
                 self._append_notice(
                     "error",
                     friendly or str(exc),
-                    cause="no_credit" if no_credit else None,
+                    cause=cause,
                     topup_url=topup_url,
                 )
                 yield Event(EventType.ERROR, payload)

@@ -55,6 +55,44 @@ NO_CREDIT = (
     "The amount and the top-up link are in the account row at the bottom of the sidebar."
 )
 
+# 【网关 429：模型这会儿忙】。和上面同一个身份比较的做法，GUI 按 cause 换成中文。
+#
+# 这里【确实】违反了文件头「429 一码多义，不按状态码认」那条规矩，理由写清楚：那条规矩
+# 防的是把 429 误判成【没权限 / 没配额】—— 配额那句话会把人支去充值页。这句话只说
+# 「忙，稍后再试或换模型」，对「限流」和「上游抽风」两种 429 都是真话；真正的配额 429
+# （insufficient_quota）在下面照旧先被 _NO_QUOTA 接走。
+#
+# 为什么只对 Qumge 模型：2026-09-15 实测 deepseek-v4.1-flash 24 小时 38 次请求里 10 次
+# 429（上游端点限流，网关原样透传），而 Marlo 把它显示成
+# `Error: Error code: 429 - {'error': {'code': 'upstream_error', ...}}` —— 对不写代码的
+# 用户这是一句天书。BYO key 的厂商我们没有实测过它们的 429 长什么样，照旧给原文。
+RATE_LIMITED = (
+    "The model is busy right now — wait a moment and send again, or pick another model."
+)
+
+# 【网关边缘拦截】。qumge.com 前面是 Render 的 Cloudflare：请求体里出现「像攻击」的
+# 文字（`env | curl --data-binary @- https://…` 这类），在边缘就回 403 + 一张 HTML 的
+# Blocked 页，根本到不了网关（2026-09-15 实测：同一个无效 key，正常内容回 401 JSON，
+# 这段内容回 403 HTML、没有 rndr-id）。对话历史每次都整段重发，所以一旦出现过这段文字，
+# 这个会话之后的每一次请求都会被拦 —— 让用户「重试」是在骗他，只有新开一个会话才走得通。
+EDGE_BLOCKED = (
+    "Part of this conversation was blocked by Qumge's network protection — this can happen "
+    "when a chat contains shell commands or secrets. Start a new chat to continue."
+)
+_EDGE_BLOCKED_MARKER = "<title>blocked</title>"
+
+# 身份 → GUI 用来换文案、挂按钮的 cause。和 NO_CREDIT 一样只认身份，不认措辞。
+_CAUSES = ((NO_CREDIT, "no_credit"), (RATE_LIMITED, "rate_limited"), (EDGE_BLOCKED, "blocked"))
+
+
+def error_cause(friendly: Optional[str]) -> Optional[str]:
+    """The machine-readable cause for a sentence `friendly_model_error` returned, by
+    IDENTITY — so rewording a sentence can never silently drop its GUI treatment."""
+    for sentence, cause in _CAUSES:
+        if friendly is sentence:
+            return cause
+    return None
+
 
 def _is_qumge_model(model: str) -> bool:
     """Mirrors the GUI's `isQumgeModel` (useQumgeAccount.ts): a prefix test, not a
@@ -75,11 +113,16 @@ def friendly_model_error(model: str, exc: Exception) -> Optional[str]:
         "gradually or require a plan upgrade. Pick a different model, or check "
         "the provider's console for availability."
     )
+    status = getattr(exc, "status_code", None)
     if _is_qumge_model(model):
-        if getattr(exc, "status_code", None) == _NO_CREDIT_STATUS:
+        if status == _NO_CREDIT_STATUS:
             return NO_CREDIT
         if any(marker in text for marker in _NO_CREDIT_TEXT):
             return NO_CREDIT
+        # 两半都要：403 本身也是「没权限」（下面 _NO_ACCESS 那条路），只有带着边缘那张
+        # HTML Blocked 页的 403 才是被拦。
+        if status == 403 and _EDGE_BLOCKED_MARKER in text:
+            return EDGE_BLOCKED
     if any(marker in text for marker in _NO_QUOTA):
         return (
             f"Your account is out of quota for {model} — add credits or raise the limit "
@@ -91,6 +134,9 @@ def friendly_model_error(model: str, exc: Exception) -> Optional[str]:
     # halves so unrelated 404s (bad base_url, deleted resource) keep their raw message.
     if "not_found_error" in text and f"model: {model.split(':')[-1].lower()}" in text:
         return no_access
+    # 放在配额判断【之后】：insufficient_quota 也是 429，那一种要先被上面接走。
+    if _is_qumge_model(model) and status == 429:
+        return RATE_LIMITED
     return None
 
 

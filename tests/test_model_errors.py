@@ -128,16 +128,82 @@ def test_text_fallback_when_the_sdk_swallowed_the_status_code():
     assert friendly_model_error("qumge:x", Exception("insufficient balance")) is errors.NO_CREDIT
 
 
-def test_404_and_429_are_unaffected():
+def test_404_is_unaffected():
     class _NotFound(Exception):
         status_code = 404
 
-    class _RateLimited(Exception):
-        status_code = 429
-
-    # 一码多义：404 也可能是 base_url 写错，429 也可能只是让你慢点
+    # 一码多义：404 也可能是 base_url 写错
     assert friendly_model_error("qumge:x", _NotFound("upstream boom")) is None
-    assert friendly_model_error("qumge:x", _RateLimited("slow down")) is None
+
+
+# -- gateway 429 / edge block（2026-09-15）------------------------------------------------
+# 原来这里钉的是「Qumge 的 429 原样透传」。改掉是有意的：那条规矩防的是把 429 说成
+# 没权限/没配额，而 RATE_LIMITED 只说「忙，稍后再试或换模型」，对两种 429 都是真话。
+# 真正的配额 429 仍然走配额那句（下面第二条钉着顺序）。
+class _Status(Exception):
+    def __init__(self, status_code, text=""):
+        super().__init__(text)
+        self.status_code = status_code
+
+
+def test_qumge_429_reads_as_busy_and_carries_a_cause():
+    from coworker.providers import errors
+
+    exc = _Status(
+        429, "Error code: 429 - {'error': {'code': 'upstream_error', 'message': 'Upstream provider error'}}"
+    )
+    msg = friendly_model_error("qumge:deepseek/deepseek-v4.1-flash", exc)
+    assert msg is errors.RATE_LIMITED
+    assert errors.error_cause(msg) == "rate_limited"
+
+
+def test_a_quota_429_still_reads_as_quota_not_busy():
+    exc = _Status(429, "Error code: 429 - {'error': {'code': 'insufficient_quota'}}")
+    msg = friendly_model_error("qumge:x", exc)
+    assert msg and "out of quota" in msg
+
+
+def test_non_qumge_429_still_passes_through_raw():
+    # BYO-key 厂商的 429 我们没实测过，照旧给原文
+    assert friendly_model_error("gpt-5.6-sol", _Status(429, "slow down")) is None
+
+
+# 2026-09-15 实测的边缘拦截响应的开头（Render 前面的 Cloudflare），SDK 把 HTML 整段塞进消息
+_BLOCKED_HTML = (
+    'Error code: 403 - <!DOCTYPE html>\n<html lang="en">\n  <head>\n    <meta charset="utf-8" />\n'
+    "    <title>Blocked</title>\n    <style>@font-face {"
+)
+
+
+def test_edge_block_reads_as_blocked_with_a_cause():
+    from coworker.providers import errors
+
+    msg = friendly_model_error("qumge:z-ai/glm-5.2", _Status(403, _BLOCKED_HTML))
+    assert msg is errors.EDGE_BLOCKED
+    assert errors.error_cause(msg) == "blocked"
+
+
+def test_a_plain_403_is_not_mistaken_for_an_edge_block():
+    from coworker.providers import errors
+
+    # 没有那张 HTML 页的 403 仍然是「没权限」那条路，或者原文
+    plain = friendly_model_error("qumge:x", _Status(403, "Error code: 403 - permission_error"))
+    assert plain is not errors.EDGE_BLOCKED
+    # 同一张 Blocked 页挂在非 Qumge 模型上，不是我们的边缘，不认
+    assert friendly_model_error("gpt-5.6-sol", _Status(403, _BLOCKED_HTML)) is None
+
+
+def test_error_cause_is_by_identity_not_wording():
+    from coworker.providers import errors
+
+    assert errors.error_cause(errors.NO_CREDIT) == "no_credit"
+    # 措辞一模一样但不是同一个对象 —— 不认。join 出来的是新对象（切片/拼空串可能被
+    # 解释器优化成同一个对象，那样这条就恒真了）。
+    twin = "".join(list(errors.RATE_LIMITED))
+    assert twin == errors.RATE_LIMITED and twin is not errors.RATE_LIMITED
+    assert errors.error_cause(twin) is None
+    assert errors.error_cause("some other sentence") is None
+    assert errors.error_cause(None) is None
 
 
 def test_402_is_gated_on_qumge_models_only():
