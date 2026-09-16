@@ -161,7 +161,12 @@
       "auto": "Full access",
       "auto_desc": "Run everything without asking"
     },
-    "approvals_inbox_note": " · approvals go to the Inbox"
+    "approvals_inbox_note": " · approvals go to the Inbox",
+    "queue": {
+      "waiting": "Sends when this reply finishes",
+      "cancel": "Cancel — put it back in the box",
+      "send_label": "Queue — sends when this reply finishes"
+    }
   },
   "usage": {
     "unknown_model": "Unknown model",

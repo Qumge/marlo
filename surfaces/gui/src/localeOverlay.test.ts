@@ -73,6 +73,11 @@ const ADDITIONS = new Set([
   "sidebar.new_runs_one",
   "sidebar.new_runs_failed_suffix",
   "composer.approvals_inbox_note",
+  // 跑着的时候按回车 = 排队（owner 2026-09-16 中途打的一整句被静默吞了）。
+  // 上游那条路只有「停止」，没有排队这回事，所以这三句是我们自己的
+  "composer.queue.waiting",
+  "composer.queue.cancel",
+  "composer.queue.send_label",
   // 用量 chip 的明细（c6c5ee5 先把余额说清楚，再等 402）—— 上游整个没有 usage 命名空间
   "usage.unknown_model",
   "usage.chip_title_bar",
