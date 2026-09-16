@@ -1,4 +1,5 @@
-# Desktop release builds — macOS (.dmg, arm64 + Intel) and Windows (.msi + NSIS .exe).
+# Desktop release builds — macOS arm64 (.dmg) and Windows (.msi + NSIS .exe).
+# Intel macOS 自 2026-09-16 起不再构建，理由与恢复方法见下面 matrix 里那段注释。
 #
 # CI calls the SAME scripts developers run locally (packaging/build_dmg.sh and
 # build_windows.ps1); this file only provisions the toolchain (Node, Rust, a Python venv at
@@ -45,11 +46,23 @@ jobs:
         include:
           - os: macos-latest # Apple Silicon
             slug: macos-arm64
-          # Intel macOS: macos-13 retired in Dec 2025; macos-15-intel replaced it and is
-          # the LAST x86_64 image Actions will offer (available until Aug 2027). Builds
-          # natively — the sidecar is a PyInstaller freeze, which cannot cross-compile.
-          - os: macos-15-intel
-            slug: macos-x64
+          # Intel macOS：2026-09-16 起【不再构建】（owner：现在基本没有 Intel 机器了）。
+          #
+          # 直接原因是它是发版链上最慢的一段：0.8.5 那次 Windows 和 arm64 都成功了，
+          # Intel 的签名+公证还在跑，整条发版卡在它身上等了半小时以上。
+          # ⚠️ 我们【没有】Intel 使用量的数据：GitHub 的 asset 下载数全平台都是 0（分发走
+          # cdn.qumge.com，不经过 GitHub），CDN 那边默认不记访问日志。所以这是按判断停的，
+          # 不是按数据停的 —— 万一真有 Intel 用户，他们会【静默地】不再收到更新
+          # （更新器读不到自己平台就当作"没有新版本"，App 照常能用，不报错）。
+          # 官网保留 0.8.5 的 Intel 下载并标明"不再更新"，所以他们至少装得上、也看得见。
+          #
+          # 【怎么恢复】把下面两行取消注释即可；GitHub 的 macos-15-intel 构建机可用到
+          # 2027 年 8 月（macos-13 已于 2025 年 12 月退役，它是最后一代 x86_64 镜像）。
+          # 本地不能交叉编译：sidecar 是 PyInstaller 冻结出来的，必须原生构建。
+          # 更新清单（packaging/make_update_manifest.py）里 Marlo-macos-x64 那条映射
+          # 【故意留着】：产物不存在时它自动跳过，留着是为了恢复时不用再想起这一处。
+          # - os: macos-15-intel
+          #   slug: macos-x64
           - os: windows-latest
             slug: windows
     runs-on: ${{ matrix.os }}
