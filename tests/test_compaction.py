@@ -101,17 +101,23 @@ class FakeSummarizer:
 
 
 def test_trigger_is_min_of_pct_and_cap():
-    assert trigger_tokens(100_000) == 80_000
-    assert trigger_tokens(1_000_000) == DEFAULT_CAP_TOKENS  # the 250k cap wins
-    assert trigger_tokens(None) == int(0.8 * DEFAULT_CONTEXT_WINDOW)
+    # Marlo 2026-09-16：cap 从上游的 250k 降到 60k（见 compaction.py 的注释），所以这里
+    # 原来写死的 80_000 / 0.8×默认窗口 不再成立 —— 它们当年的前提是「cap 比百分比大」。
+    # 这条测的是【取两者较小值】这条规则本身，所以把 cap 显式传进来，不再跟着默认值走；
+    # 我们自己的默认值由 tests/test_compaction_cap_marlo.py 用字面值钉住。
+    assert trigger_tokens(100_000, cap_tokens=250_000) == 80_000
+    assert trigger_tokens(1_000_000, cap_tokens=250_000) == 250_000  # cap 赢
+    assert trigger_tokens(None, cap_tokens=250_000) == int(0.8 * DEFAULT_CONTEXT_WINDOW)
+    assert trigger_tokens(1_000_000) == DEFAULT_CAP_TOKENS  # 默认值下 cap 仍然赢
     # both knobs are user-overridable
     assert trigger_tokens(100_000, threshold_pct=0.5, cap_tokens=40_000) == 40_000
     assert trigger_tokens(100_000, threshold_pct=0.5, cap_tokens=999_999) == 50_000
 
 
 def test_should_compact_crosses_threshold():
-    assert not should_compact(79_999, 100_000)
-    assert should_compact(80_000, 100_000)
+    # 同上：显式传 cap，量的是「跨过触发线」这件事，不是我们默认 cap 的大小
+    assert not should_compact(79_999, 100_000, cap_tokens=250_000)
+    assert should_compact(80_000, 100_000, cap_tokens=250_000)
 
 
 def test_estimate_tokens_is_chars_over_four():
