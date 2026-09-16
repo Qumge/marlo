@@ -21,7 +21,15 @@ from typing import Any, Optional
 # Trigger: min(threshold_pct × context_window, cap_tokens). The cap exists so 1M-context
 # models compact early — quality and latency degrade well before the nominal limit.
 DEFAULT_THRESHOLD_PCT = 0.8
-DEFAULT_CAP_TOKENS = 250_000
+# Marlo 2026-09-16：上游是 250_000，我们降到 60_000。
+#
+# 【为什么】Marlo 的默认模型窗口是 100 万 token（deepseek-v4.1-flash），所以触发线一直是
+# 那个 250k 的 cap —— 实际上等于不压缩。owner 反馈「很慢」，生产日志（36 小时、deepseek 系）
+# 按输入长度分档的中位耗时：<2万 3.1s / 2–4万 5.8s / 4–6万 13.8s / 8–9万 8.7s；而 agent 一轮
+# 里每一步都重发整段历史（实测某小时 41 次调用、平均输入 23k，另一小时平均 78k）。
+# 6 万这个数不是精确最优：它让绝大多数调用留在较快的区间，同时保留足够长的原文。
+# ⚠️ 等「优先支持缓存的上游端点」上线后要用新数据复核 —— 缓存命中会改变长上下文的代价。
+DEFAULT_CAP_TOKENS = 60_000
 # Models without a verified context_window entry in the matrix.
 DEFAULT_CONTEXT_WINDOW = 128_000
 # The newest slice kept verbatim, as a fraction of the trigger (a token budget, not a

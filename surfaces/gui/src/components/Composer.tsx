@@ -164,10 +164,35 @@ interface Props {
   reviewerPaused?: boolean;
 }
 
+// 排队中的一条消息 —— 就是 onSend 的三个参数，外加一个 id 和当初选中的技能行。
+// 存整行（而不只是 name）是为了「取消」能把 /前缀 还原成【选中的技能】，而不是
+// 一串看着像技能、实际只是普通文字的东西。
+type Queued = {
+  id: number;
+  body: string;
+  attachments: Attachment[];
+  skill?: string;
+  skillRow: SessionSkillRow | null;
+  // 入队时是哪个会话。换会话的那一次渲染里，「清空草稿」的 effect 和下面的出队
+  // effect 在【同一个 commit】里跑：清空排在前面，但出队那个 effect 闭包里的
+  // queued 仍是旧值，于是上一个会话的消息会被发进新会话（实测红过一次）。
+  // 谁的就只发给谁 —— 这个字段是判据，不靠 effect 的先后顺序。
+  resetKey?: string;
+};
+
 export function Composer(props: Props) {
   const { t } = useTranslation();
   const [text, setText] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  // 一轮还在跑的时候按回车，草稿搬到这里等着，而不是被 submit() 开头那个 return
+  // 悄悄吃掉（owner 2026-09-16：中途打了一整句，回车，界面上什么都没发生，字没了）。
+  // 是个【数组】：第二次回车也照样排队 —— 只收一条的话，第二条又会被吞，那正是
+  // 这次要修的毛病。
+  const [queued, setQueued] = useState<Queued[]>([]);
+  const queueSeq = useRef(0);
+  // 已经交给 onSend 的那条的 id。StrictMode 下 effect 会跑两遍，光靠 setQueued
+  // 清空挡不住第二遍（清空要等下一次渲染）—— 「只发一次」的依据是这个 ref。
+  const sentQueueId = useRef(-1);
   // Whether the top-up card is currently interposed in front of the send. Flipped true
   // only by the gate below (an Enter press while canSpend === false) — never derived
   // straight from canSpend, or a zero balance alone would pop the card the moment the
@@ -280,6 +305,8 @@ export function Composer(props: Props) {
     setText("");
     setAttachments([]);
     setPendingSkill(null);
+    // 排队的消息同理：它是对【那个】会话说的，不能跟着跑到下一个会话里去发出来。
+    setQueued([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.resetKey]);
 
@@ -419,6 +446,70 @@ export function Composer(props: Props) {
 
   const needsModel = props.modelReady === false;
 
+  // 把排队的那条原样放回输入框。草稿里已经有东西就放在【前面】另起一行 ——
+  // 这次修的就是"文字不见了"，修法本身不能又开出一个弄丢文字的口子。
+  const restoreToDraft = (q: Queued) => {
+    const line = q.skill ? `/${q.skill} ${q.body}` : q.body;
+    setText((cur) => (cur.trim() ? `${line}\n${cur}` : line));
+    setAttachments((cur) => mergeAttachments(cur, q.attachments));
+    setPendingSkill((cur) => cur ?? q.skillRow);
+    textareaRef.current?.focus();
+  };
+
+  const cancelQueued = (q: Queued) => {
+    setQueued((cur) => cur.filter((x) => x.id !== q.id));
+    restoreToDraft(q);
+  };
+
+  // 停止 = "别再自己往下做了"。这时候把排队的那条发出去，正是用户按停止想拦住的
+  // 事情。而且回合一停 running 就变 false，下面那个 effect 会立刻把它发出去 ——
+  // 所以必须在这里先接住。退回输入框：字还在、看得见、能改，要发得他自己再按一次。
+  const stopRun = () => {
+    if (queued.length) {
+      for (const q of [...queued].reverse()) restoreToDraft(q);
+      setQueued([]);
+    }
+    props.onInterrupt();
+  };
+
+  // 队列出口。回合结束（running 落回 false）时发出队首那条 —— 但闸门要在【发出去
+  // 的这一刻】重新问一遍：排队时连着、有模型、有余额，不代表现在还是。
+  useEffect(() => {
+    const q = queued[0];
+    if (!q || q.id === sentQueueId.current) return;
+    if (q.resetKey !== props.resetKey) return; // 换会话了 —— 清空那个 effect 已经在路上
+    if (props.running) return; // 这一轮还在跑，接着等
+    if (dictation?.recording || dictationBusy) return; // 人正对着麦克风说话，等他说完
+    if (!props.connected) return; // 断线：留在队列里，连上了这个 effect 自己会再跑
+    // 下面两条和 submit() 里是同一个处置：不发，把草稿还给用户，并把他送到该去的地方。
+    if (needsModel) {
+      setQueued((cur) => cur.filter((x) => x.id !== q.id));
+      restoreToDraft(q);
+      props.onConnectModel?.();
+      return;
+    }
+    if (props.canSpend === false) {
+      setQueued((cur) => cur.filter((x) => x.id !== q.id));
+      restoreToDraft(q);
+      setGated(true);
+      props.onTopUp?.();
+      return;
+    }
+    sentQueueId.current = q.id;
+    setQueued((cur) => cur.filter((x) => x.id !== q.id));
+    props.onSend(q.body, q.attachments, q.skill);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    queued,
+    props.resetKey,
+    props.running,
+    props.connected,
+    props.canSpend,
+    needsModel,
+    dictation?.recording,
+    dictationBusy,
+  ]);
+
   const submit = () => {
     // While the "/" popup is open the draft is a query, not a message — never send it.
     if (slashQuery !== null) return;
@@ -426,13 +517,28 @@ export function Composer(props: Props) {
     // the skill rides as its own field. (Named `body`, not `t`, so it can't shadow i18n's t.)
     const skill = prefixIntact ? pendingSkill!.name : undefined;
     const body = (skill ? text.slice(skill.length + 1) : text).trim();
-    if (
-      (!body && attachments.length === 0 && !skill) ||
-      (props.running && !props.gateOpen) ||
-      dictation?.recording ||
-      dictationBusy
-    )
+    if ((!body && attachments.length === 0 && !skill) || dictation?.recording || dictationBusy)
       return;
+    // 一轮还在跑（而且不是在等审批 —— 那条路下面照旧立刻发）：排队。附件和 /技能
+    // 原样跟着走，因为它们就是 onSend 的另外两个参数，搬过去不比搬文字难。
+    if (props.running && !props.gateOpen) {
+      queueSeq.current += 1;
+      setQueued((cur) => [
+        ...cur,
+        {
+          id: queueSeq.current,
+          body,
+          attachments,
+          skill,
+          skillRow: pendingSkill,
+          resetKey: props.resetKey,
+        },
+      ]);
+      setText("");
+      setAttachments([]);
+      setPendingSkill(null);
+      return;
+    }
     // No model connected: keep the draft (don't drop it) and send the user to setup instead.
     if (needsModel) {
       props.onConnectModel?.();
@@ -550,6 +656,14 @@ export function Composer(props: Props) {
   // A pinned /skill is sendable content on its own (tester catch 2026-07-26: the arrow
   // stayed grey after picking a skill, reading as "stuck").
   const hasContent = text.trim().length > 0 || attachments.length > 0 || !!pendingSkill;
+  const sendBtnClass = (active: boolean) =>
+    "w-7 h-7 rounded-full grid place-items-center shrink-0 transition-colors " +
+    (active ? "bg-accent text-white hover:brightness-105" : "bg-paper border border-line text-faint");
+  const sendArrow = (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 19V5M5 12l7-7 7 7" />
+    </svg>
+  );
 
   return (
     <div className="composer-wrap px-6 pb-5 pt-4">
@@ -577,6 +691,41 @@ export function Composer(props: Props) {
           </button>
         </div>
       )}
+
+      {/* 排队中的消息 —— 就摆在输入框正上方。按下回车之后，用户必须【立刻】在
+          手边看到那句话去了哪、什么时候发、以及怎么把它要回来。 */}
+      {queued.map((q) => {
+        const line = ((q.skill ? `/${q.skill} ` : "") + q.body).trim();
+        return (
+          <div
+            key={q.id}
+            data-testid="queued-message"
+            // 读屏用户按下回车同样得听见"它去哪了"——卡片本身就是那句交代。
+            role="status"
+            className="max-w-3xl mx-auto mb-1.5 flex items-center gap-2 rounded-lg border border-line bg-paper px-3 py-1.5 text-[13px]"
+          >
+            <Icon name="clock" size={13} className="shrink-0 text-faint" />
+            <span className="shrink-0 text-faint">{t("composer.queue.waiting")}</span>
+            <span className="flex-1 min-w-0 truncate text-ink" title={line}>
+              {line}
+            </span>
+            {q.attachments.length > 0 && (
+              <span className="shrink-0 max-w-[30%] truncate text-faint">
+                {q.attachments.map((a) => a.name).join(", ")}
+              </span>
+            )}
+            <button
+              data-testid="queued-cancel"
+              className="shrink-0 opacity-60 hover:opacity-100"
+              onClick={() => cancelQueued(q)}
+              title={t("composer.queue.cancel")}
+              aria-label={t("composer.queue.cancel")}
+            >
+              ✕
+            </button>
+          </div>
+        );
+      })}
 
       {/* Attachments preview — a strip ABOVE the input box (mock/Claude-style). */}
       {attachments.length > 0 && (
@@ -815,27 +964,37 @@ export function Composer(props: Props) {
             </button>
           )}
 
-          {/* send / stop — a pending gate re-opens Send: the reply resolves it */}
+          {/* send / stop — a pending gate re-opens Send: the reply resolves it.
+              跑着的时候，只要框里有东西，发送键就得【在】：按它是排队，不是丢掉。
+              一个只剩「停止」的工具栏等于在说"这句现在没地方交"，而用户已经打完了。 */}
           {props.running && !props.gateOpen ? (
-            <button className="btn danger" onClick={props.onInterrupt}>
-              {t("composer.stop")}
-            </button>
+            <>
+              {hasContent && (
+                <button
+                  className={sendBtnClass(!dictation?.recording && !dictationBusy)}
+                  onClick={submit}
+                  disabled={!!dictation?.recording || !!dictationBusy}
+                  title={t("composer.queue.send_label")}
+                  aria-label={t("composer.queue.send_label")}
+                >
+                  {sendArrow}
+                </button>
+              )}
+              <button className="btn danger" onClick={stopRun}>
+                {t("composer.stop")}
+              </button>
+            </>
           ) : (
             <button
-              className={
-                "w-7 h-7 rounded-full grid place-items-center shrink-0 transition-colors " +
-                (hasContent && props.connected && !dictation?.recording && !dictationBusy
-                  ? "bg-accent text-white hover:brightness-105"
-                  : "bg-paper border border-line text-faint")
-              }
+              className={sendBtnClass(
+                hasContent && props.connected && !dictation?.recording && !dictationBusy,
+              )}
               onClick={submit}
               disabled={!props.connected || !!dictation?.recording || !!dictationBusy}
               title={needsModel ? t("composer.connect_to_send") : undefined}
               aria-label={t("common.send")}
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M12 19V5M5 12l7-7 7 7" />
-              </svg>
+              {sendArrow}
             </button>
           )}
         </div>

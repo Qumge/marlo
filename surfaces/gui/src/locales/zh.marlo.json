@@ -518,7 +518,12 @@
       "start_dictation_btn": "开始口述"
     },
     "connect_to_send": "连接一个模型才能发送",
-    "placeholder_cowork": "说说你要什么…（也可以把文件拖进来）"
+    "placeholder_cowork": "说说你要什么…（也可以把文件拖进来）",
+    "queue": {
+      "waiting": "这轮结束后自动发出",
+      "cancel": "取消，把它放回输入框",
+      "send_label": "排队，这轮结束后发出"
+    }
   },
   "intro": {
     "greeting": "你每周的时间花在哪儿？",
