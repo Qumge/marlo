@@ -56,7 +56,8 @@ test("session facts: none on a fresh session, coworker + model in the title tool
   // Coworker + model in the tooltip (UX-029 restored the coworker name — the picker shipped);
   // the title is a plain fact, not a button to the persona page.
   const ttl = page.getByTestId("session-title");
-  await expect(ttl).toHaveAttribute("title", /Coworker · Claude Opus 4.8/);
+  // Marlo：默认同事显示为 "Marlo"（personaScope.DEFAULT_PERSONA_LABEL），不是 "Coworker"。
+  await expect(ttl).toHaveAttribute("title", /Marlo · Claude Opus 4.8/);
   await expect(page.getByTestId("session-subtitle")).toHaveCount(0);
   await expect(page.locator(".dd").filter({ hasText: "Claude Opus 4.8" })).toBeVisible();
   await ttl.click();
