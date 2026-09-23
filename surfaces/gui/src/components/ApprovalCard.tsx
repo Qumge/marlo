@@ -284,6 +284,22 @@ function Buttons({
   autoApprove?: boolean;
 }) {
   const { t } = useTranslation();
+  // Marlo（owner 2026-09-23）：删了 / 付了就收不回来的操作（tapOnly）只给「只允许这一次」和
+  // 「拒绝」—— 上游在删除命令上提供「始终允许这条命令」，一次点击就永久放行 rm -rf。
+  // 服务端同样不认这类长期授权（manager._grant_offered）。
+  if (item.tapOnly) {
+    return (
+      <div className="approval-btns" data-testid="approval-tap-only">
+        <button className="btn approval-primary" onClick={() => onApprove("once")}>
+          {primaryLabel}
+        </button>
+        <span className="spacer" />
+        <button className="btn quiet-deny" onClick={() => onApprove("deny")}>
+          {denyLabel ?? t("approval.btn.deny")}
+        </button>
+      </div>
+    );
+  }
   const connector = item.category === "connector";
   const offerStanding = !!(runTask && item.standingTarget);
   const verbKey = TOOL_VERBS[item.name];

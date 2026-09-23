@@ -148,3 +148,39 @@ async def test_a_plain_denial_carries_no_words(tmp_path):
     [e async for e in eng.run("send it")]
     result = next(m for m in eng.messages if m.get("role") == "tool")
     assert "user_said" not in result["content"]
+
+
+# -- 收不回来的操作：没有任何长期授权（owner 2026-09-23）-----------------------------------
+#
+# 上游的删除命令审批卡上有「始终允许这条命令」—— 一次点击永久放行 rm -rf。对 Marlo 的用户
+# 太危险：删除 / 付款类只给「只允许这一次」。界面不画那些按钮，服务端也不认（本地 API 能直接
+# 发 resolution，不能只靠界面）。
+
+
+@pytest.fixture
+def manager(tmp_path, monkeypatch):
+    from coworker.server.manager import SessionManager
+
+    monkeypatch.setenv("COWORKER_STATE_DIR", str(tmp_path / "state"))
+    ws = tmp_path / "repo"
+    ws.mkdir()
+    yield SessionManager(data_dir=tmp_path / "data", workspace=str(ws))
+
+
+def _request(name, args):
+    from coworker.engine import PermissionRequest
+
+    return PermissionRequest(
+        tool_name=name, arguments=args, metadata=None, reason="requires approval", tool_call_id="c1"
+    )
+
+
+@pytest.mark.parametrize("resolution", ["always_command", "always_tool", "this_run", "always_task", "always"])
+def test_no_standing_grant_for_an_irreversible_command(manager, resolution):
+    out = manager.approval_outcome(resolution, _request("run_shell", {"command": "rm -rf 报销/2024"}), "s1")
+    assert out is ApprovalOutcome.ONCE
+
+
+def test_ordinary_commands_keep_their_grants(manager):
+    out = manager.approval_outcome("always_command", _request("run_shell", {"command": "python report.py"}), "s1")
+    assert out is ApprovalOutcome.ALWAYS_COMMAND

@@ -33,6 +33,9 @@ test("approval: anything else declines and Marlo gets the words", async ({ page 
 test("approval that can't be undone: talking doesn't count, the button does", async ({ page }) => {
   const box = await say(page, "删掉旧报销");
   await expect(box).toHaveAttribute("placeholder", /点上面的按钮/);
+  // 收不回来的操作没有长期授权：只有「只允许这一次」和「拒绝」。
+  await expect(page.getByTestId("approval-tap-only")).toBeVisible();
+  await expect(page.getByRole("button", { name: /始终允许|本次会话/ })).toHaveCount(0);
   await say(page, "删吧");
   await expect(page.getByText("这一步删了 / 付了就收不回来，请点上面卡片的按钮确认。")).toBeVisible();
   // Nothing was sent to the server: the command did not run and the card is still there.
