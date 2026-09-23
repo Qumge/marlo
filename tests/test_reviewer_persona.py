@@ -53,6 +53,11 @@ def test_swe_lead_can_answer_the_channels_it_listens_to():
 def test_reviewer_and_swe_lead_ship(tmp_path, monkeypatch):
     monkeypatch.delenv("OPENWORKER_UNSHIPPED", raising=False)
     reg = PersonaRegistry(state_path=tmp_path / "personas.json")
+    # Marlo：两者都随发布包带着（list_all 里有），但默认关、不进选择器；设置里一开就回来。
+    assert {"reviewer", "swe-lead"} <= {p["id"] for p in reg.list_all()}
+    assert not {"reviewer", "swe-lead"} & {e["name"] for e in reg.sidebar()}
+    reg.set_enabled("reviewer", True)
+    reg.set_enabled("swe-lead", True)
     ids = [e["name"] for e in reg.sidebar()]
     assert "reviewer" in ids and "swe-lead" in ids
     # The SWE Lead's workers stay unshipped and unsurfaced; the lead staffs them anyway.

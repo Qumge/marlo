@@ -46,8 +46,14 @@ export function SessionSetupRow(props: Props) {
   const [openMenu, setOpenMenu] = useState<"coworker" | "folder" | "machine" | null>(null);
   const [recents, setRecents] = useState<RecentWorkspace[] | null>(null);
   const [error, setError] = useState("");
-  const personas = (props.personas || []).filter((p) => p.enabled);
+  // 选择器里列的是「启用 且 在选择器里」的同事 —— 和服务端 sidebar() 同一个判据。
+  const personas = (props.personas || []).filter((p) => p.enabled && p.surfaced !== false);
   const current = personas.find((p) => p.id === props.agent);
+  // Marlo（owner 2026-09-23）：只有一个可选的同事时（默认就只有 Marlo），没什么可选，
+  // 整个同事按钮不出现 —— 一个点开只有一项的菜单只会让人多想一步。导入 / 管理同事
+  // 仍然在 设置 ▸ 同事 里。会话若挂在一个不在列表里的同事上（比如以前开过的安全同事），
+  // 按钮照旧出现，让人看得见自己在跟谁说话。
+  const showCoworkerChip = personas.length > 1 || !current;
   const machines = props.machines || [];
   const currentMachine = machines.find((m) => m.id === props.machine) || null;
 
@@ -82,6 +88,7 @@ export function SessionSetupRow(props: Props) {
       {openMenu && <div className="fixed inset-0 z-20" onClick={() => setOpenMenu(null)} />}
 
       {/* Coworker chip — name only, no icon (owner call). */}
+      {showCoworkerChip && (
       <div className="relative">
         <button className={chip} data-testid="coworker-chip" onClick={() => toggle("coworker")}>
           {fullPersonaName(current?.name, props.agent)}
@@ -133,6 +140,7 @@ export function SessionSetupRow(props: Props) {
           </div>
         )}
       </div>
+      )}
 
       {/* Folder chip — only for personas that work in a folder. */}
       {props.showFolder && (

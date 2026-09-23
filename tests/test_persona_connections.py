@@ -65,7 +65,8 @@ def test_persona_detail_endpoint(tmp_path, monkeypatch):
     # identity + capabilities (from the manifest/entry)
     assert detail["id"] == "ops"
     assert detail["name"] == "Ops Coworker"
-    assert detail["enabled"] is True  # builtins ship enabled (UX-029)
+    # Marlo：ops 是工程类同事，默认关（registry.MARLO_ENGINEERING_PERSONAS）。
+    assert detail["enabled"] is False
     assert detail["requires_folder"] is False  # ops is a scratch persona
     assert detail["default_permission_mode"] == "interactive"
     assert "anthropic:claude-opus-4-8" in detail["recommended_models"]
@@ -141,7 +142,7 @@ def test_persona_enable_toggle(tmp_path, monkeypatch):
     client = TestClient(create_app(mgr))
 
     before = {p["id"]: p for p in client.get("/v1/personas").json()["personas"]}
-    assert before["ops"]["enabled"] is True  # builtins ship enabled (UX-029)
+    assert before["ops"]["enabled"] is False  # Marlo：工程类同事默认关
     assert before["cowork"]["enabled"] is True
 
     resp = client.post("/v1/personas/ops/enable", json={"enabled": True}).json()

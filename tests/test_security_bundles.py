@@ -39,7 +39,10 @@ def test_bundles_register_as_enabled_code_builtins(tmp_path):
         entry = reg.get(pid)
         assert entry is not None and entry.builtin
         assert entry.requires_folder  # folder pick at send, like Code
-        assert reg.is_enabled(pid) is True  # in the picker out of the box
+        # Marlo：安全类同事默认关（白领用不上），设置里一开就进选择器。
+        assert reg.is_enabled(pid) is False
+        reg.set_enabled(pid, True)
+        assert reg.is_enabled(pid) is True and pid in [e["name"] for e in reg.sidebar()]
         agent = reg.agent(pid)  # catalog-expanded tools materialize
         assert agent.requires_folder and agent.subagents
 

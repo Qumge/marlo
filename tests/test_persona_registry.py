@@ -36,14 +36,16 @@ def test_release_lineup(tmp_path, monkeypatch):
     reg = _reg(tmp_path)
     # 2026-09-04: the Reviewer (a solo PR reviewer for the GitHub configurations) and
     # the SWE Lead ship too (owner vision: an SWE team on a machine).
-    assert [e["name"] for e in reg.sidebar()] == [
-        "cowork", "cloud-posture", "dep-audit", "reviewer", "security", "swe-lead",
-    ]
+    # Marlo（owner 2026-09-23）：发布包仍带着这些同事（list_all 里有），但工程 / 安全类
+    # 默认关、不进选择器 —— 选择器里只有 Marlo。
+    assert [e["name"] for e in reg.sidebar()] == ["cowork"]
     listed = {p["id"]: p for p in reg.list_all()}
     assert set(listed) == {
         "cowork", "code", "cloud-posture", "dep-audit", "reviewer", "security", "swe-lead",
     }
     assert listed["code"]["enabled"] is False and listed["code"]["surfaced"] is False
+    for pid in ("cloud-posture", "dep-audit", "reviewer", "security", "swe-lead"):
+        assert listed[pid]["enabled"] is False and listed[pid]["surfaced"] is False
     assert listed["cloud-posture"]["group"] == "security"
     assert listed["cowork"]["group"] == "general"
     # Enabling Code from Settings puts it in the picker (enable implies surface).
@@ -69,8 +71,14 @@ def test_sidebar_defaults_to_surfaced_builtins(tmp_path, internal):
     # Built-ins ship enabled (UX-029: the coworker picker is their front door) except
     # Code (owner 2026-08-21). Installed personas remain opt-in.
     assert ids[0] == "cowork"
-    # Leads surface (the user's entry to a team — "the team IS the lead"); team
-    # workers never do.
+    # Marlo：工程 / 安全类同事（含各 lead）默认关、不进选择器；打开之后 lead 照上游
+    # 进选择器（"the team IS the lead"），team workers never do.
+    assert ids == ["cowork"]
+    from coworker.personas.registry import MARLO_ENGINEERING_PERSONAS
+
+    for pid in MARLO_ENGINEERING_PERSONAS:
+        reg.set_enabled(pid, True)
+    ids = [e["name"] for e in reg.sidebar()]
     assert set(ids) == {
         "cowork", "ops", "security", "cloud-posture", "dep-audit", "reviewer",
         "swe-lead", "devsecops-lead", "devops-lead", "triage-lead",
@@ -161,3 +169,24 @@ def test_set_unknown_persona_raises(tmp_path):
     reg = _reg(tmp_path)
     with pytest.raises(KeyError):
         reg.set_enabled("ghost", False)
+
+
+def test_marlo_engineering_personas_default_off_but_explicit_choice_wins(tmp_path, monkeypatch):
+    """Marlo 面向白领：工程 / 安全类内置同事默认关、不进选择器（owner 2026-09-23）。
+    但用户之前自己开过的（状态文件里的显式选择）照旧 —— 升级不能把人家在用的同事藏掉。"""
+    import json
+
+    from coworker.personas.registry import MARLO_ENGINEERING_PERSONAS
+
+    monkeypatch.delenv("OPENWORKER_UNSHIPPED", raising=False)
+    assert {"security", "cloud-posture", "dep-audit", "reviewer", "swe-lead"} <= MARLO_ENGINEERING_PERSONAS
+    fresh = _reg(tmp_path / "fresh")
+    assert [e["name"] for e in fresh.sidebar()] == ["cowork"]
+
+    state = tmp_path / "upgraded" / "personas.json"
+    state.parent.mkdir(parents=True)
+    state.write_text(
+        json.dumps({"enabled": {"security": True}, "surfaced": {"security": True}}), encoding="utf-8"
+    )
+    upgraded = PersonaRegistry(state_path=state)
+    assert [e["name"] for e in upgraded.sidebar()] == ["cowork", "security"]
