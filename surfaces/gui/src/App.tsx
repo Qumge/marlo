@@ -105,10 +105,13 @@ import {
   questionItemFromPayload,
   teamItemFromPayload,
   toolItemFromPayload,
+  skillOfferItemFromPayload,
   workItemsItemFromPayload,
 } from "./cardPayloads";
 import { ApprovalCard } from "./components/ApprovalCard";
 import { ToolRequestCard } from "./components/ToolRequestCard";
+import { SkillOfferCard } from "./components/SkillOfferCard";
+import { classifyReply } from "./replyIntent";
 import { ConnectorRequestCard } from "./components/ConnectorRequestCard";
 import { DirectoryRequestCard } from "./components/DirectoryRequestCard";
 import { PlanCard } from "./components/PlanCard";
@@ -967,6 +970,10 @@ export function App() {
           if (unattendedRef.current) break;
           setItems((p) => [...p, toolItemFromPayload(d)]);
           break;
+        case "skill_offered":
+          if (unattendedRef.current) break;
+          setItems((p) => [...p, skillOfferItemFromPayload(d)]);
+          break;
         case "connector_requested":
           if (unattendedRef.current) break;
           // 两种 connreq 共用这个事件名：上游 §11.6 的（request: connect|grant，给团队
@@ -1361,6 +1368,15 @@ export function App() {
       respondTeam(false, text);
       return;
     }
+    // Marlo：技能卡在等「装不装」时，打的字 / 说的话先当成回答（owner 2026-09-23：
+    // 用户平时是说话，只有授权才点一下）。是 / 否只认词表（replyIntent）—— 不让模型
+    // 替用户认定「同意了」；别的话按「没装」收卡，原话交给模型按原话继续。
+    if (!unattended && pendingSkillOffer?.kind === "skilloffer" && !pendingSkillOffer.resolved) {
+      setItems((p) => [...p, { kind: "user", text, ts: Date.now() / 1000 }]);
+      const intent = classifyReply(text);
+      respondSkill(intent === "yes", intent === "other" ? text : undefined);
+      return;
+    }
     if (
       !unattended &&
       pendingItemsReq?.kind === "itemsreq" &&
@@ -1435,6 +1451,11 @@ export function App() {
       setItems((p) => resolveLastConnReq(p, "approved"));
     dropSessionInbox("connector");
     sessionRef.current?.respondConnector(connect);
+  };
+  const respondSkill = (approved: boolean, feedback?: string) => {
+    setItems((p) => resolveLastSkillOffer(p, approved ? "installed" : "declined"));
+    dropSessionInbox("tool"); // 技能询问和工具安装一样停在 tool 类 Inbox 项里
+    sessionRef.current?.respondSkill(approved, feedback);
   };
   const respondTool = (approved: boolean) => {
     setItems((p) => resolveLastToolReq(p, approved ? "installed" : "skipped"));
@@ -1826,6 +1847,7 @@ export function App() {
   const pendingDirReq = [...items].reverse().find((i) => i.kind === "dirreq" && !i.resolved);
   const pendingConnReq = [...items].reverse().find((i) => i.kind === "connreq" && !i.resolved);
   const pendingToolReq = [...items].reverse().find((i) => i.kind === "toolreq" && !i.resolved);
+  const pendingSkillOffer = [...items].reverse().find((i) => i.kind === "skilloffer" && !i.resolved);
   const pendingPlan = [...items].reverse().find((i) => i.kind === "planreq" && !i.resolved);
   const pendingTeam = [...items].reverse().find((i) => i.kind === "teamreq" && !i.resolved);
   const pendingItemsReq = [...items].reverse().find((i) => i.kind === "itemsreq" && !i.resolved);
@@ -2405,7 +2427,8 @@ export function App() {
               wantedModels={personaModels}
               modelLabels={machine ? machineSettings?.model_labels || {} : modelLabels}
               running={running}
-              gateOpen={!unattended && (!!pendingTeam || !!pendingItemsReq)}
+              gateOpen={!unattended && (!!pendingTeam || !!pendingItemsReq || !!pendingSkillOffer)}
+              gatePlaceholder={!unattended && pendingSkillOffer ? t("skilloffer.placeholder") : undefined}
               // An offline machine's cached transcript is read-only: the send
               // path is dead by construction, so say so explicitly rather than
               // letting a hopeful socket state enable the button.
@@ -2470,6 +2493,8 @@ export function App() {
                     modelLabels={machine ? machineSettings?.model_labels || {} : modelLabels}
                     onRespond={respondTeam}
                   />
+                ) : !unattended && pendingSkillOffer?.kind === "skilloffer" ? (
+                  <SkillOfferCard item={pendingSkillOffer} onRespond={(ok) => respondSkill(ok)} />
                 ) : !unattended && pendingToolReq?.kind === "toolreq" ? (
                   <ToolRequestCard item={pendingToolReq} onRespond={respondTool} />
                 ) : !unattended && pendingDirReq?.kind === "dirreq" ? (
@@ -2713,6 +2738,18 @@ function resolveLastConnReq(items: Item[], resolved: "connected" | "approved" | 
     const it = copy[i];
     if (it.kind === "connreq" && !it.resolved) {
       copy[i] = { ...it, resolved } as Item;
+      break;
+    }
+  }
+  return copy;
+}
+
+function resolveLastSkillOffer(items: Item[], resolved: "installed" | "declined"): Item[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i >= 0; i--) {
+    const it = copy[i];
+    if (it.kind === "skilloffer" && !it.resolved) {
+      copy[i] = { ...it, resolved };
       break;
     }
   }

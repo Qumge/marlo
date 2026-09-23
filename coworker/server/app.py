@@ -2855,6 +2855,8 @@ def create_app(manager: SessionManager) -> FastAPI:
         # 名字也叫 connector_requester —— 会把上面那个一键连接的 requester 覆盖掉。
         # 我们只让它管 grant_connector。
         connector_granter = manager.inbox_connector_requester(session_id, agent, visibility=_visibility)
+        # Marlo：缺技能时先问（卡片在对话里；没人看着时进 Inbox）。
+        skill_offerer = manager.inbox_skill_offerer(session_id, agent, visibility=_visibility)
 
         team_approver = manager.inbox_team_approver(session_id, agent, visibility=_visibility)
 
@@ -2908,6 +2910,7 @@ def create_app(manager: SessionManager) -> FastAPI:
             team_approver=team_approver,
             items_approver=items_approver,
             connector_granter=connector_granter,
+            skill_offerer=skill_offerer,
         )
         if engine is None:
             await ws.send_json(
@@ -3116,6 +3119,21 @@ def create_app(manager: SessionManager) -> FastAPI:
                             {
                                 "connected": bool(message.get("connected")),
                                 "approved": bool(message.get("approved")),
+                            }
+                        )
+                    )
+                elif kind == "skill_response":
+                    # 装不装技能。feedback = 用户没说是也没说否时的原话（打字或语音），
+                    # 交给模型按原话继续。
+                    _resolve_pending(
+                        json.dumps(
+                            {
+                                "approved": bool(message.get("approved")),
+                                **(
+                                    {"feedback": str(message.get("feedback"))}
+                                    if message.get("feedback")
+                                    else {}
+                                ),
                             }
                         )
                     )

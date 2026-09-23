@@ -10,6 +10,7 @@ export type EventType =
   | "directory_requested"
   | "connector_requested"
   | "tool_requested"
+  | "skill_offered"
   | "connector_requested"
   | "question_requested"
   | "plan_proposed"
@@ -222,6 +223,15 @@ export type Item =
       summary?: string;
       source?: string;
       resolved?: "installed" | "skipped";
+    }
+  // Marlo：缺一个技能时先问用户要不要装（install_skill 的人工闸门）。
+  // title / why 是模型用用户的话写的；slug 只用来标识，不给人看。
+  | {
+      kind: "skilloffer";
+      slug: string;
+      title: string;
+      why: string;
+      resolved?: "installed" | "declined";
     }
   | {
       kind: "planreq";

@@ -8,6 +8,7 @@ import {
   questionResponseMessage,
   teamResponseMessage,
   toolResponseMessage,
+  skillResponseMessage,
 } from "./cardPayloads";
 import type { GroupedQuestion, QuestionOption, SessionInfo, WsEvent } from "./types";
 import { t } from "./legacyI18n";
@@ -2992,6 +2993,11 @@ export class Session {
   respondConnector(connect: boolean) {
     // 两个字段都带：我们的服务端读 connected，上游 §11.6（grant_connector）读 approved。
     this.send({ ...connectorResponseMessage(connect), connected: connect });
+  }
+
+  // 回答「要不要装这个技能」。feedback = 用户说的既不是是也不是否的那句话。
+  respondSkill(approved: boolean, feedback?: string) {
+    this.send(skillResponseMessage(approved, feedback));
   }
 
   // Reply to a `request_tool` prompt: install the pinned build, or skip the check.

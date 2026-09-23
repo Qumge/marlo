@@ -7,10 +7,12 @@ import {
   teamGateResolution,
   teamItemFromPayload,
   toolItemFromPayload,
+  skillOfferItemFromPayload,
   workItemsItemFromPayload,
 } from "../cardPayloads";
 import { TeamRequestCard } from "./TeamRequestCard";
 import { ToolRequestCard } from "./ToolRequestCard";
+import { SkillOfferCard } from "./SkillOfferCard";
 import { leadDecisionFromArgs, WorkerDecisionCard } from "./WorkerDecisionCard";
 import { WorkItemsCard } from "./WorkItemsCard";
 import type { Item, QuestionOption } from "../types";
@@ -349,8 +351,11 @@ export function InboxItemCard({
   // Team and work-item gates render their own card below; the plain-text body repeats
   // it (it exists for Slack mirrors), so it is not printed above the card.
   const toolCard = item.kind === "tool" && typeof item.data?.tool === "string";
+  // Marlo：「要不要装这个技能」也停在 tool 类 Inbox 项里（data.skill）。
+  const skillCard = item.kind === "tool" && typeof item.data?.skill === "string";
   const gateCard =
     toolCard ||
+    skillCard ||
     (item.kind === "plan" &&
       ((item.data?.gate === "team" && Array.isArray(item.data.members)) ||
         (item.data?.gate === "items" && Array.isArray(item.data.items))));
@@ -527,6 +532,13 @@ export function InboxItemCard({
           >
             {t("approval.btn.not_now")}
           </button>
+        </div>
+      ) : skillCard ? (
+        <div className={(compact ? "" : "mt-2.5 ") + "gate-nested"}>
+          <SkillOfferCard
+            item={skillOfferItemFromPayload({ ...item.data, why: item.body })}
+            onRespond={(approved: boolean) => onResolve(item.id, JSON.stringify({ approved }))}
+          />
         </div>
       ) : toolCard ? (
         // A parked tool request had no branch here and fell through to "Dismiss", which the

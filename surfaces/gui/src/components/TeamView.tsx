@@ -1199,6 +1199,7 @@ function WorkerConversation({
               "question_requested",
               "directory_requested",
               "tool_requested",
+              "skill_offered",
               "plan_proposed",
               "tool_finished",
               "turn_done",

@@ -120,6 +120,8 @@ interface Props {
   // so `running` is true — but typing must stay possible, because a typed reply
   // IS an answer (decline-with-feedback). Unblocks Send while the gate is up.
   gateOpen?: boolean;
+  // 等待中的卡片自己的提示语（技能卡：「说『装吧』或『先不用』…」）；不给就用提案卡那句。
+  gatePlaceholder?: string;
   connected: boolean;
   // False when the default model's provider has no key — the composer shows a "connect a model"
   // banner and routes sends to setup (preserving the draft) instead of dropping them.
@@ -856,7 +858,7 @@ export function Composer(props: Props) {
           className="w-full block px-3.5 pt-3.5 pb-1.5 text-body"
           placeholder={
             props.gateOpen
-              ? t("composer.placeholder_gate")
+              ? props.gatePlaceholder || t("composer.placeholder_gate")
               : props.placeholder || t("composer.placeholder")
           }
           value={text}

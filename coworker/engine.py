@@ -158,6 +158,13 @@ class TurnEngine:
         items_approver: Optional[
             Callable[[dict[str, Any]], "Awaitable[dict[str, Any]]"]
         ] = None,
+        # Marlo：`install_skill` 的人工闸门。缺一个技能时先问用户「要不要装」，
+        # 同意才真的装（owner 2026-09-23：用户平时只是说话，授权时才点一下）。
+        # 可带 `.installed(slug) -> name | None`：已装的不再问。None = 不能问的场景
+        # （TUI、测试），工具照旧直接装。
+        skill_offerer: Optional[
+            Callable[[dict[str, Any]], "Awaitable[dict[str, Any]]"]
+        ] = None,
         # Handles `grant_connector` (spec §11.6): emits CONNECTOR_REQUESTED, waits
         # for the human, returns {approved, …}.
         #
@@ -214,6 +221,9 @@ class TurnEngine:
         # carries the roster (actor ids). None on surfaces that can't prompt.
         self.team_approver = team_approver
         self.connector_granter = connector_granter
+        self.skill_offerer = skill_offerer
+        # 这一个对话里用户说过「不装」的技能：不再弹卡（不纠缠）。
+        self._skills_declined: set[str] = set()
         # Handles `propose_work_items` (the decomposition gate): emits ITEMS_PROPOSED,
         # waits; approval creates the items on the board. Mode-independent by design —
         # unlike propose_plan it carries no permission-mode semantics: propose_plan is
@@ -1121,6 +1131,10 @@ class TurnEngine:
                 continue
             if tool_call.name == "propose_team":
                 async for event in self._handle_team_proposal(tool_call):
+                    yield event
+                continue
+            if tool_call.name == "install_skill" and self.skill_offerer is not None:
+                async for event in self._handle_skill_offer(tool_call):
                     yield event
                 continue
             if tool_call.name == "grant_connector":
@@ -2401,6 +2415,75 @@ class TurnEngine:
                 "status": status,
                 "result_preview": _preview(result),
             },
+        )
+
+    async def _handle_skill_offer(self, tool_call: ToolCall) -> AsyncIterator[Event]:
+        """Ask the user before installing a catalog skill; install only on yes.
+
+        The card speaks the user's language: `title` / `why` are written by the model
+        (the catalog's own names — xlsx, pptx — and English blurbs mean nothing to the
+        people Marlo is for). Declining is a normal outcome, never an error, and the
+        same skill is not offered twice in one conversation.
+        """
+        args = tool_call.arguments or {}
+        slug = str(args.get("slug", "")).strip()
+        title = str(args.get("title", "")).strip() or slug.rsplit("/", 1)[-1]
+        why = str(args.get("why", "")).strip()
+        installed = getattr(self.skill_offerer, "installed", None)
+        already = installed(slug) if (slug and callable(installed)) else None
+        result: dict[str, Any]
+        if not slug:
+            result = {"ok": False, "error": "empty slug"}
+        elif already:
+            result = {
+                "ok": True,
+                "already_installed": True,
+                "name": already,
+                "next": f"call load_skill({already!r}) to read it",
+            }
+        elif slug in self._skills_declined:
+            result = {
+                "installed": False,
+                "error": "the user already declined this skill in this conversation",
+                "guidance": "Do not offer it again. Carry on without it and say plainly what you could not do.",
+            }
+        else:
+            yield Event(EventType.SKILL_OFFERED, {"slug": slug, "title": title, "why": why})
+            self._audit(tool_call, stage="skill_offered", reason=why)
+            answer = await self._wait_tool(tool_call,
+                self.skill_offerer(dict(args), tool_call.id),
+                interrupted={"approved": False, "error": "interrupted by user"},
+            ) or {"approved": False, "error": "no response"}
+            if answer.get("approved"):
+                # Yes: run the registered install_skill itself (it installs and refreshes
+                # the session's loader so load_skill sees the skill this turn).
+                result, _status = await asyncio.to_thread(self._execute_sync, tool_call)
+            else:
+                self._skills_declined.add(slug)
+                result = {
+                    "installed": False,
+                    "reason": answer.get("error") or "the user declined to install it",
+                    "guidance": (
+                        "Carry on without it and say plainly what you could not do. "
+                        "Do not offer this skill again in this conversation."
+                    ),
+                }
+                feedback = str(answer.get("feedback") or "").strip()
+                if feedback:
+                    # Neither yes nor no ("有没有更简单的办法？"): the user's own words
+                    # are the instruction now.
+                    result["user_said"] = feedback
+                    result["guidance"] = (
+                        "The user answered in their own words instead of yes/no — follow "
+                        "what they said. Do not offer this skill again in this conversation."
+                    )
+        ok = bool(result.get("ok"))
+        status = "ok" if ok else "denied"
+        self.messages.append(self._timed_result(tool_call, result))
+        self._audit(tool_call, stage="finished", status=status, result=result, result_preview=_preview(result))
+        yield Event(
+            EventType.TOOL_FINISHED,
+            {"name": tool_call.name, "status": status, "result_preview": _preview(result)},
         )
 
     async def _handle_tool_request(self, tool_call: ToolCall) -> AsyncIterator[Event]:

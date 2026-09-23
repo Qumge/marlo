@@ -274,6 +274,7 @@ def build_engine(
     question_asker: Optional[Any] = None,
     tool_requester: Optional[Any] = None,
     connector_granter: Optional[Any] = None,
+    skill_offerer: Optional[Any] = None,
     team_approver: Optional[Any] = None,
     items_approver: Optional[Any] = None,
     subscription_store: Optional[Any] = None,
@@ -716,6 +717,7 @@ def build_engine(
         question_asker=question_asker,
         tool_requester=tool_requester,
         connector_granter=connector_granter,
+        skill_offerer=skill_offerer,
         team_approver=team_approver,
         items_approver=items_approver,
     )

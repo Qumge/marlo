@@ -706,6 +706,7 @@ class SessionManager(QumgeManagerMixin):
         team_approver: Optional[Any] = None,
         items_approver: Optional[Any] = None,
         connector_granter: Optional[Any] = None,
+        skill_offerer: Optional[Any] = None,
     ) -> Optional[TurnEngine]:
         engine = self._engines.get(session_id)
         self.reconcile_obsolete_prompts(session_id)
@@ -730,6 +731,8 @@ class SessionManager(QumgeManagerMixin):
                 engine.items_approver = items_approver
             if connector_granter is not None:
                 engine.connector_granter = connector_granter
+            if skill_offerer is not None:
+                engine.skill_offerer = skill_offerer
             return engine
 
         record = self.session_store.load(session_id)
@@ -848,6 +851,7 @@ class SessionManager(QumgeManagerMixin):
             team_approver=team_approver or self.inbox_team_approver(session_id, agent),
             items_approver=items_approver or self.inbox_items_approver(session_id, agent),
             connector_granter=connector_granter or self.inbox_connector_requester(session_id, agent),
+            skill_offerer=skill_offerer or self.inbox_skill_offerer(session_id, agent),
             subscription_store=self.subscriptions,
             channel_buffer=self.channel_buffer,
             routing_targets=self._routing_targets(session_id, agent),
@@ -1493,6 +1497,55 @@ class SessionManager(QumgeManagerMixin):
             return answer_result(item.questions, answer)
 
         return ask
+
+    def inbox_skill_offerer(self, session_id: str, agent: str, *, visibility=None):
+        """Marlo：`install_skill` 的人工闸门 —— 缺一个技能时先问用户要不要装。
+
+        走 Inbox，所以后台 / 自唤醒 / 重启后恢复的回合一样能问；有人看着的时候
+        visibility 让它在对话里就地出现。回答是 {approved, feedback?}：feedback 是
+        用户没说是也没说否时的原话（「有没有更简单的办法？」），交还给模型。
+
+        卡片上的字是模型写的 title / why —— 目录里的 xlsx / pptx 和英文简介用户看不懂。
+        """
+
+        async def offer(args, tool_call_id=None):
+            slug = str(args.get("slug", "")).strip()
+            title = str(args.get("title", "")).strip() or slug.rsplit("/", 1)[-1]
+            item = self.inbox.add_tool_request(
+                session_id,
+                title,
+                body=str(args.get("why", "")).strip(),
+                inbox=self.inbox_routing.route_for(session_id, agent),
+                data={"skill": slug, "title": title},
+                tool_call_id=tool_call_id,
+                **({"visibility": visibility()} if visibility else {}),
+            )
+            if item.state == "pending":
+                self.persist_session(session_id)
+                if item.visibility == VIS_INBOX:
+                    await self.mirror_inbox_item(item)
+            resp = _parse_inbox_json(await self.inbox.wait(item.id))
+            out: dict[str, Any] = {"approved": bool(resp.get("approved"))}
+            feedback = str(resp.get("feedback") or "").strip()
+            if feedback and not out["approved"]:
+                out["feedback"] = feedback
+            return out
+
+        def installed(slug: str):
+            # 从目录装的技能在 frontmatter 里记着 source: qumge:<slug>（qumge_catalog.install）。
+            from ..skills.store import SkillStore
+
+            want = f"qumge:{slug}"
+            try:
+                for row in SkillStore().rows():
+                    if row.get("source") == want:
+                        return row.get("name")
+            except OSError:
+                pass
+            return None
+
+        offer.installed = installed  # type: ignore[attr-defined]
+        return offer
 
     def inbox_approver(self, session_id: str, agent: str):
         """Inbox-based approver — the default for no-socket runs (background, self-wake, durable
@@ -5953,6 +6006,8 @@ class SessionManager(QumgeManagerMixin):
             model=self.resolve_persona_model(task.agent, task.model),
             mode=Mode.INTERACTIVE,
             approver=self._scheduled_approver(task, session_id),
+            # 自动化缺技能时也是先问（进 Inbox），不悄悄装。
+            skill_offerer=self.inbox_skill_offerer(session_id, task.agent),
             provider=self.provider,
             memory_store=self.memory_store,
             memory_workspace=self._memory_key_for(None, task.workspace),

@@ -31,9 +31,12 @@ COWORK_INSTRUCTIONS = (
     "no todo list means the user sees nothing happening. Keep exactly one item in_progress and "
     "update statuses as you finish each step. NEVER inline a multi-line script in a shell "
     "command (no heredocs): write it to a file with write_file, then run that file — the "
-    "script stays reviewable and the approval prompt stays short. To change an existing "
-    "file, read it and edit it in place with replace_in_file or apply_patch rather than "
-    "rewriting the whole file; reserve write_file for new files or full rewrites. "
+    "script stays reviewable and the approval prompt stays short. "
+    # Marlo：上游（OPE-186）这里教模型用 replace_in_file / apply_patch 就地改 —— 但
+    # 知识工作角色故意没有补丁工具（catalog._PATCH_TOOLS：审批卡片上的 diff 白领看不懂）。
+    # 让模型去调它没有的工具，只会白烧一轮。
+    "To change an existing text file, read it first, then write the whole updated file "
+    "with write_file. Word and Excel deliverables go through write_docx / write_xlsx. "
     "Be outcome-oriented — "
     "clarify the goal, do the "
     "work in small reversible steps, and finish with the actual artifact plus a short summary "

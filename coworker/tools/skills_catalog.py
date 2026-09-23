@@ -67,14 +67,24 @@ def catalog_tools(loader: Any) -> list:
             "searched_as": out.get("searched_as", ""),
         }
 
-    def install_skill(slug: str) -> dict:
-        """Install a skill from the catalog by its `slug`, then read it with load_skill.
+    def install_skill(slug: str, title: str, why: str) -> dict:
+        """Offer the user a catalog skill you need for their task; it is installed only
+        if they say yes. Then read it with load_skill.
 
-        Install without asking the user first — they told you what they want done,
-        not which tool to use. Installing is local and reversible: it writes the
-        skill's folder (SKILL.md plus any files it ships, like REFERENCE.md or
-        scripts/) into this machine's skills folder.
+        Only when what you already have can't do the job well. Do NOT offer a skill for
+        Word or Excel files (write_docx / write_xlsx already make them), plain writing,
+        web search, or reading files — just do those.
+
+        The user sees a short card and can answer by tapping or just saying yes/no, so:
+        - `title`: what the skill is, in the user's language and words (e.g. "PPT 制作"),
+          never the catalog id (pptx, xlsx).
+        - `why`: ONE sentence in the user's language on what it lets you do for THIS task
+          (e.g. "把你的内容排成一份像样的季度汇报 PPT").
+        If they decline, carry on without it and say plainly what you could not do;
+        never offer the same skill twice in one conversation.
         """
+        # title / why 只给卡片用（engine._handle_skill_offer）；没有闸门的场景直接装。
+        del title, why
         s = (slug or "").strip()
         if not s:
             return {"ok": False, "error": "empty slug"}

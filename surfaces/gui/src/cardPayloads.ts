@@ -86,6 +86,18 @@ export function directoryItemFromPayload(d: any): DirectoryRequestItem {
   return { kind: "dirreq", reason: d.reason || "", path: d.path || "", writable: !!d.writable, primary: !!d.primary };
 }
 
+export type SkillOfferItem = Extract<Item, { kind: "skilloffer" }>;
+
+/** `skill_offered`. */
+export function skillOfferItemFromPayload(d: any): SkillOfferItem {
+  return { kind: "skilloffer", slug: d.slug || d.skill || "", title: d.title || "", why: d.why || "" };
+}
+
+/** feedback：用户没说是也没说否时的原话（打字或语音），模型按原话继续。 */
+export function skillResponseMessage(approved: boolean, feedback?: string) {
+  return { type: "skill_response", approved, ...(feedback ? { feedback } : {}) };
+}
+
 /** `tool_requested`. */
 export function toolItemFromPayload(d: any): ToolRequestItem {
   return {

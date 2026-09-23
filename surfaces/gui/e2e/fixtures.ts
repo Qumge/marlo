@@ -835,6 +835,15 @@ export async function mockApi(page: import("@playwright/test").Page) {
         }
         // Spec §11.6: the lead asks to give a worker a connector after staffing, or a
         // coworker asks for a service to be connected — both suspend on the verdict.
+        // Marlo：缺技能先问（skill_offered），然后挂起等用户点或说。
+        if (/季度汇报|quarterly deck/i.test(msg.text)) {
+          send("skill_offered", {
+            slug: "anthropics/skills/pptx",
+            title: "PPT 制作",
+            why: "把你的内容排成一份像样的季度汇报 PPT",
+          });
+          return;
+        }
         if (/grant nia github/i.test(msg.text)) {
           upstreamConnReq = true;
           sendState("connector_requested", "connector-request", "grant-github");
@@ -1101,6 +1110,16 @@ export async function mockApi(page: import("@playwright/test").Page) {
           text: msg.approved
             ? "Granted — nia can push the branch now."
             : "Understood — I'll route that step through myself.",
+        });
+        send("turn_done");
+      } else if (msg.type === "skill_response") {
+        // 把收到的回答原样说出来，spec 才能断言「装吧」被认成了同意、长句原话被带回去。
+        send("assistant_message", {
+          text: msg.approved
+            ? "技能装好了，开始做 PPT。"
+            : msg.feedback
+              ? `没装。你说：${msg.feedback}`
+              : "好，先不装，我用现有的办法做。",
         });
         send("turn_done");
       } else if (msg.type === "tool_response") {

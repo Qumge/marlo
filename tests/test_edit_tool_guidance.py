@@ -37,6 +37,8 @@ def test_code_files_capability_gets_the_same_guidance(tmp_path):
         assert d[name] == text
 
 
-def test_cowork_prompt_steers_edits_to_in_place_tools():
-    assert "edit it in place with replace_in_file or apply_patch" in COWORK_INSTRUCTIONS
-    assert "reserve write_file for new files or full rewrites" in COWORK_INSTRUCTIONS
+def test_cowork_prompt_steers_edits_to_the_tools_it_has():
+    # Marlo：cowork 没有补丁工具，提示词不能让它去调（上游这里断言的是 replace_in_file）。
+    assert "replace_in_file" not in COWORK_INSTRUCTIONS
+    assert "apply_patch" not in COWORK_INSTRUCTIONS
+    assert "write the whole updated file with write_file" in COWORK_INSTRUCTIONS

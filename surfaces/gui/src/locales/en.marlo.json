@@ -283,5 +283,15 @@
     "api": {
       "http_error": "Request failed (HTTP {{status}})."
     }
+  },
+  "skilloffer": {
+    "head": "To do this I need to add a skill first",
+    "from": "From the Qumge skill library — next time it just works.",
+    "voice_hint": "You can also just say “install it” or “not now”.",
+    "skip": "Not now",
+    "install": "Install",
+    "installed": "Skill installed",
+    "declined": "Not installed",
+    "placeholder": "Say “install it” or “not now” — or just tell Marlo what you think"
   }
 }
