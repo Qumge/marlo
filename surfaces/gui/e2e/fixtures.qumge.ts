@@ -25,8 +25,13 @@ export const QUMGE_STATE = {
   } as Record<string, unknown> | null,
 };
 
+/** 盖在 /v1/settings 上的字段（比如 model_ready:false = 还没登录、没有模型）。
+ * 放这里而不是改 fixtures.ts 里的 SETTINGS：理由同文件头。 */
+export const SETTINGS_OVERRIDE: Record<string, unknown> = {};
+
 /** 每个用例开始前恢复默认。模块级状态活得比一个 page 长。 */
 export function resetQumgeState(): void {
+  for (const k of Object.keys(SETTINGS_OVERRIDE)) delete SETTINGS_OVERRIDE[k];
   Object.assign(QUMGE_STATE, {
     signed_in: true,
     email: "someone@example.com",

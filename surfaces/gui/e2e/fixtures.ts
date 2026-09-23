@@ -1,5 +1,5 @@
 import { test as base, expect, type Page } from "@playwright/test";
-import { qumgeRoute, resetQumgeState } from "./fixtures.qumge";
+import { qumgeRoute, resetQumgeState, SETTINGS_OVERRIDE } from "./fixtures.qumge";
 // Card payloads live in the gallery's state files (one source for the gallery, the unit
 // tests and this fixture) — replay them by id instead of writing the event by hand.
 import { statePayload, type CardId } from "../src/gallery/states";
@@ -755,6 +755,11 @@ export async function mockApi(page: import("@playwright/test").Page) {
             name: "request_connector",
             status: msg.connected ? "ok" : "denied",
           });
+          if (!msg.connected) {
+            send("assistant_message", {
+              text: "好，先不连。" + (msg.feedback ? ` 你说：${msg.feedback}` : ""),
+            });
+          }
           send("turn_done", { status: "completed" });
         }, 800);
         return;
@@ -799,6 +804,33 @@ export async function mockApi(page: import("@playwright/test").Page) {
               "Auto-approve is paused for the rest of this turn — the reviewer blocked 5 actions in a row, so approvals now come to you.",
           });
           return; // turn stays open: the pause is a mid-turn state
+        }
+        // 用话回答卡片（owner 2026-09-23）：发消息 = 能口头答；删文件 = 只认按钮；授权文件夹。
+        if (/发给张总/.test(msg.text)) {
+          pendingTool = "send_message";
+          send("tool_proposed", { name: "send_message", arguments: { text: "季度汇报已发，请查收" } });
+          send("permission_required", {
+            name: "send_message",
+            arguments: { text: "季度汇报已发，请查收" },
+            reason: "requires approval",
+            tap_only: false,
+          });
+          return;
+        }
+        if (/删掉旧报销/.test(msg.text)) {
+          pendingTool = "run_shell";
+          send("tool_proposed", { name: "run_shell", arguments: { command: "rm -rf 报销/2024" } });
+          send("permission_required", {
+            name: "run_shell",
+            arguments: { command: "rm -rf 报销/2024" },
+            reason: "requires approval",
+            tap_only: true,
+          });
+          return;
+        }
+        if (/看看报销文件夹/.test(msg.text)) {
+          send("directory_requested", { path: "/Users/me/Desktop/报销", reason: "读一下你的报销单据", writable: false });
+          return;
         }
         if (/run an unsure tool/i.test(msg.text)) {
           // The Auto-Approve reviewer answered `unsure`: the card carries its reason.
@@ -1000,14 +1032,18 @@ export async function mockApi(page: import("@playwright/test").Page) {
         if (pendingTool === "run_shell") {
           if (msg.decision === "deny") {
             send("tool_finished", { name: "run_shell", status: "denied" });
-            send("assistant_message", { text: "Understood — skipped the command." });
+            send("assistant_message", {
+              text: "Understood — skipped the command." + (msg.feedback ? ` 你说：${msg.feedback}` : ""),
+            });
           } else {
             send("tool_finished", { name: "run_shell", status: "done", result_preview: "README.md" });
             send("assistant_message", { text: "The command ran; 1 file found." });
           }
         } else if (msg.decision === "deny") {
           send("tool_finished", { name: pendingTool, status: "denied" });
-          send("assistant_message", { text: "Understood — skipped it." });
+          send("assistant_message", {
+            text: "Understood — skipped it." + (msg.feedback ? ` 你说：${msg.feedback}` : ""),
+          });
         } else {
           send("tool_finished", { name: pendingTool, status: "done", result_preview: "ok" });
           // The decision echoes back so specs can pin what rode the wire (e.g. always_task).
@@ -1110,6 +1146,13 @@ export async function mockApi(page: import("@playwright/test").Page) {
           text: msg.approved
             ? "Granted — nia can push the branch now."
             : "Understood — I'll route that step through myself.",
+        });
+        send("turn_done");
+      } else if (msg.type === "directory_response") {
+        send("assistant_message", {
+          text: msg.granted
+            ? `可以读了：${msg.path || ""}`
+            : "好，不看这个文件夹。" + (msg.feedback ? ` 你说：${msg.feedback}` : ""),
         });
         send("turn_done");
       } else if (msg.type === "skill_response") {
@@ -1589,7 +1632,7 @@ export async function mockApi(page: import("@playwright/test").Page) {
     if (p.endsWith("/v1/skills")) return json({ skills });
 
     if (p.endsWith("/v1/health")) return json(HEALTH);
-    if (p.endsWith("/v1/settings")) return json(SETTINGS);
+    if (p.endsWith("/v1/settings")) return json({ ...SETTINGS, ...SETTINGS_OVERRIDE });
     if (p.endsWith("/v1/settings/context-bar") && m === "POST") {
       Object.assign(SETTINGS, req.postDataJSON());
       return json({ ok: true, context_bar: SETTINGS.context_bar });

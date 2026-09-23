@@ -151,6 +151,14 @@ def _grant_offered(outcome, request) -> bool:
     args = getattr(request, "arguments", None) or {}
     risk = classify(name, metadata)
 
+    # Marlo（owner 2026-09-23）：删了 / 付了就收不回来的操作没有任何长期授权 —— 上游在
+    # 删除命令的卡片上提供「始终允许这条命令」，一次点击就永久放行 rm -rf。这类只给
+    # 「只允许这一次」；界面不画那些按钮，这里兜住直接调 API 的情况。
+    from ..talk import needs_tap
+
+    if needs_tap(name, args):
+        return False
+
     if outcome is ApprovalOutcome.ALWAYS_COMMAND:
         return risk is RiskClass.EXEC
     if outcome is ApprovalOutcome.ALWAYS_DOMAIN:
@@ -5858,6 +5866,12 @@ class SessionManager(QumgeManagerMixin):
                 else ApprovalOutcome.DENY
             )
         if resolution == "always_task":
+            from ..talk import needs_tap
+
+            if needs_tap(request.tool_name, getattr(request, "arguments", None)):
+                # 自动化的「每次都允许」同样不给收不回来的操作（见 _grant_offered）。
+                self._audit_grant_refused(session_id, request, resolution)
+                return ApprovalOutcome.ONCE
             minted = self.mint_task_rule(
                 session_id,
                 request.tool_name,

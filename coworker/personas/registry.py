@@ -26,6 +26,27 @@ from .manifest import PersonaManifest, load_manifest_file
 
 DEFAULT_PERSONA_ID = "cowork"
 
+# Marlo：面向不写代码的白领（owner 2026-09-23）。上游这些内置同事是工程 / 安全岗位
+# （云配置审计、依赖漏洞、代码评审、安全扫描、带研发团队的 lead……），在选择器里
+# 一排英文岗位名，用户既看不懂也用不上。所以它们【默认关、不进选择器】—— 走的是
+# Code 那套 default_enabled / default_surfaced，不是删掉：
+#   - 用户之前自己开过的，状态文件里有显式选择，照旧（显式选择永远赢）；
+#   - 想用的人在 设置 ▸ 同事 里一勾就回来（启用即进选择器，见 set_enabled）。
+# 团队 worker 本来就不进选择器（由 lead 调度），不在这张表里。
+MARLO_ENGINEERING_PERSONAS = frozenset(
+    {
+        "security",
+        "cloud-posture",
+        "dep-audit",
+        "reviewer",
+        "swe-lead",
+        "devops-lead",
+        "devsecops-lead",
+        "triage-lead",
+        "ops",
+    }
+)
+
 
 def include_unshipped() -> bool:
     """Internal builds opt ships:false coworkers in (owner, 2026-08-21). A release
@@ -192,6 +213,8 @@ class PersonaRegistry:
                 )
 
     def _register_manifest(self, m, *, builtin: bool) -> None:
+        # Marlo：工程 / 安全类内置同事默认关、不进选择器（和 Code 同一套 default-off）。
+        engineering = builtin and m.id in MARLO_ENGINEERING_PERSONAS
         self._entries[m.id] = PersonaEntry(
             id=m.id,
             name=m.name,
@@ -208,7 +231,8 @@ class PersonaRegistry:
             # Team workers never surface in the picker: they are purpose-built to be
             # STAFFED by a lead, not started solo (their prompts talk to a lead, not
             # a human). They stay enabled so the staffing gate can resolve them.
-            default_surfaced=m.team != "worker",
+            default_surfaced=m.team != "worker" and not engineering,
+            default_enabled=not engineering,
         )
 
     def _load_installed(self) -> None:

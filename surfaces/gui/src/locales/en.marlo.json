@@ -293,5 +293,15 @@
     "installed": "Skill installed",
     "declined": "Not installed",
     "placeholder": "Say “install it” or “not now” — or just tell Marlo what you think"
+  },
+  "talk": {
+    "placeholder_yesno": "Say “yes” or “no” — or just tell Marlo what you think",
+    "placeholder_tap": "This one needs a tap on the button above",
+    "tap_needed": "This can’t be undone, so it needs a tap — use the buttons on the card above."
+  },
+  "signin": {
+    "head": "Sign in to Qumge to get started",
+    "body": "One click, no keys to paste — every model and skill comes with it. I kept what you just said and will pick it up as soon as you're in.",
+    "own_key": "Use my own API key instead"
   }
 }

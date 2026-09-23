@@ -3099,6 +3099,12 @@ def create_app(manager: SessionManager) -> FastAPI:
                 if not isinstance(kind, str):
                     await reject_input("Invalid WebSocket message: missing string type.")
                     continue
+                # Marlo：卡片被用户的「别的话」收掉时，原话随这次回答带给引擎（用话回答卡片，
+                # coworker/talk.py）。只收字符串，且只对这几类是非卡片。
+                if kind in ("approval", "connector_response", "tool_response", "directory_response"):
+                    said = message.get("feedback")
+                    if isinstance(said, str) and said.strip():
+                        engine.set_user_reply(said[:2000])
                 if kind == "approval":
                     _resolve_pending(message.get("decision", "deny"))
                 elif kind == "directory_response":

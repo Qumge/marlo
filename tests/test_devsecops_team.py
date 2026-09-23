@@ -41,6 +41,9 @@ def test_lead_carries_no_execution_tools(tmp_path):
 def test_workers_never_surface_lead_does(tmp_path, monkeypatch):
     monkeypatch.setenv("OPENWORKER_UNSHIPPED", "1")  # teams are ships:false — internal builds
     reg = _reg(tmp_path)
+    # Marlo：工程类同事默认关（registry.MARLO_ENGINEERING_PERSONAS）；这里测的是上游的
+    # 团队形状，所以先像用户在「设置 ▸ 同事」里那样把 lead 打开。
+    reg.set_enabled("devsecops-lead", True)
     ids = [e["name"] for e in reg.sidebar()]
     assert "devsecops-lead" in ids
     assert not any(pid in ids for pid in ROSTER)

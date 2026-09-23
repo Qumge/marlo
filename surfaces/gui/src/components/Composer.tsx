@@ -135,6 +135,9 @@ interface Props {
   // Rendered above the input when canSpend === false. Passed in rather than built
   // here so Composer stays ignorant of Qumge — it only knows "gated / not gated".
   topUpSlot?: ReactNode;
+  // Marlo：没登录 Qumge 时按发送，不跳去服务商设置页，而是在输入框上方就地弹这张
+  // 登录卡；草稿留着，登录好（modelReady 变 true）自动发出去。不给就走 onConnectModel。
+  signInSlot?: ReactNode;
   onConfigureVoiceInput?: () => void;
   onSend: (text: string, attachments?: Attachment[], skill?: string) => void;
   // Feeds the "/" force-run popup (SKILLS-SPEC §4.1 #3): the popup lists this session's
@@ -215,6 +218,12 @@ export function Composer(props: Props) {
   // user opened the session, which is exactly the standing-banner behaviour §credit
   // gate rejected (the sidebar chip already carries that notice).
   const [gated, setGated] = useState(false);
+  // 按了发送但还没登录：显示 signInSlot，等模型就绪后把草稿自动发出去。
+  const [awaitingSignIn, setAwaitingSignIn] = useState(false);
+  const needSignInOrSetup = () => {
+    if (props.signInSlot) setAwaitingSignIn(true);
+    else props.onConnectModel?.();
+  };
 
   // 充值回来（canSpend 不再是 false）或者草稿被清空（发出去了/换会话了），
   // 这张卡片就没有理由继续占着位置。
@@ -503,7 +512,7 @@ export function Composer(props: Props) {
     if (needsModel) {
       setQueued((cur) => cur.filter((x) => x.id !== q.id));
       restoreToDraft(q);
-      props.onConnectModel?.();
+      needSignInOrSetup();
       return;
     }
     if (props.canSpend === false) {
@@ -527,6 +536,14 @@ export function Composer(props: Props) {
     dictation?.recording,
     dictationBusy,
   ]);
+
+  // 登录好了（模型就绪）：收起登录卡，把用户刚才那句话自动发出去 —— 他不该再按一次。
+  useEffect(() => {
+    if (!awaitingSignIn || needsModel) return;
+    setAwaitingSignIn(false);
+    if (text.trim() || attachments.length > 0) submit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [awaitingSignIn, needsModel]);
 
   const submit = () => {
     // While the "/" popup is open the draft is a query, not a message — never send it.
@@ -566,7 +583,7 @@ export function Composer(props: Props) {
     }
     // No model connected: keep the draft (don't drop it) and send the user to setup instead.
     if (needsModel) {
-      props.onConnectModel?.();
+      needSignInOrSetup();
       return;
     }
     // Credit gate. AFTER needsModel on purpose: with no model connected, talking
@@ -803,6 +820,9 @@ export function Composer(props: Props) {
       {/* Credit gate card — only interposed after an Enter press while canSpend === false
           (see `gated`), never a standing banner off canSpend alone. */}
       {gated && <div className="max-w-3xl mx-auto">{props.topUpSlot}</div>}
+      {awaitingSignIn && needsModel && props.signInSlot && (
+        <div className="max-w-3xl mx-auto">{props.signInSlot}</div>
+      )}
 
       {props.teamSlot}
       <div
@@ -979,7 +999,7 @@ export function Composer(props: Props) {
           {!props.compact && !dictation?.recording && (needsModel ? (
             <button
               className="pill model-warn chip"
-              onClick={() => props.onConnectModel?.()}
+              onClick={needSignInOrSetup}
               title={
                 props.wantedModels?.length
                   ? t("onmachine.composer.runs_on_models", {

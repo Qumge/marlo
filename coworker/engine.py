@@ -29,6 +29,7 @@ from . import session_facts
 from . import toolchain as _toolchain
 from . import toolresult
 from .events import Event, EventType
+from .talk import needs_tap
 
 # §8.4 retry guard: the reviewer pauses for the rest of the turn after this many denials
 # IN A ROW (2→5 + streak semantics, owner ruling 2026-08-24 — a cumulative 2 silently
@@ -222,6 +223,10 @@ class TurnEngine:
         self.team_approver = team_approver
         self.connector_granter = connector_granter
         self.skill_offerer = skill_offerer
+        # 用户对卡片说的既不是「是」也不是「否」的那句话（「把第二段改一下再发」）。
+        # 服务端在解决卡片之前放进来，这次拒绝的结果带着它回到模型手里 —— Marlo
+        # 运行中服务端拒收新消息，这句话只能搭这一趟车。一张卡一句，用完即清。
+        self._user_reply: Optional[str] = None
         # 这一个对话里用户说过「不装」的技能：不再弹卡（不纠缠）。
         self._skills_declined: set[str] = set()
         # Handles `propose_work_items` (the decomposition gate): emits ITEMS_PROPOSED,
@@ -385,6 +390,25 @@ class TurnEngine:
         if tool_call.id in self._tool_timings:
             message["timing"] = self._tool_timings.pop(tool_call.id)
         return message
+
+    def set_user_reply(self, text: str) -> None:
+        text = (text or "").strip()
+        self._user_reply = text or None
+
+    def _take_user_reply(self) -> Optional[str]:
+        # getattr：有测试 / 旧路径用 __new__ 造引擎，不经过 __init__。
+        text = getattr(self, "_user_reply", None)
+        self._user_reply = None
+        return text
+
+    def _attach_user_reply(self, result: dict[str, Any], *, declined: bool) -> None:
+        """卡片被「别的话」收掉时（不是是也不是否），把原话挂到这次结果上交给模型。"""
+        said = self._take_user_reply()
+        if said and declined:
+            result["user_said"] = said
+            result["guidance"] = (
+                "The user answered in their own words instead of yes/no — do what they said."
+            )
 
     def queue_steering(
         self, text: str, source: Optional[dict[str, Any]] = None,
@@ -1770,6 +1794,11 @@ class TurnEngine:
                     # True when this shell command classifies as read-only — the card
                     # offers "Allow read-only commands for this session" only then.
                     "readonly_ok": _readonly_ok(tool_call.arguments),
+                    # Marlo：删了 / 付了就收不回来的操作只接受点按钮，不接受口头回答
+                    # （coworker/talk.py）。
+                    "tap_only": needs_tap(
+                        tool_call.name, tool_call.arguments, human_only=bool(decision.human_only)
+                    ),
                     # OPE-136 finding 4: where an MCP call actually goes, stamped at
                     # registration (mcp/tools.py) from the server def — so the card's
                     # scope chip can say "leaves this computer → host" instead of the
@@ -1837,6 +1866,12 @@ class TurnEngine:
                     False,
                     "interrupted by user" if self._cancel.is_set() else "denied by user",
                 )
+                said = self._take_user_reply()
+                if said:
+                    reason = (
+                        f"denied by user — user_said: \"{said}\". The user answered in their "
+                        "own words instead of approving: do what they said, not this action."
+                    )
                 self._approval_origins[tool_call.id] = {
                     "origin": "user",
                     "grant": "deny",
@@ -2171,6 +2206,7 @@ class TurnEngine:
                     "guidance",
                     "The user declined. Carry on without it and say plainly what you could not do.",
                 )
+        self._attach_user_reply(result, declined=not result.get("approved"))
         status = "ok" if result.get("approved") else "denied"
         self.messages.append(self._timed_result(tool_call, result))
         self._audit(tool_call, stage="finished", status=status, result=result, result_preview=_preview(result))
@@ -2399,6 +2435,7 @@ class TurnEngine:
                     "error_type": type(exc).__name__,
                 }
 
+        self._attach_user_reply(result, declined=not result.get("connected"))
         status = "ok" if result.get("connected") else "denied"
         self.messages.append(_tool_result_message(tool_call, result))
         self._audit(
@@ -2565,6 +2602,7 @@ class TurnEngine:
                     "your report which checks were degraded.",
                 )
 
+        self._attach_user_reply(result, declined=not result.get("installed"))
         status = "ok" if result.get("installed") else "denied"
         self.messages.append(self._timed_result(tool_call, result))
         self._audit(
@@ -2627,6 +2665,7 @@ class TurnEngine:
                     "error_type": type(exc).__name__,
                 }
 
+        self._attach_user_reply(result, declined=not result.get("granted"))
         status = "ok" if result.get("granted") else "denied"
         self.messages.append(self._timed_result(tool_call, result))
         self._audit(

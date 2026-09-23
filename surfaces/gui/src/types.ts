@@ -186,6 +186,8 @@ export type Item =
       // Server-classified: this shell command only reads locally, so the card may offer
       // the session-wide "Allow read-only commands" grant.
       readonlyOk?: boolean;
+      // Marlo：只接受点按钮确认（删除 / 付款 / 硬底线）；卡片等待时说「好」不算数。
+      tapOnly?: boolean;
       // decide_worker_call only: the worker's waiting call this decision answers, looked
       // up by the server so the card can show it (absent from an older server).
       workerCall?: { worker?: string; tool: string; arguments?: any; reason?: string; state?: string; resolution?: string | null };
@@ -213,6 +215,9 @@ export type Item =
       user_code?: string;
       verification_uri?: string;
       resolved?: "connected" | "declined";
+      // 用户已经点了「连接」、正在等浏览器那一趟：卡片还在，但不再等回答 ——
+      // 这时说的话是给 Marlo 的，不是对这张卡的第二次回答。
+      answered?: boolean;
     }
   | {
       kind: "toolreq";
