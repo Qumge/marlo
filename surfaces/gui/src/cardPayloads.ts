@@ -33,6 +33,8 @@ export function approvalItemFromPayload(d: any): ApprovalItem {
     reviewerUnsure: d.reviewer_unsure || undefined,
     escalation: d.escalation || undefined,
     readonlyOk: !!d.readonly_ok,
+    // 删了 / 付了就收不回来的操作：只接受点按钮，不接受口头回答（coworker/talk.py）。
+    tapOnly: d.tap_only === true,
     mcpDestination: d.mcp_destination || undefined,
     workerCall: d.worker_call && typeof d.worker_call === "object" && d.worker_call.tool ? d.worker_call : undefined,
   };

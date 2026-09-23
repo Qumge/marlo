@@ -253,8 +253,11 @@ export function useProviderSetup(opts?: { onSaved?: () => void }): ProviderSetup
     // Alphabetical by display title (owner ruling 2026-08-21: a curated order reads
     // as vendor bias). The old providerRank curation stays only as the tiebreaker
     // for identical titles.
+    // Marlo：Qumge 置顶 —— 它是 Marlo 自家的主路（一键登录、所有模型），不是二十几家里的
+    // 一家；其余照上游的规矩按字母排。
     ordered: [...providers].sort(
       (a, b) =>
+        Number(b.name === "qumge") - Number(a.name === "qumge") ||
         a.title.localeCompare(b.title, undefined, { sensitivity: "base" }) ||
         providerRank(a.name) - providerRank(b.name),
     ),

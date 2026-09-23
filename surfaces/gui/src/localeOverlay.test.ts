@@ -44,6 +44,14 @@ const ADDITIONS = new Set([
   "skilloffer.installed",
   "skilloffer.declined",
   "skilloffer.placeholder",
+  // 用话回答其他是非卡片（审批 / 连接 / 安装工具 / 文件夹），及只认按钮的例外
+  "talk.placeholder_yesno",
+  "talk.placeholder_tap",
+  "talk.tap_needed",
+  // 没登录就发送：就地 Qumge 登录卡（不再跳服务商设置页）
+  "signin.head",
+  "signin.body",
+  "signin.own_key",
   "misc.api.http_error", // 上游 api.ts 里十处 `HTTP ${status}` 兜底报错会上屏（连接/机器卡片）
   // 报错通知按 cause 换成本地化文案（服务端 providers/errors.py 那几句是英文）
   "transcript.error_prefix",

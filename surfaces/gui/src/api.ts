@@ -2973,8 +2973,9 @@ export class Session {
     });
   }
 
-  approve(decision: string) {
-    this.send(approvalMessage(decision));
+  // feedback：卡片被用户的「别的话」收掉时的原话（用话回答卡片），随这次回答交给引擎。
+  approve(decision: string, feedback?: string) {
+    this.send({ ...approvalMessage(decision), ...(feedback ? { feedback } : {}) });
   }
 
   /** §8.4 "Allow anyway": register a ONE-SHOT exact-action approval for a reviewer-denied
@@ -2984,15 +2985,15 @@ export class Session {
   }
 
   // Reply to a `request_directory` prompt: grant a folder (with access level) or decline.
-  respondDirectory(granted: boolean, path?: string, writable?: boolean) {
-    this.send(directoryResponseMessage(granted, path, writable));
+  respondDirectory(granted: boolean, path?: string, writable?: boolean, feedback?: string) {
+    this.send({ ...directoryResponseMessage(granted, path, writable), ...(feedback ? { feedback } : {}) });
   }
 
   // Reply to a `request_connector` / `grant_connector` prompt: connect the account, or decline.
   // 服务端在这之后还要等浏览器那一趟——见 app.py 的 connector_requester。
-  respondConnector(connect: boolean) {
+  respondConnector(connect: boolean, feedback?: string) {
     // 两个字段都带：我们的服务端读 connected，上游 §11.6（grant_connector）读 approved。
-    this.send({ ...connectorResponseMessage(connect), connected: connect });
+    this.send({ ...connectorResponseMessage(connect), connected: connect, ...(feedback ? { feedback } : {}) });
   }
 
   // 回答「要不要装这个技能」。feedback = 用户说的既不是是也不是否的那句话。
@@ -3001,8 +3002,8 @@ export class Session {
   }
 
   // Reply to a `request_tool` prompt: install the pinned build, or skip the check.
-  respondTool(approved: boolean) {
-    this.send(toolResponseMessage(approved));
+  respondTool(approved: boolean, feedback?: string) {
+    this.send({ ...toolResponseMessage(approved), ...(feedback ? { feedback } : {}) });
   }
 
   // Reply to a `propose_plan` prompt: approve (choosing the execution mode) or reject with feedback.

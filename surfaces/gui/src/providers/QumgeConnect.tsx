@@ -82,13 +82,17 @@ export function QumgeConnect({ onConnected }: { onConnected: () => void }) {
   // A while the server polls code B.
   const startSeqRef = useRef(0);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    // 挂载时复位：StrictMode（dev / e2e）会先挂、卸、再挂一次 —— 只在卸载时置 true
+    // 而不在挂载时清掉，第二次挂载后 stoppedRef 永远是 true，start() 拿到验证码也
+    // 直接丢掉，界面停在「正在连接…」。正式包里不会二次挂载，所以用户碰不到，但 dev
+    // 和 e2e 里这条登录路一直是断的（2026-09-23 写就地登录的 e2e 时撞上）。
+    stoppedRef.current = false;
+    return () => {
       stoppedRef.current = true;
       if (timerRef.current !== null) window.clearTimeout(timerRef.current);
-    },
-    [],
-  );
+    };
+  }, []);
 
   const schedulePoll = () => {
     if (timerRef.current !== null) window.clearTimeout(timerRef.current);

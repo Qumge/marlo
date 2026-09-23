@@ -111,6 +111,7 @@ import {
 import { ApprovalCard } from "./components/ApprovalCard";
 import { ToolRequestCard } from "./components/ToolRequestCard";
 import { SkillOfferCard } from "./components/SkillOfferCard";
+import { SignInPrompt } from "./components/SignInPrompt";
 import { classifyReply } from "./replyIntent";
 import { ConnectorRequestCard } from "./components/ConnectorRequestCard";
 import { DirectoryRequestCard } from "./components/DirectoryRequestCard";
@@ -1377,6 +1378,33 @@ export function App() {
       respondSkill(intent === "yes", intent === "other" ? text : undefined);
       return;
     }
+    // 其他是非卡片同一个规矩：连接账号、安装工具、授权文件夹、操作审批。
+    // 「好」= 同意，「不用」= 拒绝，别的话 = 拒绝并把原话随这次回答交给 Marlo。
+    // 例外：删了 / 付了就收不回来的审批（tapOnly）只认按钮 —— 语音偶尔会听错。
+    if (!unattended) {
+      const card =
+        pendingConnReq?.kind === "connreq" && !pendingConnReq.resolved && !("answered" in pendingConnReq && pendingConnReq.answered)
+          ? pendingConnReq
+        : pendingToolReq?.kind === "toolreq" && !pendingToolReq.resolved ? pendingToolReq
+        : pendingDirReq?.kind === "dirreq" && !pendingDirReq.resolved ? pendingDirReq
+        : pendingApproval?.kind === "approval" && !pendingApproval.resolved ? pendingApproval
+        : null;
+      if (card) {
+        setItems((p) => [...p, { kind: "user", text, ts: Date.now() / 1000 }]);
+        if (card.kind === "approval" && card.tapOnly) {
+          setItems((p) => [...p, { kind: "notice", tone: "warn", text: t("talk.tap_needed") }]);
+          return;
+        }
+        const intent = classifyReply(text);
+        const yes = intent === "yes";
+        const said = intent === "other" ? text : undefined;
+        if (card.kind === "connreq") respondConnector(yes, said);
+        else if (card.kind === "toolreq") respondTool(yes, said);
+        else if (card.kind === "dirreq") respondDirectory(yes, card.path, card.writable, said);
+        else approve(yes ? "once" : "deny", said);
+        return;
+      }
+    }
     if (
       !unattended &&
       pendingItemsReq?.kind === "itemsreq" &&
@@ -1408,10 +1436,10 @@ export function App() {
     sessionRef.current?.allowAnyway(name, args);
     send(t("app.allow_anyway_message", { name }));
   };
-  const approve = (decision: ApprovalDecision) => {
+  const approve = (decision: ApprovalDecision, feedback?: string) => {
     setItems((p) => resolveLastApproval(p, decision));
     dropSessionInbox("approval");
-    sessionRef.current?.approve(decision);
+    sessionRef.current?.approve(decision, feedback);
   };
   const respondPlan = (approved: boolean, mode?: string, feedback?: string) => {
     setItems((p) => resolveLastPlan(p, approved ? "approved" : "rejected"));
@@ -1435,12 +1463,12 @@ export function App() {
     sessionRef.current?.respondItems(approved, feedback);
     if (approved) setTimeout(refreshBoard, 400); // the items just landed
   };
-  const respondDirectory = (granted: boolean, path?: string, writable?: boolean) => {
+  const respondDirectory = (granted: boolean, path?: string, writable?: boolean, feedback?: string) => {
     setItems((p) => resolveLastDirReq(p, granted ? "granted" : "denied"));
     dropSessionInbox("directory");
-    sessionRef.current?.respondDirectory(granted, path, writable);
+    sessionRef.current?.respondDirectory(granted, path, writable, feedback);
   };
-  const respondConnector = (connect: boolean) => {
+  const respondConnector = (connect: boolean, feedback?: string) => {
     // 拒绝是终局，立刻解决。同意【不是】—— 浏览器那一趟还没走完，卡片要
     // 留在原地显示"去浏览器里完成…"，等服务端的 tool_finished 回来才解决。
     // 文件夹授权是瞬时的所以能立刻消失，连一个账号不是：点完就消失会让用户
@@ -1449,18 +1477,19 @@ export function App() {
     if (!connect) setItems((p) => resolveLastConnReq(p, "declined"));
     else if (pendingConnReq?.kind === "connreq" && "request" in pendingConnReq)
       setItems((p) => resolveLastConnReq(p, "approved"));
+    else setItems((p) => markLastConnReqAnswered(p));
     dropSessionInbox("connector");
-    sessionRef.current?.respondConnector(connect);
+    sessionRef.current?.respondConnector(connect, feedback);
   };
   const respondSkill = (approved: boolean, feedback?: string) => {
     setItems((p) => resolveLastSkillOffer(p, approved ? "installed" : "declined"));
     dropSessionInbox("tool"); // 技能询问和工具安装一样停在 tool 类 Inbox 项里
     sessionRef.current?.respondSkill(approved, feedback);
   };
-  const respondTool = (approved: boolean) => {
+  const respondTool = (approved: boolean, feedback?: string) => {
     setItems((p) => resolveLastToolReq(p, approved ? "installed" : "skipped"));
     dropSessionInbox("tool");
-    sessionRef.current?.respondTool(approved);
+    sessionRef.current?.respondTool(approved, feedback);
   };
   const answerQuestion = (answer: string) => {
     setReviewerPaused(false); // an answered question resets the reviewer's streak
@@ -2427,8 +2456,20 @@ export function App() {
               wantedModels={personaModels}
               modelLabels={machine ? machineSettings?.model_labels || {} : modelLabels}
               running={running}
-              gateOpen={!unattended && (!!pendingTeam || !!pendingItemsReq || !!pendingSkillOffer)}
-              gatePlaceholder={!unattended && pendingSkillOffer ? t("skilloffer.placeholder") : undefined}
+              gateOpen={
+                !unattended &&
+                (!!pendingTeam || !!pendingItemsReq || !!pendingSkillOffer ||
+                  (!!pendingConnReq && !("answered" in pendingConnReq && pendingConnReq.answered)) ||
+                  !!pendingToolReq || !!pendingDirReq || !!pendingApproval)
+              }
+              gatePlaceholder={
+                unattended ? undefined
+                : pendingSkillOffer ? t("skilloffer.placeholder")
+                : pendingConnReq || pendingToolReq || pendingDirReq ? t("talk.placeholder_yesno")
+                : pendingApproval?.kind === "approval"
+                  ? pendingApproval.tapOnly ? t("talk.placeholder_tap") : t("talk.placeholder_yesno")
+                  : undefined
+              }
               // An offline machine's cached transcript is read-only: the send
               // path is dead by construction, so say so explicitly rather than
               // letting a hopeful socket state enable the button.
@@ -2454,6 +2495,19 @@ export function App() {
               }
               onTopUp={refreshQumgeAccount}
               onConnectModel={openModelSetup}
+              // Marlo：没登录 Qumge 就发送 → 就地登录卡，登录好自动发出刚才那句（不再跳服务商设置页）。
+              // 连着远程机器时模型在那台机器上，就地登录无意义，照旧走设置。
+              signInSlot={
+                !machine && !qumgeAccount.signed_in ? (
+                  <SignInPrompt
+                    onConnected={() => {
+                      refreshQumgeAccount();
+                      loadSettings();
+                    }}
+                    onUseOwnKey={openModelSetup}
+                  />
+                ) : undefined
+              }
               onOpenMemory={() => openSettings("memory")}
               onConfigureVoiceInput={() => openSettings("voice")}
               onSend={send}
@@ -2738,6 +2792,18 @@ function resolveLastConnReq(items: Item[], resolved: "connected" | "approved" | 
     const it = copy[i];
     if (it.kind === "connreq" && !it.resolved) {
       copy[i] = { ...it, resolved } as Item;
+      break;
+    }
+  }
+  return copy;
+}
+
+function markLastConnReqAnswered(items: Item[]): Item[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i >= 0; i--) {
+    const it = copy[i];
+    if (it.kind === "connreq" && !it.resolved) {
+      copy[i] = { ...it, answered: true } as Item;
       break;
     }
   }
