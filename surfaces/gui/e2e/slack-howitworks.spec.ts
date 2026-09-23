@@ -9,6 +9,7 @@ async function openSlackPage(page) {
   await page.getByTestId("account-row").click();
   await page.getByRole("button", { name: "Connectors", exact: true }).click();
   await page.getByTestId("connector-slack").click();
+  // Marlo：账号菜单 ▸ 连接进的是 IntegrationsView，点连接器直达详情页；上游的「多机器速览页」（manage-local-*）只在设置里、且跟机器一起藏着。
 }
 
 test("post-connect card: personalized status line + the installer's 'you' chip", async ({

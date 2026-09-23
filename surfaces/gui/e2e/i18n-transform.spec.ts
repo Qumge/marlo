@@ -26,35 +26,28 @@ test("裸英文的属性，在中文界面上渲染成中文", async ({ page }) 
   await expect(page.getByRole("button", { name: "发送" })).toBeVisible();
 });
 
-// 用量弹窗：它的标题全是 JSX 文本节点，而且源码里现在是裸英文。
-async function openUsagePopover(page: import("@playwright/test").Page) {
-  await page.goto("/");
-  await page.getByText("Draft the launch note").first().click();
-  // 这一条走的是 t("composerPlaceholder")（不在 JSX 文本位置，transform 够不到），
-  // 所以中英文两套都要认 —— 正好说明两条路是并存的，不是互相替代。
-  const box = page.getByPlaceholder(/Ask the coworker|说说你要什么/);
-  await box.fill("hello");
-  await box.press("Enter");
-  const chip = page.getByTestId("usage-chip");
-  await expect(chip).toBeVisible({ timeout: 10_000 });
-  await chip.click();
-  return page.getByTestId("usage-popover");
+// JSX 文本节点：模型清单里默认模型那枚徽章。源码 ModelChecklist.tsx 里是裸英文
+// <span className="mlist-default">default</span>（无 t()）。
+// Marlo：原来用的是用量弹窗，上游 2026-09 把用量 chip 改成默认不显示，换一个一定渲染的节点。
+async function defaultBadge(page: import("@playwright/test").Page) {
+  await page.goto("/#/settings/models");
+  const badge = page.locator(".mlist-default").first();
+  await expect(badge).toBeVisible({ timeout: 10_000 });
+  return badge;
 }
 
 test("裸英文的 JSX 文本节点，同样", async ({ page }) => {
   await inChinese(page);
-  const pop = await openUsagePopover(page);
-  // 源码：<div …>Context window</div>（无 t()）—— transform 把它变成中文。
-  // 「Session totals」那一段等 per-model 用量到齐才渲染，断言时还没出来，
-  // 缺口记在 usage-chip-context-bar.spec.ts 末尾。
-  await expect(pop).toContainText("上下文窗口");
-  await expect(pop).not.toContainText("Context window");
+  const badge = await defaultBadge(page);
+  await expect(badge).toHaveText("默认");
 });
 
 test("英文界面拿到的仍然是原文 —— tx 查不到就回退，不是空白", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("marlo.locale", "en"));
-  const pop = await openUsagePopover(page);
-  await expect(pop).toContainText("Context window");
+  const badge = await defaultBadge(page);
+  await expect(badge).toHaveText("default");
+  await page.goto("/");
+  await page.getByText("Draft the launch note").first().click();
   await expect(page.getByRole("button", { name: "Attach" })).toBeVisible();
 });
 

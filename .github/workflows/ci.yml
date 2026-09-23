@@ -39,8 +39,15 @@ jobs:
           # fastapi、openai 一起抬上去 —— 那种升级要单独一个提交，不该混在
           # 「合上游」里。
           pip install -e ".[messaging,dev,bedrock]" -c requirements-ci.txt
-      - name: Test
-        run: pytest tests -q
+      - name: Test with coverage
+        run: pytest tests -q --cov=coworker --cov-report=term-missing --cov-report=xml
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+          retention-days: 30
       # 【为什么现在才进 CI】check_branding.py 写好之后从来不在任何 workflow 里 ——
       # 和 check_i18n_text.mjs 当年一样，手动的守卫等于没有守卫（见 gui-unit 那段）。
       # 2026-08-31 界面文案全搬进 locales/*.json，而那之前这个守卫连 .json 都不扫：

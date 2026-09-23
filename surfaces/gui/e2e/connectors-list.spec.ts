@@ -27,6 +27,7 @@ test("connected connectors come first with status + health chip", async ({ page 
 test("row navigates to the detail subpage; breadcrumb returns", async ({ page }) => {
   await openConnectors(page);
   await page.getByTestId("connector-slack").click();
+  // Marlo：账号菜单 ▸ 连接进的是 IntegrationsView，点连接器直达详情页；上游的「多机器速览页」（manage-local-*）只在设置里、且跟机器一起藏着。
   await expect(page.getByTestId("slack-workspaces")).toBeVisible();
   await page.getByTestId("connectors-breadcrumb").click();
   await expect(page.getByTestId("connector-slack")).toContainText("2 workspaces · relay");

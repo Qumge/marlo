@@ -153,7 +153,8 @@ def _looks_like_prose(s: str) -> bool:
 # 判据：反引号里【去掉所有 ${...} 之后仍然有英文单词】。纯插值（`${a}:${b}`）、
 # 路径、URL、className 不算。
 _TPL = re.compile(r"`([^`\n]*\$\{[^`\n]*)`")
-_TPL_BAD = re.compile(r"(className|data-testid|aria-|key=|/v1/|https?://|\.json|Bearer )")
+# conic-gradient( 是 Composer 上下文环的 style 值；openworker join 是 MachinesSection 里照抄就要能跑的 CLI 命令（上游 2026-09）。
+_TPL_BAD = re.compile(r"(className|data-testid|aria-|key=|/v1/|https?://|\.json|Bearer |conic-gradient\(|openworker join )")
 _TPL_WORD = re.compile(r"[A-Za-z]{3,}\s")
 
 # 【守卫的盲区】：写死的界面文字不只在 JSX 里，也在【数据数组】里 ——
@@ -204,7 +205,15 @@ ALLOWED = [
     # 判据收得很紧（全小写 + 点分 + 至少两段），不会误放真正的英文文案进来。
     re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$"),
     # HTTP 头名 —— 协议词，翻了浏览器就不认了。
-    re.compile(r"^(Content-Security-Policy|Content-Type|Authorization|User-Agent)$"),
+    re.compile(r"^(Content-Security-Policy|Content-Type|Authorization|User-Agent|X-OCW-Org)$"),
+    # 上游 2026-09 的几处误报，逐条确认过：
+    #   Tailwind 类名串（每个词都带 - 或 :）—— 出现在 className 三元里，不上屏；
+    #   Composer 的上下文环 style 值；MachinesSection 的设备码占位 XXXX-XXXX 和
+    #   `openworker join …`（CLI 真名，照抄要能跑）；Sidebar 按机器分组时的
+    #   "This Mac" 是分组键，渲染时走 t("onmachine…")；SettingsView 两个 label
+    #   都带 labelKey，英文只是没键时的兜底，而它们有键。
+    re.compile(r"^!?[a-z][\w\[\]./%!]*[-:][\w\[\]./%!:-]*( !?[a-z][\w\[\]./%!]*[-:][\w\[\]./%!:-]*)*$"),
+    re.compile(r"^(XXXX-XXXX|This Mac|Models & Keys|Voice input)$"),
     # 域名（provider 的控制台地址）：console.anthropic.com、platform.openai.com…
     # 翻译它们等于给用户一个打不开的地址。
     re.compile(r"^[a-z0-9-]+(\.[a-z0-9-]+)+$"),
@@ -314,7 +323,11 @@ def _allowed(s: str, min_words: int = 2) -> bool:
 
 
 def _is_test(p: Path) -> bool:
-    return ".test." in p.name
+    # gallery/ 是上游 2026-09 带来的卡片画廊：只在 dev 构建里（main.tsx 的
+    # import.meta.env.DEV 守着，生产包里被整棵摇掉），里面是【夹具数据】——
+    # 模拟的审批、团队提案、工作项。用户永远看不到它，翻译夹具是白干，
+    # 而且那 400 条会把真正漏翻的界面文案淹掉。和 .test. 同一类东西。
+    return ".test." in p.name or "gallery" in p.relative_to(SRC).parts
 
 
 # 【JSX 块注释】。逐行那几条规则会跳过以 // 开头的行，也会切掉行尾的 //，但
@@ -383,6 +396,8 @@ _TS_SKIP = {"legacyI18n/en.ts", "legacyI18n/zh.ts", "legacyI18n/zh-text.ts"}
 # 再写一句新的英文照样会报。改了措辞也会重新报，逼人重看一遍它还是不是不上屏。
 # 值是理由；没有理由的条目不该出现在这里。
 TS_NOT_RENDERED: dict[str, str] = {
+    "api.ts: Team summary unavailable":
+        "App.tsx 里 getTeamSummary(…).catch(() => setTeamSummary(null))：拿不到就不显示团队摘要，报错不上屏",
     "api.qumge.ts: `Qumge poll request failed (HTTP ${res.status}).`":
         "QumgeConnect.tsx 的 poll() 用 .catch(() => ({ status: \"error\", error: t(\"qcCantReachServer\") }))"
         " 接住它：message 被丢掉，上屏的是已经翻译的那句",

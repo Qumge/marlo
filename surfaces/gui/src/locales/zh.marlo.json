@@ -650,5 +650,20 @@
       "just_now": "刚才",
       "steps_ago_other": " {{count}} 步之前"
     }
+  },
+  "machines": {
+    "sub": "已加入此应用的无界面 Marlo。机器只会主动连接到你 —— 从不接受外部连接。即使关闭此应用，机器上的会话也会继续运行。",
+    "keys": {
+      "no_seal_key": "此机器尚未固定密封密钥 —— 请用当前版本的 Marlo 重新连接一次，然后重新打开此卡片。"
+    },
+    "models": {
+      "audit_via_cloud": "通过 Marlo 云端",
+      "no_seal_key": "此机器尚未固定密封密钥 —— 请用当前版本的 Marlo 重新连接一次。"
+    }
+  },
+  "misc": {
+    "api": {
+      "http_error": "请求失败（HTTP {{status}}）。"
+    }
   }
 }

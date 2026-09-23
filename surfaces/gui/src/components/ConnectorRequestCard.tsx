@@ -1,9 +1,79 @@
 import { useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import type { Item } from "../types";
 import { useT } from "../legacyI18n";
 import { Icon } from "./Icon";
 
 type ConnReqItem = Extract<Item, { kind: "connreq" }>;
+// 一键连接卡读的字段（request_connector 的 Marlo 负载）；grant 负载没有它们。
+type ConnectFields = { title?: string; brokered_by?: string; user_code?: string };
+
+const LABELS: Record<string, string> = {
+  github: "GitHub",
+  slack: "Slack",
+  telegram: "Telegram",
+  linear: "Linear",
+  jira: "Jira",
+  gmail: "Gmail",
+  notion: "Notion",
+  hubspot: "HubSpot",
+};
+
+export function connectorLabel(id: string): string {
+  return LABELS[id] || id.charAt(0).toUpperCase() + id.slice(1);
+}
+
+// 两种请求共用 connreq 这个 kind（上游 §11.6）：
+//  - request_connector：Marlo 自己的一键连接卡（下面的 ConnectorRequestCard 主体）。
+//    上游这一支是「打开连接器页，连好了回来点一下」—— 对白领多一次跳页、多一次
+//    自己判断「算不算连好了」，我们保留就地一键授权。
+//  - grant_connector：负责人请求给团队成员开一个连接器。这是上游团队功能带来的，
+//    原样用上游的卡片（GrantCard）。
+function GrantCard({
+  item,
+  onRespond,
+}: {
+  item: ConnReqItem & { worker?: string };
+  onRespond: (approved: boolean) => void;
+}) {
+  const { t } = useTranslation();
+  const label = connectorLabel(item.connector);
+  return (
+    <div className="dirreq-card" data-testid="connreq-card">
+      <div className="dirreq-head">
+        <Icon name="plug" size={16} className="ico" />
+        <span>
+          <Trans
+            i18nKey="connreq.head_grant"
+            values={{ worker: item.worker, label }}
+            components={{ b: <b /> }}
+          />
+        </span>
+      </div>
+      {item.reason && (
+        <div className="dirreq-reason">
+          <Trans
+            i18nKey="toolreq.reason_line"
+            values={{ reason: item.reason }}
+            components={{ label: <span className="toolreq-label" /> }}
+          />
+        </div>
+      )}
+      <div className="toolreq-facts">
+        <div className="toolreq-explain">{t("connreq.explain_grant", { worker: item.worker, label })}</div>
+      </div>
+      <div className="dirreq-actions">
+        <span className="spacer" />
+        <button className="btn" data-testid="connreq-decline" onClick={() => onRespond(false)}>
+          {t("approval.btn.not_now")}
+        </button>
+        <button className="btn primary" data-testid="connreq-grant" onClick={() => onRespond(true)}>
+          {t("connreq.grant", { label })}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // Marlo 在对话里要一个账号的授权（request_connector）。形状跟着
 // DirectoryRequestCard 走 —— 用户已经认得那张卡，换个说法只会让人多想一次。
@@ -20,6 +90,21 @@ export function ConnectorRequestCard({
   onRespond,
 }: {
   item: ConnReqItem;
+  onRespond: (connect: boolean) => void;
+  // 上游的「去连接器页」入口。Marlo 的连接走卡片上的一键授权，这里只接住参数。
+  onOpenConnectors?: () => void;
+}) {
+  if ("request" in item && item.request === "grant") {
+    return <GrantCard item={item} onRespond={onRespond} />;
+  }
+  return <ConnectCard item={item} onRespond={onRespond} />;
+}
+
+function ConnectCard({
+  item,
+  onRespond,
+}: {
+  item: ConnReqItem & ConnectFields;
   onRespond: (connect: boolean) => void;
 }) {
   const t = useT();

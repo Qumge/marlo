@@ -95,6 +95,9 @@ export function shouldSkip(id) {
   return (
     !id.endsWith(".tsx") ||
     id.includes("/src/legacyI18n/") ||
+    // 上游 2026-09 的卡片画廊：dev-only（main.tsx 的 import.meta.env.DEV 守着），
+    // 里面是夹具数据，用户看不到 —— 和 check_i18n.py 的 _is_test 同一条理由。
+    id.includes("/src/gallery/") ||
     /\.test\.tsx$/.test(id)
   );
 }

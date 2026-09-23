@@ -643,6 +643,39 @@ def test_402_without_a_parseable_topup_url_omits_the_field_rather_than_emitting_
     assert "topup_url" not in error_event.data
     assert eng.messages[-1]["cause"] == "no_credit"
     assert "topup_url" not in eng.messages[-1]
+def test_new_turn_repairs_dangling_tool_calls(tmp_path):
+    """A restart mid-approval leaves an assistant tool_use with no result;
+    providers 400 the whole conversation for it, poisoning the session (found
+    live in the machine-events drill). A NEW user turn stubs every orphan —
+    in place, id-matched, honest — before appending its message."""
+    engine, _ = _engine(tmp_path, [_text_turn("recovered")])
+    engine.messages.append(
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {
+                    "id": "call_lost",
+                    "type": "function",
+                    "function": {"name": "send_message", "arguments": "{}"},
+                }
+            ],
+        }
+    )
+    events = _collect(engine, "follow-up")
+    assert events[-1].data["status"] == "completed"
+    idx = next(
+        i
+        for i, m in enumerate(engine.messages)
+        if m.get("role") == "assistant" and m.get("tool_calls")
+    )
+    stub = engine.messages[idx + 1]
+    assert stub["role"] == "tool" and stub["tool_call_id"] == "call_lost"
+    assert "interrupted" in stub["content"]
+    # The user's follow-up comes AFTER the stub — valid provider ordering.
+    assert engine.messages[idx + 2]["role"] == "user"
+
+
 def test_leaked_tool_call_ends_the_turn_as_a_retriable_error(tmp_path):
     """A tool call the endpoint couldn't parse must not pass as an answer. Ending "completed"
     made a half-written call indistinguishable from the model deciding it was done — the user

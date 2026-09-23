@@ -19,18 +19,20 @@ import { PILL_ACCENT, PILL_LINE, TAG_ACCENT } from "./ui";
 // existing ConnectSetup directly (Gmail's managed flow skips the modal entirely).
 
 const INPUT =
-  "w-full px-3 py-2 rounded-lg border border-line bg-paper text-[13px] text-ink outline-none focus:border-accent";
+  "w-full px-3 py-2 rounded-lg border border-line bg-paper text-ui text-ink outline-none focus:border-accent";
 
 export function AddConnectionModal({
   c,
   cloud,
   title,
+  githubFlow,
   onClose,
   onChanged,
 }: {
   c: Connector;
   cloud: CloudStatus | null;
   title?: string; // e.g. "Add a workspace" — defaults to "Connect {title}"
+  githubFlow?: "install";
   onClose: () => void;
   onChanged: () => void;
 }) {
@@ -66,10 +68,10 @@ export function AddConnectionModal({
       >
         <div className="flex items-center gap-3 px-5 pt-5">
           <ConnectorBadge connector={c} size={34} title={c.title} />
-          <div className="flex-1 font-semibold text-[16px] tracking-tight">
+          <div className="flex-1 font-semibold text-body tracking-tight">
             {title || defaultTitle}
           </div>
-          <button className="text-faint hover:text-ink text-[20px] leading-none" onClick={onClose} title={t("modal.close")}>
+          <button className="text-faint hover:text-ink text-title leading-none" onClick={onClose} title={t("modal.close")}>
             ×
           </button>
         </div>
@@ -77,7 +79,7 @@ export function AddConnectionModal({
         {twoModes ? (
           <>
             <div className="px-5 pt-4">
-              <div className="inline-flex rounded-full p-0.5 bg-paper text-[13px] font-medium">
+              <div className="inline-flex rounded-full p-0.5 bg-paper text-ui font-medium">
                 {(["one", "manual"] as const).map((p) => (
                   <button
                     key={p}
@@ -99,7 +101,7 @@ export function AddConnectionModal({
               ) : c.name === "hubspot" ? (
                 <HubSpotOneClick c={c} cloud={cloud} />
               ) : c.name === "github" ? (
-                <GithubOneClick c={c} cloud={cloud} />
+                <GithubOneClick c={c} cloud={cloud} flow={githubFlow} />
               ) : c.name === "slack" ? (
                 <SlackOneClick c={c} cloud={cloud} />
               ) : (
@@ -155,7 +157,7 @@ function McpOneClick({ c, onConnected }: { c: Connector; onConnected: () => void
   };
   return (
     <div className="px-5 py-4 space-y-3">
-      <p className="text-[13px] text-muted">
+      <p className="text-ui text-muted">
         {t("modal.mcp_blurb", { title: c.title })}
       </p>
       <button
@@ -166,8 +168,8 @@ function McpOneClick({ c, onConnected }: { c: Connector; onConnected: () => void
       >
         {waiting ? t("cloud.check_browser") : t("modal.connect_title", { title: c.title })}
       </button>
-      {error && <div className="text-[13px] text-danger">{error}</div>}
-      <p className="text-[12px] text-faint text-center flex items-center justify-center gap-1.5">
+      {error && <div className="text-ui text-danger">{error}</div>}
+      <p className="text-meta text-faint text-center flex items-center justify-center gap-1.5">
         <span className={TAG_ACCENT}>{t("modal.recommended")}</span> {t("modal.mcp_recommended_foot", { title: c.title })}
       </p>
     </div>
@@ -188,7 +190,7 @@ function GenericOneClick({ c, cloud }: { c: Connector; cloud: CloudStatus | null
   };
   return (
     <div className="px-5 py-4 space-y-3">
-      <p className="text-[13px] text-muted">
+      <p className="text-ui text-muted">
         {t("modal.generic_blurb", { title: c.title })}
       </p>
       {cloud?.signed_in ? (
@@ -205,8 +207,8 @@ function GenericOneClick({ c, cloud }: { c: Connector; cloud: CloudStatus | null
       ) : (
         <CloudStatusPending />
       )}
-      {error && <div className="text-[13px] text-danger">{error}</div>}
-      <p className="text-[12px] text-faint text-center flex items-center justify-center gap-1.5">
+      {error && <div className="text-ui text-danger">{error}</div>}
+      <p className="text-meta text-faint text-center flex items-center justify-center gap-1.5">
         <span className={TAG_ACCENT}>{t("modal.recommended")}</span> {t("modal.tokens_stay_local")}
       </p>
     </div>
@@ -225,7 +227,7 @@ function SlackOneClick({ c, cloud }: { c: Connector; cloud: CloudStatus | null }
   };
   return (
     <div className="px-5 py-4 space-y-3">
-      <p className="text-[13px] text-muted">
+      <p className="text-ui text-muted">
         {t("modal.slack_blurb")}
       </p>
       {cloud?.signed_in ? (
@@ -237,43 +239,40 @@ function SlackOneClick({ c, cloud }: { c: Connector; cloud: CloudStatus | null }
       ) : (
         <CloudStatusPending />
       )}
-      {error && <div className="text-[13px] text-danger">{error}</div>}
-      <p className="text-[12px] text-faint text-center flex items-center justify-center gap-1.5">
+      {error && <div className="text-ui text-danger">{error}</div>}
+      <p className="text-meta text-faint text-center flex items-center justify-center gap-1.5">
         <span className={TAG_ACCENT}>{t("modal.recommended")}</span> {t("modal.slack_recommended_foot")}
       </p>
     </div>
   );
 }
 
-function GithubOneClick({ c, cloud }: { c: Connector; cloud: CloudStatus | null }) {
+function GithubOneClick({ c, cloud, flow }: { c: Connector; cloud: CloudStatus | null; flow?: "install" }) {
   const { t } = useTranslation();
   const [waiting, setWaiting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const go = async () => {
     setError(null);
-    const res = await connectManaged(c.name);
+    const res = await connectManaged(c.name, flow ? { flow } : undefined);
     if (res.ok) setWaiting(true);
     else setError(res.error || t("modal.could_not_start_install"));
   };
   return (
     <div className="px-5 py-4 space-y-3">
-      <p className="text-[13px] text-muted">
-        {t("modal.github_blurb")}
+      <p className="text-ui text-muted">
+        {t(flow === "install" ? "modal.github_install_blurb" : "modal.github_blurb")}
       </p>
       {cloud?.signed_in ? (
-        /* One button: the broker is authorize-first — it links an existing installation or
-           redirects the same tab on to the install page (the old "Already installed? Link
-           it" question and the Configure dead-end are gone). */
         <button className={PILL_ACCENT + " w-full !py-2"} data-testid="modal-install-github-app" onClick={() => go()} disabled={waiting}>
-          {waiting ? t("cloud.check_browser") : t("modal.connect_github")}
+          {waiting ? t("cloud.check_browser") : t(flow === "install" ? "modal.choose_github_account" : "modal.connect_github")}
         </button>
       ) : cloud ? (
         <CloudSignInInline />
       ) : (
         <CloudStatusPending />
       )}
-      {error && <div className="text-[13px] text-danger">{error}</div>}
-      <p className="text-[12px] text-faint text-center flex items-center justify-center gap-1.5">
+      {error && <div className="text-ui text-danger">{error}</div>}
+      <p className="text-meta text-faint text-center flex items-center justify-center gap-1.5">
         <span className={TAG_ACCENT}>{t("modal.recommended")}</span> {t("modal.github_recommended_foot")}
       </p>
     </div>
@@ -293,7 +292,7 @@ function HubSpotOneClick({ c, cloud }: { c: Connector; cloud: CloudStatus | null
   };
   return (
     <div className="px-5 py-4 space-y-3">
-      <p className="text-[13px] text-muted">
+      <p className="text-ui text-muted">
         {t("modal.hubspot_blurb")}
       </p>
       <div className="space-y-1.5" data-testid="hubspot-access">
@@ -303,7 +302,7 @@ function HubSpotOneClick({ c, cloud }: { c: Connector; cloud: CloudStatus | null
             ["write", t("modal.hubspot_readwrite"), t("modal.hubspot_readwrite_blurb")],
           ] as const
         ).map(([value, label, blurb]) => (
-          <label key={value} className="flex items-start gap-2 text-[13px] cursor-pointer">
+          <label key={value} className="flex items-start gap-2 text-ui cursor-pointer">
             <input
               type="radio"
               name="hubspot-access"
@@ -314,7 +313,7 @@ function HubSpotOneClick({ c, cloud }: { c: Connector; cloud: CloudStatus | null
             />
             <span>
               <span className="font-medium">{label}</span>
-              <span className="block text-[12px] text-muted">{blurb}</span>
+              <span className="block text-meta text-muted">{blurb}</span>
             </span>
           </label>
         ))}
@@ -328,8 +327,8 @@ function HubSpotOneClick({ c, cloud }: { c: Connector; cloud: CloudStatus | null
       ) : (
         <CloudStatusPending />
       )}
-      {error && <div className="text-[13px] text-danger">{error}</div>}
-      <p className="text-[12px] text-faint text-center">
+      {error && <div className="text-ui text-danger">{error}</div>}
+      <p className="text-meta text-faint text-center">
         {t("modal.hubspot_foot")}
       </p>
     </div>
@@ -352,7 +351,7 @@ function SlackManual({ onConnected }: { onConnected: () => void }) {
   };
   return (
     <div className="px-5 py-4 space-y-3">
-      <ol className="list-decimal pl-4 text-[13px] text-muted space-y-1">
+      <ol className="list-decimal pl-4 text-ui text-muted space-y-1">
         <li>{t("modal.slack_manual_step1")}</li>
         <li>{t("modal.slack_manual_step2")}</li>
         <li>{t("modal.slack_manual_step3")}</li>
@@ -362,8 +361,8 @@ function SlackManual({ onConnected }: { onConnected: () => void }) {
       <button className={PILL_LINE + " w-full !py-2"} onClick={submit} disabled={busy || !bot.trim() || !app.trim()}>
         {busy ? t("modal.validating") : t("modal.connect")}
       </button>
-      {error && <div className="text-[13px] text-danger">{error}</div>}
-      <p className="text-[12px] text-warnInk text-center">
+      {error && <div className="text-ui text-danger">{error}</div>}
+      <p className="text-meta text-warnInk text-center">
         {t("modal.slack_manual_pause_note")}
       </p>
     </div>

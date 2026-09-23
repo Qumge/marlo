@@ -32,6 +32,7 @@ test("skills-session: new skill offered in '/', disabled one absent", async ({ p
   await expect(page.getByRole("status")).toContainText("turned off everywhere");
 
   // Back in the session: the popup reflects the new state — created offered, disabled gone.
+  // Marlo：技能是独立页面（账号菜单 ▸ 技能），不在设置里，侧栏一直在 —— 没有 settings-back 要点。
   await page.getByText("Draft the launch note").first().click();
   await box.fill("/");
   await expect(page.getByTestId("skill-popup")).toBeVisible();

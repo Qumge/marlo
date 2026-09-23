@@ -19,3 +19,9 @@ function flag(key: string, fallback: boolean): boolean {
  * Coworkers tab and management flows are ON by default. `ocw.flag.personas` = "0" is the
  * escape hatch to hide them again. (Hidden for launch 2026-07-19 → enabled 2026-08-10.) */
 export const showPersonas = () => flag("ocw.flag.personas", true);
+
+/** Remote machines (upstream "remote homes": `openworker join`, the machine picker, the
+ * Machines inventory, the upstream cloud union view). OFF in Marlo: its users are not
+ * running headless boxes, and every one of those screens is a question they can't answer
+ * ("which machine?"). The engine keeps the feature; `marlo.flag.machines` = "1" shows it. */
+export const showMachines = () => flag("marlo.flag.machines", false);

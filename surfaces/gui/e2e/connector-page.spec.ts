@@ -19,6 +19,7 @@ test("list row status + navigation to the Slack page", async ({ page }) => {
   const row = page.getByTestId("connector-slack");
   await expect(row).toContainText("2 workspaces · relay");
   await row.click();
+  // Marlo：直达详情页，没有上游的多机器速览页（glance-slack）。
   await expect(page.getByTestId("slack-workspaces")).toBeVisible();
   // signed out (fixture default) → the status line leads with the actionable layer
   await expect(page.getByTestId("slack-mode-badge")).toContainText("Sign-in needed");
