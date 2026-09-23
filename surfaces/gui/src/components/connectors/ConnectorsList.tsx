@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { type CloudStatus, type Connector, type McpServer, type SlackStatus } from "../../api";
 import { ConnectorBadge } from "../../connectors/ConnectorIcon";
+import { ApprovalsRouting } from "../RemoteConnectorsPanel";
 import { AddConnectionModal } from "./AddConnectionModal";
 import { AddMcpModal, CustomMcpGroup, McpPresetRows, mcpPresetOffers } from "./CustomMcp";
 import { CHIP_OK, CHIP_OFF, CHIP_WARN, GRP, GRP_H, FOOT, PILL_QUIET, ROW } from "./ui";
@@ -78,7 +79,7 @@ export function ConnectorsList({
           placeholder={t("connector.search")}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          className="w-44 px-3.5 py-1.5 rounded-full border border-line bg-panel text-[13px] outline-none focus:border-accent"
+          className="w-44 px-3.5 py-1.5 rounded-full border border-line bg-panel text-ui outline-none focus:border-accent"
         />
       </div>
 
@@ -93,20 +94,28 @@ export function ConnectorsList({
           <div className={GRP_H + " !mt-0"}>{t("connector.connected_count", { count: connected.length })}</div>
           <div className={GRP}>
             {connected.map((c) => (
-              <button
+              // A div, not a button: the Slack row hosts the per-machine approvals
+              // control (UX-049), and a select cannot live inside a button.
+              <div
                 key={c.name}
+                role="button"
+                tabIndex={0}
                 data-testid={`connector-${c.name}`}
-                className={ROW + " w-full text-left hover:bg-paper/60"}
+                className={ROW + " w-full text-left hover:bg-paper/60 cursor-pointer"}
                 onClick={() => onOpen(c.name)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") onOpen(c.name);
+                }}
               >
                 <ConnectorBadge connector={c} size={34} title={c.title} />
                 <span className="min-w-0 flex-1">
-                  <span className="font-medium text-[13px]">{c.title}</span>
-                  <span className="block text-[12px] text-muted">{statusLine(c, t)}</span>
+                  <span className="font-medium text-ui">{c.title}</span>
+                  <span className="block text-meta text-muted">{statusLine(c, t)}</span>
                 </span>
+                {c.name === "slack" && <ApprovalsRouting />}
                 {healthChip(c, slack, t)}
-                <span className="text-faint text-[14px] shrink-0">›</span>
-              </button>
+                <span className="text-faint text-body shrink-0">›</span>
+              </div>
             ))}
           </div>
         </>

@@ -19,6 +19,8 @@ class EventType(str, Enum):
     TOOL_PROPOSED = "tool_proposed"
     PERMISSION_REQUIRED = "permission_required"
     DIRECTORY_REQUESTED = "directory_requested"  # agent asks the user to grant a folder
+    # Marlo：缺一个技能时先问用户要不要装（install_skill 的人工闸门）
+    SKILL_OFFERED = "skill_offered"
     CONNECTOR_REQUESTED = (
         "connector_requested"  # agent asks the user to connect an account, in the conversation
     )
@@ -44,6 +46,9 @@ class EventType(str, Enum):
     INTERRUPTED = "interrupted"
     COMPACTING = "compacting"  # compaction started — surfaces show a transient signal
     COMPACTED = "compacted"  # outbound history was compacted (summary or trim)
+    # OPE-171: the reply was cut off at the output-token limit with no tool call; the
+    # engine nudged the model to act and is going round the loop again.
+    CONTINUATION = "continuation"
 
 
 @dataclass

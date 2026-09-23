@@ -269,5 +269,29 @@
       "steps_ago_one": "{{count}} step ago",
       "steps_ago_other": "{{count}} steps ago"
     }
+  },
+  "machines": {
+    "keys": {
+      "no_seal_key": "This machine has no sealing key pinned yet — reconnect it once on the current version of Marlo, then reopen this card."
+    },
+    "models": {
+      "audit_via_cloud": "via the Marlo cloud",
+      "no_seal_key": "This machine has no sealing key pinned yet — reconnect it once on the current version of Marlo."
+    }
+  },
+  "misc": {
+    "api": {
+      "http_error": "Request failed (HTTP {{status}})."
+    }
+  },
+  "skilloffer": {
+    "head": "To do this I need to add a skill first",
+    "from": "From the Qumge skill library — next time it just works.",
+    "voice_hint": "You can also just say “install it” or “not now”.",
+    "skip": "Not now",
+    "install": "Install",
+    "installed": "Skill installed",
+    "declined": "Not installed",
+    "placeholder": "Say “install it” or “not now” — or just tell Marlo what you think"
   }
 }

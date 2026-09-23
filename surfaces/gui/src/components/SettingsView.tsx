@@ -1,8 +1,25 @@
 import type { ParseKeys } from "i18next";
-import { useEffect, useState } from "react";
-import { getI18n, useTranslation } from "react-i18next";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { getI18n, Trans, useTranslation } from "react-i18next";
 import { getStoredLanguage, setLanguage as setI18nLanguage, type Lang } from "../i18n";
 import {
+  announceCloudChanged,
+  CLOUD_CHANGED,
+  cloudLogin,
+  getCloudConnections,
+  getConnectors,
+  cloudLogout,
+  getActiveOrg,
+  getCloudMachines,
+  getCloudStatus,
+  getMachines,
+  MACHINES_CHANGED,
+  getMe,
+  isCloudMode,
+  waitForCloudSignIn,
+  type CloudStatus,
+  type Machine,
+  type MeInfo,
   getSettings,
   getTrustedWorkspaces,
   setAutoApprove,
@@ -40,14 +57,23 @@ import {
   type DictationDownloadProgress,
   type DictationStatus,
 } from "../tauri";
+import { canSignOut, cloudSignOut } from "../cloudAuth";
+import { reflectSettings, settingsMachineParam } from "../routes";
 import { useThemePref } from "../theme";
 import { downloadHint } from "../voiceProxyHint";
+import { useTextSize } from "../textSize";
+import { createPortal } from "react-dom";
 import { Icon } from "./Icon";
 import { PanelHead } from "./IntegrationsView";
+import { ConnectorGlance } from "./connectors/ConnectorGlance";
 import { ModelsTab } from "./ManageTabs";
+import { ConnectorsSection } from "./connectors/ConnectorsSection";
+import { MachineModelsPanel } from "./MachineModelsPanel";
+import { MachinesSection } from "./MachinesSection";
+import { RemoteConnectorsPanel } from "./RemoteConnectorsPanel";
 import { MemorySection } from "./MemorySection";
 import { PersonasTab } from "./PersonasTab";
-import { showPersonas } from "../flags";
+import { showMachines, showPersonas } from "../flags";
 
 // Settings, restructured (Option 2) into a full-page surface that mirrors IntegrationsView's shell:
 // a left sub-nav (Appearance · Files · Models · Personas) + centered panel, replacing the old
@@ -58,94 +84,362 @@ import { showPersonas } from "../flags";
 // rename (UX-021) changed only the label. "files" folded into General as a card.
 // 「技能」曾经是这里的一个 tab。2026-08-02 它和账号菜单的「能力」合成了一页，
 // 搬去账号菜单 ▸ 技能 —— 设置管的是本机/应用的配置，技能是 Marlo 有什么。
-type SetTab = "appearance" | "models" | "voice" | "memory" | "personas";
+// 上游这次合并又带回了 "skills" 和 "context" 两个页签：skills 照旧不要；
+// context（省 token / 压缩）照旧跟着模型页走，见下面 models 分支。
+export type SetTab =
+  | "appearance"
+  | "account"
+  | "models"
+  | "voice"
+  | "memory"
+  | "machines"
+  | "connectors"
+  | "personas"
+  // UX-049: per-connector glance pages (App group), shown once connected somewhere.
+  | "slack"
+  | "github";
 
 const CARD = "rounded-xl2 border border-line bg-panel";
-const FIELD_LABEL = "text-[13px] font-medium text-ink";
-const FIELD_HELP = "text-[12px] text-muted mt-1.5 leading-relaxed";
+const FIELD_LABEL = "text-ui font-medium text-ink";
+const FIELD_HELP = "text-meta text-muted mt-1.5 leading-relaxed";
 const INPUT =
-  "flex-1 min-w-0 px-3 py-2 rounded-lg border border-line bg-paper text-[13px] text-ink outline-none focus:border-accent";
-const BTN_ACCENT = "text-[13px] px-3 py-2 rounded-lg bg-accent text-white shrink-0 disabled:opacity-40";
+  "flex-1 min-w-0 px-3 py-2 rounded-lg border border-line bg-paper text-ui text-ink outline-none focus:border-accent";
+const BTN_ACCENT = "text-ui px-3 py-2 rounded-lg bg-accent text-white shrink-0 disabled:opacity-40";
 const BTN_BORDERED =
-  "text-[13px] px-3 py-2 rounded-lg border border-line bg-paper hover:border-lineStrong shrink-0";
+  "text-ui px-3 py-2 rounded-lg border border-line bg-paper hover:border-lineStrong shrink-0";
 
-// label 存的是 i18n 【键】不是英文 —— 常量保持纯数据，渲染时才 t(key)。
-// 上游这里是英文字面量，我们每次合并都要换回来；这是数据数组，transform 够不到。
 // label 是 i18n 的【键】—— 数据数组里的键迁移器和 tsc 都看不见，2026-08-31 已经
 // 在 SlackHowItWorks 的 TABS 和 InboxView 的 KIND_TABS 上各栽过一次。ParseKeys
 // 而不是 string：写错的键编译期就红。
-const SET_TABS: { key: SetTab; label: ParseKeys; icon: "sliders" | "code" | "mic" | "archive" | "sparkle" }[] = [
-  { key: "appearance", label: "settings.tab.general", icon: "sliders" },
-  { key: "models", label: "settings.tab.models", icon: "code" },
-  { key: "voice", label: "settings.tab.voice", icon: "mic" },
-  { key: "memory", label: "settings.tab.memory", icon: "archive" },
-  { key: "personas", label: "settings.tab.personas", icon: "sparkle" },
+// UX-046 (approved 2026-08-30): the rail is grouped by SCOPE. APP pages are
+// about where you sit; MACHINE pages are about one machine's engine — the
+// picker on that group header chooses which ("This Mac" is just the first
+// machine); INVENTORY is the fleet list itself, outside the picker. With no
+// enrolled machines the picker does not exist and the rail reads like before.
+type SetIcon =
+  | "sliders"
+  | "code"
+  | "mic"
+  | "archive"
+  | "sparkle"
+  | "book"
+  | "refresh"
+  | "plug"
+  | "user";
+// `labelKey` = the i18n key for the label; tabs without one yet show `label` as is.
+type TabDef = { key: SetTab; label: string; labelKey?: ParseKeys; icon: SetIcon };
+
+const SET_GROUPS: { name: string; nameKey?: ParseKeys; scope: "app" | "machine" | "inventory"; tabs: TabDef[] }[] = [
+  {
+    name: "App",
+    nameKey: "settingsx.group.app",
+    scope: "app",
+    tabs: [
+      { key: "appearance", label: "General", labelKey: "settings.tab.general", icon: "sliders" },
+      { key: "voice", label: "Voice input", labelKey: "settings.tab.voice", icon: "mic" },
+      { key: "account", label: "Account", labelKey: "settingsx.tab.account", icon: "user" },
+      { key: "slack", label: "Slack", labelKey: "settingsx.tab.slack", icon: "plug" },
+      { key: "github", label: "GitHub", labelKey: "settingsx.tab.github", icon: "plug" },
+    ],
+  },
+  {
+    name: "Machine",
+    nameKey: "settingsx.group.machine",
+    scope: "machine",
+    tabs: [
+      { key: "models", label: "Models & Keys", labelKey: "settings.tab.models", icon: "code" },
+      { key: "connectors", label: "Connectors", labelKey: "nav.connectors", icon: "plug" },
+      { key: "memory", label: "Memory", labelKey: "settings.tab.memory", icon: "archive" },
+      { key: "personas", label: "Coworkers", labelKey: "settings.tab.personas", icon: "sparkle" },
+    ],
+  },
+  {
+    name: "Inventory",
+    nameKey: "settingsx.group.inventory",
+    scope: "inventory",
+    tabs: [{ key: "machines", label: "Machines", labelKey: "settingsx.tab.machines", icon: "plug" }],
+  },
 ];
 
 export function SettingsView({
   initialTab,
   onOpenPersona,
+  onAskWorker,
+  onBack,
 }: {
   initialTab?: SetTab;
-  onOpenPersona?: (id: string) => void;
+  // "Back to app" on the rail — returns to the conversation surface.
+  onBack?: () => void;
+  onOpenPersona?: (id: string, machineId?: string | null) => void;
+  // Skills doorway (SKILLS-SPEC §5.2): start a new conversation with the description
+  // prefilled — the worker builds the skill and proposes it via save_skill. Under a
+  // machine scope, that conversation runs ON the machine.
+  onCreateSkill?: (description: string, machineId?: string | null) => void;
+  // Memory's remote CTA: start a conversation ON that machine to change its memory.
+  onAskWorker?: (machineId: string) => void;
 }) {
   const { t } = useTranslation();
   // Personas is flag-gated (hidden for launch) — filter the tab AND coerce a stale
   // deep-link to it (openSettings("personas") callers) so the page never opens on a
   // section with no nav entry.
   const personas = showPersonas();
-  const tabs = personas ? SET_TABS : SET_TABS.filter((tab) => tab.key !== "personas");
-  const wanted = initialTab && (personas || initialTab !== "personas") ? initialTab : "appearance";
+  // UX-049: the Slack / GitHub glance pages appear once that connector is
+  // connected on any machine (the cloud's view) or on This Mac.
+  const [inbound, setInbound] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    const seen = new Set<string>();
+    Promise.allSettled([
+      getCloudConnections().then((rows) => {
+        for (const r of rows) if (r.status !== "disconnected") seen.add(r.connector);
+      }),
+      getConnectors().then((cs) => {
+        for (const c of cs) if (c.connected) seen.add(c.name);
+      }),
+    ]).then(() => setInbound(new Set([...seen].filter((n) => n === "slack" || n === "github"))));
+  }, []);
+  // "Manage on This Mac" from a glance page opens that connector's local
+  // management page inside Connectors (one shot; the list is the default).
+  const [manageDetail, setManageDetail] = useState<string | null>(null);
+  // Marlo：机器关着时，「清单」组（机器列表）整组不出现，组标题也不显示 ——
+  // 只剩一台电脑，「应用 / 机器」这种分法对用户没有意义。
+  const machinesOn = showMachines();
+  const groups = SET_GROUPS.filter((g) => machinesOn || g.scope !== "inventory").map((g) => ({
+    ...g,
+    tabs: g.tabs.filter(
+      (tb) =>
+        (personas || tb.key !== "personas") &&
+        (tb.key !== "slack" && tb.key !== "github" ? true : inbound.has(tb.key)),
+    ),
+  }));
+  const wanted =
+    initialTab &&
+    (personas || initialTab !== "personas") &&
+    (machinesOn || initialTab !== "machines")
+      ? initialTab
+      : "appearance";
   const [tab, setTab] = useState<SetTab>(wanted);
+
+  // The machine scope for the MACHINE group ("" = This Mac / the local engine).
+  // Cloud has no local engine, so the first enrolled machine is the scope there.
+  const [machines, setMachines] = useState<Machine[]>([]);
+  const [scopeId, setScopeId] = useState<string>("");
+  // The URL's ?m= names the scope (a deep link, or a remount of a page that
+  // was already scoped). Captured at FIRST RENDER — the reflect effect below
+  // rewrites the hash before the machines fetch could read it.
+  const [urlScope] = useState(() => settingsMachineParam());
+  useEffect(() => {
+    // Union view: the picker offers local rows plus (signed-in desktop) the
+    // cloud registry's, origin-tagged — scoped pages route by id prefix.
+    // Reloaded whenever the fleet changes under us (a sandbox joining, a
+    // machine removed) — the Machines page announces it (owner catch
+    // 2026-09-02: a new sandbox needed a hard refresh to reach the picker).
+    if (!machinesOn) return;
+    let first = true;
+    const load = () =>
+      Promise.all([
+        getMachines().catch(() => ({ machines: [] as Machine[] })),
+        isCloudMode()
+          ? Promise.resolve({ machines: [] as Machine[] })
+          : getCloudMachines().catch(() => ({ machines: [] as Machine[] })),
+      ])
+        .then(([local, cloud]) => {
+          const rows = [...(local.machines ?? []), ...(cloud.machines ?? [])];
+          setMachines(rows);
+          // A gone machine falls back to the default scope.
+          if (first && urlScope && rows.some((m) => m.id === urlScope)) setScopeId(urlScope);
+          else if (isCloudMode() && rows.length) setScopeId((cur) => (cur && rows.some((m) => m.id === cur) ? cur : rows[0].id));
+          first = false;
+        })
+        .catch(() => setMachines([]));
+    void load();
+    const onChange = () => void load();
+    window.addEventListener(MACHINES_CHANGED, onChange);
+    return () => window.removeEventListener(MACHINES_CHANGED, onChange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const scoped = machines.find((m) => m.id === scopeId) ?? null;
+
+  // The open page (and its machine scope) rides the URL — #/settings/{page},
+  // bookmarkable. App pages carry no scope; the fleet page is outside it.
+  const machineScoped = SET_GROUPS[1].tabs.some((tb) => tb.key === tab);
+  useEffect(() => {
+    reflectSettings(tab, machineScoped ? scopeId || null : null);
+  }, [tab, scopeId, machineScoped]);
+
+  // The nav lives in the app's left column (App mounts #settings-rail in place of the
+  // session sidebar while Settings is open) — rendered there through a portal so this
+  // view keeps owning the page + scope state. Standalone mounts (tests) render it inline.
+  const [railSlot, setRailSlot] = useState<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    setRailSlot(document.getElementById("settings-rail"));
+  }, []);
+
+  const nav = (
+      <nav
+        className={
+          railSlot
+            ? "settings-rail flex-1 min-h-0 overflow-y-auto hairline-scroll px-2.5 pt-2 pb-2"
+            : "page-subnav w-[208px] shrink-0 border-r border-line bg-panel/40 px-3 py-4"
+        }
+        aria-label={t("nav.settings")}
+      >
+        <button
+          className="settings-rail-head w-full flex items-center gap-2 px-2 py-1.5 mb-3 rounded-[7px] text-ui text-muted hover:text-ink hover:bg-chromeHover text-left"
+          onClick={() => onBack?.()}
+          data-testid="settings-back"
+        >
+          <Icon name="arrowLeft" size={15} /> {t("settingsx.back_to_app")}
+        </button>
+        {groups.map((g) => (
+          <div key={g.name} className="mb-3.5">
+            <div className={"px-2 flex items-center gap-2 " + (machinesOn ? "pb-1" : "")}>
+              {machinesOn && (
+                <span className="text-label text-faint font-medium">
+                  {g.nameKey ? t(g.nameKey) : g.name}
+                </span>
+              )}
+              {/* The ONE picker (UX-046): appears only when there is a choice
+                  to make — extra machines on desktop, several on cloud. */}
+              {g.scope === "machine" && machines.length > 0 && (
+                <select
+                  className="ml-auto max-w-[110px] truncate text-label px-1.5 py-0.5 rounded-md border border-line bg-paper text-ink outline-none"
+                  value={scopeId}
+                  onChange={(e) => setScopeId(e.target.value)}
+                  data-testid="machine-scope-picker"
+                  aria-label={t("settingsx.machine_scope_aria")}
+                >
+                  {!isCloudMode() && <option value="">{t("settingsx.this_mac_option")}</option>}
+                  {machines
+                    .filter((m) => m.origin !== "cloud")
+                    .map((m) => (
+                      <option key={m.id} value={m.id}>
+                        ⌂ {m.name}
+                      </option>
+                    ))}
+                  {machines.some((m) => m.origin === "cloud") && (
+                    <optgroup label={t("settingsx.openworker_cloud")}>
+                      {machines
+                        .filter((m) => m.origin === "cloud")
+                        .map((m) => (
+                          <option key={m.id} value={m.id}>
+                            ⌂ {m.name}
+                          </option>
+                        ))}
+                    </optgroup>
+                  )}
+                </select>
+              )}
+            </div>
+            {g.tabs.map((tb) => {
+              const active = tab === tb.key;
+              return (
+                <button
+                  key={tb.key}
+                  className={
+                    "w-full text-left px-2 py-1.5 rounded-[7px] text-ui flex items-center gap-2 " +
+                    (active ? "bg-chromeHover text-ink font-medium" : "text-ink hover:bg-chromeHover")
+                  }
+                  onClick={() => setTab(tb.key)}
+                >
+                  <Icon name={tb.icon} size={15} className="text-muted" />{" "}
+                  {tb.labelKey ? t(tb.labelKey) : tb.label}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </nav>
+  );
 
   return (
     <main className="flex-1 min-w-0 flex bg-paper">
-      <nav className="page-subnav w-[208px] shrink-0 border-r border-line bg-panel/40 px-3 py-4">
-        <div className="px-2 text-[13px] font-semibold mb-3 flex items-center gap-2">
-          <Icon name="gear" size={16} /> {t("nav.settings")}
-        </div>
-        {tabs.map((tb) => {
-          const active = tab === tb.key;
-          return (
-            <button
-              key={tb.key}
-              className={
-                "w-full text-left px-2.5 py-2 rounded-lg text-[13px] flex items-center gap-2 " +
-                (active ? "bg-paper text-accent font-medium" : "text-muted hover:bg-paper hover:text-ink")
-              }
-              onClick={() => setTab(tb.key)}
-            >
-              <Icon name={tb.icon} size={15} /> {t(tb.label)}
-            </button>
-          );
-        })}
-      </nav>
+      {railSlot ? createPortal(nav, railSlot) : nav}
 
       <div className="flex-1 min-w-0 overflow-y-auto hairline-scroll">
         <div className="max-w-3xl mx-auto px-7 py-6">
           {tab === "appearance" ? (
             <AppearanceSection />
+          ) : tab === "account" ? (
+            <AccountSection />
           ) : tab === "models" ? (
-            <section>
-              <PanelHead
-                title={t("settings.tab.models")}
-                sub={t("settings.models_sub")}
-              />
-              <ModelsTab />
+            <section key={scopeId || "local"}>
+              {scoped ? (
+                <MachineModelsPanel machine={scoped} />
+              ) : (
+                <>
+                  <PanelHead
+                    title={t("settings.tab.models")}
+                    sub={t("settings.models_sub")}
+                  />
+                  <ModelsTab />
+                </>
+              )}
               {/* Token savings is model-spend behavior, so it lives here (UX-021),
                   not under General. 上游把这两张卡挪去了新的 context 页；我们没有
-                  那个页签，settings 管的是本机配置，用量设置跟着模型走。 */}
+                  那个页签，settings 管的是本机配置，用量设置跟着模型走。机器范围下
+                  它们照样跟着选中的机器（上游 context 页的 machine 参数原样传）。 */}
               <div className="mt-6">
-                <TokenSavingsCard />
-                <CompactionCard />
+                <TokenSavingsCard machine={scoped} />
+                <CompactionCard machine={scoped} />
               </div>
             </section>
           ) : tab === "voice" ? (
             <VoiceInputSection />
           ) : tab === "memory" ? (
-            <MemorySection />
+            <MemorySection
+              key={scopeId || "local"}
+              machine={scoped}
+              onAskWorker={(machineId) => onAskWorker?.(machineId)}
+            />
+          ) : tab === "machines" ? (
+            <MachinesSection />
+          ) : tab === "slack" || tab === "github" ? (
+            <ConnectorGlance
+              key={tab}
+              connector={tab}
+              onManage={(name) => {
+                setManageDetail(name);
+                setScopeId("");
+                setTab("connectors");
+              }}
+            />
+          ) : tab === "connectors" ? (
+            // Connectors moved here from its own surface (owner 2026-08-31):
+            // This-Mac scope = the full existing page; a machine scope = that
+            // machine's list with the flows a headless box can run (sealed
+            // manual connect; browser sign-ins stay on the controller).
+            <section>
+              <PanelHead
+                title={t("nav.connectors")}
+                sub={
+                  scoped
+                    ? t("settingsx.connectors.sub_machine", { name: scoped.name })
+                    : t("integrations.connectors_sub")
+                }
+              />
+              {scoped ? (
+                <RemoteConnectorsPanel
+                  key={scopeId}
+                  machine={scoped}
+                  onConfigure={(name) => setTab(name === "github" ? "github" : "slack")}
+                />
+              ) : (
+                <ConnectorsSection
+                  key={manageDetail || "list"}
+                  initialDetail={manageDetail}
+                  onConfigure={(name) => {
+                    setManageDetail(null);
+                    setTab(name === "github" ? "github" : "slack");
+                  }}
+                />
+              )}
+            </section>
           ) : (
-            <PersonasSection onOpenPersona={onOpenPersona} />
+            <PersonasSection
+              key={scopeId || "local"}
+              machine={scoped}
+              onOpenPersona={(id) => onOpenPersona?.(id, scoped?.id ?? null)}
+            />
           )}
         </div>
       </div>
@@ -293,10 +587,10 @@ function VoiceInputSection() {
       />
 
       {!desktop ? (
-        <div className={CARD + " p-4 text-[13px] text-muted"}>{t("settings.voice_desktop_only")}</div>
+        <div className={CARD + " p-4 text-ui text-muted"}>{t("settings.voice_desktop_only")}</div>
       ) : (
         <div className="space-y-4">
-          <div className="rounded-xl border border-green-200 bg-green-50/70 px-4 py-3 text-[13px] text-green-800">
+          <div className="rounded-xl border border-green-200 bg-green-50/70 px-4 py-3 text-ui text-green-800">
             <span className="font-medium">{t("settings.voice_private_title")}</span>{" "}
             {t("settings.voice_private_body")}
           </div>
@@ -305,17 +599,17 @@ function VoiceInputSection() {
             <div className="p-4 flex items-start gap-3">
               <Icon name="code" size={18} className="text-accent mt-0.5" />
               <div className="min-w-0 flex-1">
-                <div className="text-[13px] font-medium">{t("settings.voice_device_title")}</div>
-                <div className="text-[12px] text-muted mt-1">{status?.device_summary || t("settings.voice_checking")}</div>
-                {status?.compatibility_reason && <div className="text-[12px] text-red-600 mt-1.5">{status.compatibility_reason}</div>}
+                <div className="text-ui font-medium">{t("settings.voice_device_title")}</div>
+                <div className="text-meta text-muted mt-1">{status?.device_summary || t("settings.voice_checking")}</div>
+                {status?.compatibility_reason && <div className="text-meta text-red-600 mt-1.5">{status.compatibility_reason}</div>}
               </div>
               {status && (
-                <span className={"text-[12px] px-2 py-1 rounded-full " + (status.supported ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600")}>
+                <span className={"text-meta px-2 py-1 rounded-full " + (status.supported ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600")}>
                   {status.supported ? `● ${t("settings.voice_compatible")}` : t("settings.voice_unsupported")}
                 </span>
               )}
             </div>
-            <div className="border-t border-line bg-paper/50 px-4 py-3 grid grid-cols-2 gap-3 text-[12px] text-muted">
+            <div className="border-t border-line bg-paper/50 px-4 py-3 grid grid-cols-2 gap-3 text-meta text-muted">
               <div><span className="block text-ink font-medium">{t("settings.voice_mac")}</span>{t("settings.voice_mac_detail")}</div>
               <div><span className="block text-ink font-medium">{t("settings.voice_windows")}</span>{t("settings.voice_windows_detail")}</div>
               <div><span className="block text-ink font-medium">{t("settings.voice_memory")}</span>{t("settings.voice_memory_detail")}</div>
@@ -327,8 +621,8 @@ function VoiceInputSection() {
             <div className="p-4 flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-accentSoft text-accent grid place-items-center font-semibold">W</div>
               <div className="min-w-0 flex-1">
-                <div className="text-[13px] font-medium">{t("settings.voice_whisper_title")}</div>
-                <div className="text-[12px] text-muted mt-0.5">
+                <div className="text-ui font-medium">{t("settings.voice_whisper_title")}</div>
+                <div className="text-meta text-muted mt-0.5">
                   {status?.model_verified
                     ? t("settings.voice_installed", { size: formatBytes(status.model_bytes) })
                     : t("settings.voice_not_installed", { size: formatBytes(status?.model_bytes || 147_964_211) })}
@@ -336,14 +630,14 @@ function VoiceInputSection() {
               </div>
               {status?.model_verified ? (
                 <>
-                  <span className="text-[12px] px-2 py-1 rounded-full bg-green-50 text-green-700">{t("settings.voice_verified")}</span>
+                  <span className="text-meta px-2 py-1 rounded-full bg-green-50 text-green-700">{t("settings.voice_verified")}</span>
                   <button className={BTN_BORDERED} onClick={() => void repair()}>{t("settings.voice_repair")}</button>
-                  <button className="text-[12px] text-red-600 px-2 py-2" onClick={() => void remove()}>{t("settings.voice_delete")}</button>
+                  <button className="text-meta text-red-600 px-2 py-2" onClick={() => void remove()}>{t("settings.voice_delete")}</button>
                 </>
               ) : downloading ? (
                 <button className={BTN_BORDERED} onClick={() => void cancelDownload()}>{t("common.stop")}</button>
               ) : phase === "verifying" ? (
-                <span className="text-[12px] text-muted">{t("settings.voice_verifying")}</span>
+                <span className="text-meta text-muted">{t("settings.voice_verifying")}</span>
               ) : (
                 <button className={BTN_ACCENT} disabled={!status?.supported} onClick={() => void download()}>{t("settings.voice_download")}</button>
               )}
@@ -351,7 +645,7 @@ function VoiceInputSection() {
             {downloading && (
               <div className="border-t border-line px-4 py-3">
                 <div className="h-1.5 rounded-full bg-line overflow-hidden"><div className="h-full bg-accent transition-all" style={{ width: `${progressPercent}%` }} /></div>
-                <div className="mt-1.5 text-[12px] text-muted flex"><span>{t("settings.voice_dl_progress", { done: formatBytes(progress?.downloaded_bytes || 0), total: formatBytes(progressTotal) })}</span><span className="ml-auto">{progressPercent}%</span></div>
+                <div className="mt-1.5 text-meta text-muted flex"><span>{t("settings.voice_dl_progress", { done: formatBytes(progress?.downloaded_bytes || 0), total: formatBytes(progressTotal) })}</span><span className="ml-auto">{progressPercent}%</span></div>
               </div>
             )}
           </div>
@@ -360,12 +654,12 @@ function VoiceInputSection() {
             <div className="p-4 flex items-center gap-3">
               <Icon name="mic" size={18} className={ready ? "text-green-600" : "text-muted"} />
               <div className="min-w-0 flex-1">
-                <div className="text-[13px] font-medium">{t("settings.voice_mic_test_title")}</div>
-                <div className="text-[12px] text-muted mt-0.5">
+                <div className="text-ui font-medium">{t("settings.voice_mic_test_title")}</div>
+                <div className="text-meta text-muted mt-0.5">
                   {ready ? t("settings.voice_mic_test_ready") : t("settings.voice_mic_test_pending")}
                 </div>
               </div>
-              {ready && <span className="text-[12px] px-2 py-1 rounded-full bg-green-50 text-green-700">● {t("settings.voice_ready_badge")}</span>}
+              {ready && <span className="text-meta px-2 py-1 rounded-full bg-green-50 text-green-700">● {t("settings.voice_ready_badge")}</span>}
               <button className={BTN_BORDERED} disabled={!status?.supported || !status?.model_verified || phase === "transcribing"} onClick={() => void toggleTest()}>
                 {status?.recording
                   ? t("settings.voice_stop_check")
@@ -376,11 +670,11 @@ function VoiceInputSection() {
                       : t("settings.voice_test_mic")}
               </button>
             </div>
-            {status?.recording && <div className="border-t border-line px-4 py-3 text-[12px] text-accent" role="status">{t("settings.voice_listening")}</div>}
-            {testTranscript && <div className="border-t border-line bg-paper/50 px-4 py-3 text-[13px]">“{testTranscript}”</div>}
+            {status?.recording && <div className="border-t border-line px-4 py-3 text-meta text-accent" role="status">{t("settings.voice_listening")}</div>}
+            {testTranscript && <div className="border-t border-line bg-paper/50 px-4 py-3 text-ui">“{testTranscript}”</div>}
           </div>
 
-          {error && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-[12px] text-red-700">{error}</div>}
+          {error && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-meta text-red-700">{error}</div>}
         </div>
       )}
     </section>
@@ -393,16 +687,175 @@ function VoiceInputSection() {
 // The Gallery entry point is GONE (owner 2026-08-21) — coworkers install from
 // GitHub / folder / zip only. GalleryModal stays in the tree for the gallery's
 // possible return as a first-class distribution surface, but nothing mounts it.
-function PersonasSection({ onOpenPersona }: { onOpenPersona?: (id: string) => void }) {
+function PersonasSection({
+  onOpenPersona,
+  machine,
+}: {
+  onOpenPersona?: (id: string) => void;
+  machine?: Machine | null;
+}) {
   const { t } = useTranslation();
   return (
     <section>
-      <PanelHead title={t("settings.tab.personas")} sub={t("settings.personas_intro")} />
-      <p className="text-[13px] text-muted leading-relaxed max-w-[560px] mt-5 mb-1">
+      <PanelHead
+        title={t("settings.tab.personas")}
+        sub={
+          machine
+            ? t("settingsx.personas.machine_sub", { name: machine.name })
+            : t("settings.personas_intro")
+        }
+      />
+      <p className="text-ui text-muted leading-relaxed max-w-[560px] mt-5 mb-1">
         {t("settings.personas_desc")}
       </p>
-      <PersonasTab onOpenPersona={onOpenPersona} />
+      <PersonasTab onOpenPersona={onOpenPersona} machine={machine} />
     </section>
+  );
+}
+
+// -- Account -------------------------------------------------------------------
+// Two deployments, two meanings of "account". On the hosted dashboard the page
+// is the signed-in identity: who you are, the organization this browser acts
+// in, and the way out (moved here from the Machines page's inline bar). On
+// desktop and self-hosted browsers it is the optional OpenWorker Cloud
+// sign-in — the same one the sidebar's account menu offers, given a full page.
+function AccountSection() {
+  const { t } = useTranslation();
+  return (
+    <section>
+      <PanelHead
+        title={t("settingsx.tab.account")}
+        sub={
+          isCloudMode()
+            ? t("settingsx.account.sub_hosted")
+            : t("settingsx.account.sub_desktop")
+        }
+      />
+      {isCloudMode() ? <HostedAccountCards /> : <DesktopCloudCard />}
+    </section>
+  );
+}
+
+function HostedAccountCards() {
+  const { t } = useTranslation();
+  // Fetched here rather than read from the boot gate: the page should show
+  // the identity as the API resolves it right now, under the active org.
+  const [me, setMe] = useState<MeInfo | null | undefined>(undefined);
+  useEffect(() => {
+    getMe()
+      .then(setMe)
+      .catch(() => setMe(null));
+  }, []);
+
+  if (me === undefined) return <div className="text-meta text-muted mt-3">{t("settingsx.account.loading")}</div>;
+  if (me === null)
+    return (
+      <div className={CARD + " p-4 text-ui text-muted"}>
+        {t("settingsx.account.no_signin_service")}
+      </div>
+    );
+  const active = getActiveOrg() || me.org_id;
+  const activeOrg = me.orgs.find((o) => o.id === active);
+  return (
+    <div data-testid="cloud-account-card">
+      <div className={CARD + " p-4 mb-4"}>
+        <div className={FIELD_LABEL}>{t("settingsx.account.signed_in_as")}</div>
+        <div className="mt-2 flex items-center gap-3">
+          <span className="w-8 h-8 rounded-full bg-accentSoft text-accent grid place-items-center text-ui font-semibold">
+            {(me.actor || "?").slice(0, 1).toUpperCase()}
+          </span>
+          <span className="text-ui text-ink min-w-0 truncate">{me.actor}</span>
+          {canSignOut() && (
+            <button
+              className={BTN_BORDERED + " ml-auto"}
+              onClick={() => void cloudSignOut()}
+            >
+              {t("sidebar.sign_out")}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* One login, one org (spec 2026-08-31): the org is a function of the
+          identity — display only, never a choice made here. */}
+      <div className={CARD + " p-4 mb-4"}>
+        <div className={FIELD_LABEL}>{t("settingsx.account.organization")}</div>
+        <div className="mt-2 text-ui text-ink" data-testid="org-name">
+          {activeOrg?.name ?? active}
+        </div>
+        <div className={FIELD_HELP}>
+          {t("settingsx.account.organization_help")}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DesktopCloudCard() {
+  const { t } = useTranslation();
+  const [status, setStatus] = useState<CloudStatus | null>(null);
+  const [waiting, setWaiting] = useState(false);
+  const cancelWait = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    const load = () =>
+      getCloudStatus()
+        .then(setStatus)
+        .catch(() => setStatus({ signed_in: false, account: "", user_id: "" }));
+    load();
+    window.addEventListener(CLOUD_CHANGED, load);
+    return () => {
+      window.removeEventListener(CLOUD_CHANGED, load);
+      cancelWait.current?.();
+    };
+  }, []);
+
+  const signIn = async () => {
+    setWaiting(true);
+    await cloudLogin().catch(() => {});
+    cancelWait.current?.();
+    cancelWait.current = waitForCloudSignIn((s) => {
+      setWaiting(false);
+      if (s) setStatus(s);
+      if (s?.signed_in) announceCloudChanged();
+    });
+  };
+  const signOut = async () => {
+    await cloudLogout().catch(() => {});
+    announceCloudChanged();
+  };
+
+  return (
+    <div className={CARD + " p-4"} data-testid="cloud-signin-card">
+      <div className={FIELD_LABEL}>{t("settingsx.openworker_cloud")}</div>
+      {status === null ? (
+        <div className="text-meta text-muted mt-2">{t("settingsx.account.checking_signin")}</div>
+      ) : status.signed_in ? (
+        <div className="mt-2 flex items-center gap-3">
+          <span className="w-8 h-8 rounded-full bg-accentSoft text-accent grid place-items-center text-ui font-semibold">
+            {(status.account || "?").slice(0, 1).toUpperCase()}
+          </span>
+          <span className="text-ui text-ink min-w-0 truncate">{status.account}</span>
+          <button className={BTN_BORDERED + " ml-auto"} onClick={() => void signOut()}>
+            {t("sidebar.sign_out")}
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className={FIELD_HELP}>
+            {t("settingsx.account.signin_help")}
+          </div>
+          <button
+            className={BTN_ACCENT + " mt-3"}
+            onClick={() => void signIn()}
+            disabled={waiting}
+            data-testid="account-page-sign-in"
+          >
+            {waiting ? t("cloud.check_browser") : t("cloud.sign_in")}
+          </button>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -410,6 +863,7 @@ function PersonasSection({ onOpenPersona }: { onOpenPersona?: (id: string) => vo
 function AppearanceSection() {
   const { t } = useTranslation();
   const [theme, setTheme] = useThemePref();
+  const [textSize, setTextSizePref] = useTextSize();
   const [autostart, setAuto] = useState(false);
   const [keepAwake, setKeep] = useState(false);
   const desktop = isTauri();
@@ -466,6 +920,29 @@ function AppearanceSection() {
         <div className={FIELD_HELP}>{t("settings.language_help")}</div>
       </div>
 
+      <div className={CARD + " p-4 mb-4"} data-testid="text-size-card">
+        <div className={FIELD_LABEL}>{t("settingsx.text_size.title")}</div>
+        <div className="seg mt-2.5" role="radiogroup" aria-label={t("settingsx.text_size.title")}>
+          {(["small", "default", "large"] as const).map((s) => (
+            <button
+              key={s}
+              className={s === textSize ? "active" : ""}
+              onClick={() => setTextSizePref(s)}
+              data-testid={`text-size-${s}`}
+              aria-checked={s === textSize}
+              role="radio"
+            >
+              {s === "small"
+                ? t("settingsx.text_size.small")
+                : s === "default"
+                  ? t("settingsx.text_size.default")
+                  : t("settingsx.text_size.large")}
+            </button>
+          ))}
+        </div>
+        <div className={FIELD_HELP}>{t("settingsx.text_size.help")}</div>
+      </div>
+
       <SidebarCard />
 
       <ContextBarCard />
@@ -482,15 +959,15 @@ function AppearanceSection() {
           <label className="flex items-start gap-3 py-2">
             <input type="checkbox" className="mt-0.5" checked={autostart} onChange={(e) => toggleAuto(e.target.checked)} />
             <span>
-              <span className="block text-[13px] text-ink">{t("settings.open_at_login")}</span>
-              <span className="block text-[12px] text-muted">{t("settings.open_at_login_help")}</span>
+              <span className="block text-ui text-ink">{t("settings.open_at_login")}</span>
+              <span className="block text-meta text-muted">{t("settings.open_at_login_help")}</span>
             </span>
           </label>
           <label className="flex items-start gap-3 py-2">
             <input type="checkbox" className="mt-0.5" checked={keepAwake} onChange={(e) => toggleKeep(e.target.checked)} />
             <span>
-              <span className="block text-[13px] text-ink">{t("settings.keep_awake")}</span>
-              <span className="block text-[12px] text-muted">{t("settings.keep_awake_help")}</span>
+              <span className="block text-ui text-ink">{t("settings.keep_awake")}</span>
+              <span className="block text-meta text-muted">{t("settings.keep_awake_help")}</span>
             </span>
           </label>
         </div>
@@ -539,16 +1016,16 @@ function TrustedWorkspacesCard() {
         {t("settings.trusted_workspaces_help")}
       </div>
       {workspaces === null ? (
-        <div className="text-[12px] text-muted mt-3">{t("settings.trust_loading")}</div>
+        <div className="text-meta text-muted mt-3">{t("settings.trust_loading")}</div>
       ) : workspaces.length === 0 ? (
-        <div className="text-[12px] text-muted mt-3">{t("settings.trust_empty")}</div>
+        <div className="text-meta text-muted mt-3">{t("settings.trust_empty")}</div>
       ) : (
         <div className="mt-3 divide-y divide-line">
           {workspaces.map((workspace) => (
             <div key={workspace.workspace} className="py-2.5 flex items-start gap-3">
               <div className="min-w-0 flex-1">
-                <div className="text-[13px] text-ink break-all">{workspace.workspace}</div>
-                <div className="text-[12px] text-muted mt-0.5">
+                <div className="text-ui text-ink break-all">{workspace.workspace}</div>
+                <div className="text-meta text-muted mt-0.5">
                   {workspace.requested_commands.length
                     ? t("settings.trust_allowances", { count: workspace.requested_commands.length })
                     : t("settings.trust_no_allowances")}
@@ -556,7 +1033,7 @@ function TrustedWorkspacesCard() {
                 </div>
               </div>
               <button
-                className="text-[12px] text-red-600 px-2 py-1"
+                className="text-meta text-red-600 px-2 py-1"
                 onClick={() => void revoke(workspace.workspace)}
               >
                 {t("settings.trust_revoke")}
@@ -621,7 +1098,7 @@ function UpdateInline() {
         </button>
       )}
       {(state === "none" || state === "error" || state === "installing") && (
-        <span className="text-[12px] text-muted">
+        <span className="text-meta text-muted">
           {state === "none"
             ? t("settings.update_latest")
             : state === "error"
@@ -645,12 +1122,13 @@ function UpdateInline() {
 // This card is the attachment dial: attach thresholds + the fallback for models
 // without native PDF support. (Long-history spend is handled by auto-compaction —
 // the CompactionCard below, OPE-27.)
-function TokenSavingsCard() {
+function TokenSavingsCard({ machine }: { machine?: Machine | null }) {
   const { t } = useTranslation();
+  const mid = machine?.id ?? null;
   const [pdf, setPdf] = useState<PdfSettings | null>(null);
 
   useEffect(() => {
-    getSettings()
+    getSettings(mid)
       .then((s) =>
         setPdf({
           pdf_fallback: s.pdf_fallback || "text",
@@ -659,11 +1137,11 @@ function TokenSavingsCard() {
         }),
       )
       .catch(() => setPdf({ pdf_fallback: "text", pdf_max_pages: 20, pdf_max_mb: 10 }));
-  }, []);
+  }, [mid]);
 
   const save = async (patch: Partial<PdfSettings>) => {
     setPdf((p) => (p ? { ...p, ...patch } : p));
-    await setPdfSettings(patch);
+    await setPdfSettings(patch, mid);
   };
 
   if (!pdf) return null;
@@ -674,7 +1152,7 @@ function TokenSavingsCard() {
         {t("settings.token_savings_help")}
       </div>
 
-      <div className="mt-3 text-[13px] text-ink">{t("settings.pdf_fallback_label")}</div>
+      <div className="mt-3 text-ui text-ink">{t("settings.pdf_fallback_label")}</div>
       <div className="seg mt-2" role="radiogroup" aria-label={t("settings.pdf_fallback_aria")} data-testid="pdf-fallback">
         <button
           className={pdf.pdf_fallback === "text" ? "active" : ""}
@@ -695,29 +1173,29 @@ function TokenSavingsCard() {
 
       <div className="mt-3 flex items-center gap-5">
         <label className="flex items-center gap-2.5">
-          <span className="text-[13px] text-ink">{t("settings.pdf_max_pages")}</span>
+          <span className="text-ui text-ink">{t("settings.pdf_max_pages")}</span>
           <input
             type="number"
             min={1}
             max={100}
             value={pdf.pdf_max_pages}
             data-testid="pdf-max-pages"
-            className="w-16 px-2 py-1.5 rounded-lg border border-line bg-paper text-[13px] text-ink outline-none focus:border-accent"
+            className="w-16 px-2 py-1.5 rounded-lg border border-line bg-paper text-ui text-ink outline-none focus:border-accent"
             onChange={(e) => save({ pdf_max_pages: Math.max(1, Math.min(Number(e.target.value) || 20, 100)) })}
           />
         </label>
         <label className="flex items-center gap-2.5">
-          <span className="text-[13px] text-ink">{t("settings.pdf_max_size")}</span>
+          <span className="text-ui text-ink">{t("settings.pdf_max_size")}</span>
           <input
             type="number"
             min={1}
             max={10}
             value={pdf.pdf_max_mb}
             data-testid="pdf-max-mb"
-            className="w-16 px-2 py-1.5 rounded-lg border border-line bg-paper text-[13px] text-ink outline-none focus:border-accent"
+            className="w-16 px-2 py-1.5 rounded-lg border border-line bg-paper text-ui text-ink outline-none focus:border-accent"
             onChange={(e) => save({ pdf_max_mb: Math.max(1, Math.min(Number(e.target.value) || 10, 10)) })}
           />
-          <span className="text-[13px] text-muted">MB</span>
+          <span className="text-ui text-muted">MB</span>
         </label>
       </div>
       <div className={FIELD_HELP}>
@@ -731,14 +1209,15 @@ function TokenSavingsCard() {
 // Long sessions are summarized automatically when they approach the model's context
 // limit, so work continues instead of hitting a raw provider error. Two spec'd
 // overrides (trigger % + token cap) and the summarizer-model pin — nothing more.
-function CompactionCard() {
+function CompactionCard({ machine }: { machine?: Machine | null }) {
   const { t } = useTranslation();
+  const mid = machine?.id ?? null;
   const [cfg, setCfg] = useState<CompactionSettings | null>(null);
   const [models, setModels] = useState<string[]>([]);
   const [labels, setLabels] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    getSettings()
+    getSettings(mid)
       .then((s) => {
         setCfg({
           compaction_threshold_pct: s.compaction_threshold_pct ?? 0.8,
@@ -755,11 +1234,11 @@ function CompactionCard() {
           compaction_model: "",
         }),
       );
-  }, []);
+  }, [mid]);
 
   const save = async (patch: Partial<CompactionSettings>) => {
     setCfg((p) => (p ? { ...p, ...patch } : p));
-    await setCompactionSettings(patch);
+    await setCompactionSettings(patch, mid);
   };
 
   if (!cfg) return null;
@@ -771,14 +1250,14 @@ function CompactionCard() {
 
       <div className="mt-3 flex items-center gap-5 flex-wrap">
         <label className="flex items-center gap-2.5">
-          <span className="text-[13px] text-ink">{t("settings.compact_at")}</span>
+          <span className="text-ui text-ink">{t("settings.compact_at")}</span>
           <input
             type="number"
             min={10}
             max={95}
             value={Math.round(cfg.compaction_threshold_pct * 100)}
             data-testid="compaction-threshold"
-            className="w-16 px-2 py-1.5 rounded-lg border border-line bg-paper text-[13px] text-ink outline-none focus:border-accent"
+            className="w-16 px-2 py-1.5 rounded-lg border border-line bg-paper text-ui text-ink outline-none focus:border-accent"
             onChange={(e) =>
               save({
                 compaction_threshold_pct:
@@ -786,10 +1265,10 @@ function CompactionCard() {
               })
             }
           />
-          <span className="text-[13px] text-muted">% of the context window</span>
+          <span className="text-ui text-muted">{t("settingsx.compaction.pct_of_window")}</span>
         </label>
         <label className="flex items-center gap-2.5">
-          <span className="text-[13px] text-ink">{t("settings.compact_or_at")}</span>
+          <span className="text-ui text-ink">{t("settings.compact_or_at")}</span>
           <input
             type="number"
             min={10_000}
@@ -797,7 +1276,7 @@ function CompactionCard() {
             step={10_000}
             value={cfg.compaction_cap_tokens}
             data-testid="compaction-cap"
-            className="w-28 px-2 py-1.5 rounded-lg border border-line bg-paper text-[13px] text-ink outline-none focus:border-accent"
+            className="w-28 px-2 py-1.5 rounded-lg border border-line bg-paper text-ui text-ink outline-none focus:border-accent"
             onChange={(e) =>
               save({
                 compaction_cap_tokens: Math.max(
@@ -807,17 +1286,17 @@ function CompactionCard() {
               })
             }
           />
-          <span className="text-[13px] text-muted">tokens, whichever is smaller</span>
+          <span className="text-ui text-muted">{t("settingsx.compaction.tokens_smaller")}</span>
         </label>
       </div>
       <div className={FIELD_HELP}>{t("settings.compaction_cap_help")}</div>
 
       <div className="mt-3 flex items-center gap-2.5">
-        <span className="text-[13px] text-ink">{t("settings.summarizer_model")}</span>
+        <span className="text-ui text-ink">{t("settings.summarizer_model")}</span>
         <select
           value={cfg.compaction_model}
           data-testid="compaction-model"
-          className="px-2 py-1.5 rounded-lg border border-line bg-paper text-[13px] text-ink outline-none focus:border-accent"
+          className="px-2 py-1.5 rounded-lg border border-line bg-paper text-ui text-ink outline-none focus:border-accent"
           onChange={(e) => save({ compaction_model: e.target.value })}
         >
           <option value="">{t("settings.summarizer_default")}</option>
@@ -864,8 +1343,8 @@ function ContextBarCard() {
           onChange={(e) => save(e.target.checked)}
         />
         <span>
-          <span className="block text-[13px] text-ink">{t("settings.context_bar_title")}</span>
-          <span className="block text-[12px] text-muted">{t("settings.context_bar_desc")}</span>
+          <span className="block text-ui text-ink">{t("settings.context_bar_title")}</span>
+          <span className="block text-meta text-muted">{t("settings.context_bar_desc")}</span>
         </span>
       </label>
     </div>
@@ -902,7 +1381,7 @@ function AutoApproveCard() {
   if (on === null) return null;
   return (
     <div className={CARD + " p-4 mb-4"} data-testid="auto-approve-card">
-      <div className={FIELD_LABEL}>Auto-approve (experimental)</div>
+      <div className={FIELD_LABEL}>{t("settingsx.auto_approve.title")}</div>
       <label className="flex items-start gap-3 py-2">
         <input
           type="checkbox"
@@ -912,12 +1391,9 @@ function AutoApproveCard() {
           onChange={(e) => saveOn(e.target.checked)}
         />
         <span>
-          <span className="block text-[13px] text-ink">{t("settings.enable_auto_approve")}</span>
-          <span className="block text-[12px] text-muted">
-            Adds an <em>Auto-approve</em> option to the mode picker. In that mode, your session
-            model reviews each action that would normally need approval and clears the routine
-            ones; anything doubtful still asks you. It can never allow something the rules
-            block. One extra model call per check, billed to your usage.
+          <span className="block text-ui text-ink">{t("settings.enable_auto_approve")}</span>
+          <span className="block text-meta text-muted">
+            <Trans i18nKey="settingsx.auto_approve.enable_desc" components={{ em: <em /> }} />
           </span>
         </span>
       </label>
@@ -930,13 +1406,14 @@ function AutoApproveCard() {
           onChange={(e) => saveShadow(e.target.checked)}
         />
         <span>
-          <span className="block text-[13px] text-ink">
-            Shadow evaluation <span className="text-faint">(for measuring)</span>
+          <span className="block text-ui text-ink">
+            <Trans
+              i18nKey="settingsx.auto_approve.shadow_title"
+              components={{ faint: <span className="text-faint" /> }}
+            />
           </span>
-          <span className="block text-[12px] text-muted">
-            On any mode, the reviewer records what it <em>would</em> have decided next to your
-            own choice — without changing anything. Lets you see how it would behave before
-            trusting it. Also costs one model call per approval.
+          <span className="block text-meta text-muted">
+            <Trans i18nKey="settingsx.auto_approve.shadow_desc" components={{ em: <em /> }} />
           </span>
         </span>
       </label>
@@ -965,13 +1442,13 @@ function SidebarCard() {
     <div className={CARD + " p-4 mb-4"}>
       <div className={FIELD_LABEL}>{t("settings.sidebar_card_title")}</div>
       <label className="flex items-center gap-3 mt-2.5">
-        <span className="text-[13px] text-ink">{t("settings.sidebar_per_coworker")}</span>
+        <span className="text-ui text-ink">{t("settings.sidebar_per_coworker")}</span>
         <input
           type="number"
           min={1}
           max={50}
           value={peek}
-          className="w-16 px-2 py-1.5 rounded-lg border border-line bg-paper text-[13px] text-ink outline-none focus:border-accent"
+          className="w-16 px-2 py-1.5 rounded-lg border border-line bg-paper text-ui text-ink outline-none focus:border-accent"
           onChange={(e) => save(Number(e.target.value))}
         />
       </label>
@@ -1045,7 +1522,7 @@ function FilesCard() {
       <div className={FIELD_HELP}>
         {t("settings.files_help")}
       </div>
-      {scratchMsg && <div className="text-[13px] text-muted mt-2.5">{scratchMsg}</div>}
+      {scratchMsg && <div className="text-ui text-muted mt-2.5">{scratchMsg}</div>}
     </div>
   );
 }

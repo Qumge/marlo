@@ -12,7 +12,7 @@ test("Settings: Context compaction card edits threshold, cap, and summarizer mod
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   // 上游把这两张卡挪去了新的 Context optimization 页签。我们没有那个页签 ——
   // 用量相关的设置跟着模型走（UX-021，见 SettingsView 里那段注释）。
-  await page.getByRole("button", { name: "Models", exact: true }).click();
+  await page.getByRole("button", { name: "Models & Keys", exact: true }).click();
 
   const card = page.getByTestId("compaction-card");
   await expect(card).toBeVisible();

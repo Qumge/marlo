@@ -1,3 +1,11 @@
+// The standalone Connectors surface is RETIRED (owner 2026-08-31): Connectors
+// lives in Settings under the MACHINE group — machine-scoped like every other
+// engine page (see SettingsView + RemoteConnectorsPanel). This file keeps
+// PanelHead, the page-shell heading shared across surfaces.
+//
+// Marlo 这边的独立「连接」页（下面的 IntegrationsView）先留着导出：它是账号菜单 ▸ 连接
+// 进来的那一页，一个非技术用户不该要走到「设置 ▸ 机器 ▸ 连接器」才找得到。
+// 由 App / Sidebar 决定还挂不挂它；不挂的话这个导出就是死代码，可以删。
 import { useTranslation } from "react-i18next";
 import { ConnectorsSection } from "./connectors/ConnectorsSection";
 
@@ -33,8 +41,8 @@ export function IntegrationsView() {
 export function PanelHead({ title, sub }: { title: string; sub: string }) {
   return (
     <div className="mb-4">
-      <h2 className="text-[20px] font-semibold tracking-tight">{title}</h2>
-      <p className="text-[13px] text-muted mt-0.5">{sub}</p>
+      <h2 className="text-title font-semibold tracking-tight">{title}</h2>
+      <p className="text-ui text-muted mt-0.5">{sub}</p>
     </div>
   );
 }

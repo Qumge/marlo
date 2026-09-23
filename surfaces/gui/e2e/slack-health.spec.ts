@@ -37,6 +37,7 @@ test("signed out: chip and status line say Sign-in needed", async ({ page }) => 
   await openConnectors(page);
   await expect(page.getByTestId("connector-slack")).toContainText("Sign-in needed");
   await page.getByTestId("connector-slack").click();
+  // Marlo：账号菜单 ▸ 连接进的是 IntegrationsView，点连接器直达详情页；上游的「多机器速览页」（manage-local-*）只在设置里、且跟机器一起藏着。
   await expect(page.getByTestId("slack-mode-badge")).toContainText(
     "Sign-in needed — relaying is paused",
   );

@@ -35,6 +35,16 @@ const ADDITIONS = new Set([
   "rail.open_board", // 看板 chip 的 title：上游这句没包进 t()
   "cloud.signin_unlocks_default", // 没有 blurb 时的默认说明：同上
   "transcript.add_credit", // 零余额充值入口：我们 fork 的功能，上游没有
+  // 缺技能时先问要不要装（install_skill 的人工闸门）：我们 fork 的功能，上游没有
+  "skilloffer.head",
+  "skilloffer.from",
+  "skilloffer.voice_hint",
+  "skilloffer.skip",
+  "skilloffer.install",
+  "skilloffer.installed",
+  "skilloffer.declined",
+  "skilloffer.placeholder",
+  "misc.api.http_error", // 上游 api.ts 里十处 `HTTP ${status}` 兜底报错会上屏（连接/机器卡片）
   // 报错通知按 cause 换成本地化文案（服务端 providers/errors.py 那几句是英文）
   "transcript.error_prefix",
   "transcript.error_cause.no_credit",
