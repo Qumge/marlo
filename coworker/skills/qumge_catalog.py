@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import json
 import re
-from decimal import ROUND_HALF_EVEN, Decimal
 from pathlib import Path
 from typing import Any, Optional
 
@@ -152,20 +151,23 @@ def _search_meta_and_group(
 ) -> tuple[str, str]:
     """一条结果的展示文字（meta）和分组。
 
-    分组（分类 key / 「qumge 精选」）的结构化字段 qumge 还没给，所以【现在】这一
-    行仍然取自文本。等 outputSchema 里出现 category / vetted，这里自动改读结构化
-    —— 按字段探测，不按版本号：哪次返回带了就用哪次，没带就用文本那行兜底。
+    【顺序要紧：先 vetted、后 category】精选条目【也带分类】—— 结构化比文本信息
+    多，是有意为之。先看 category 的话，我们审过的那些会被当成普通第三方技能，
+    「Qumge 精选」那一组就没了。文本那条路的语义也是这个次序。
+
+    两个字段都要按【字段探测】：哪次返回带了就用哪次，没带就用文本那行兜底
+    （老版本 qumge 两个都没有）。
 
     返回值里的 group 是界面用来分栏的：分类 key、"__vetted__"，或者 "other"。
     """
+    if item.get("vetted") is True:
+        repo = _repo_slug(item.get("source_url"))
+        return " · ".join(p for p in ("vetted by qumge · first-party", repo) if p), "__vetted__"
     category = item.get("category")
     if isinstance(category, str) and category:
         repo = _repo_slug(item.get("source_url"))
         meta = " · ".join(p for p in (f"category: {category}", _stars_tail(repo, item.get("stars"))) if p)
         return meta, category
-    if item.get("vetted") is True:
-        repo = _repo_slug(item.get("source_url"))
-        return " · ".join(p for p in ("vetted by qumge · first-party", repo) if p), "__vetted__"
     if fallback.get("meta"):
         return str(fallback["meta"]), str(fallback.get("group") or "other")
     # 连文本都没有（不该发生）：结构化里能拼多少拼多少，分组退到 other。
@@ -314,18 +316,16 @@ def _vendor_slug(model_id: str) -> str:
 
 
 def _fmt_usd(value: Any) -> Optional[str]:
-    """每 Mtok 的价格 -> 目录文本里的写法（两位小数）。
+    """每 Mtok 的价格 -> "$5.00" 这样的展示写法。
 
-    【为什么不用 f"{x:.2f}"】目录那边把 0.325 写成 "$0.32"（对 0.325 这个二进制
-    数的"最近两位小数"是 0.33，但目录按十进制字面量做了四舍六入五成双）。要还原
-    【文本里那个样子】，就得按同一个规则来 —— 否则同一个模型在界面上的价格会因为
-    数据来源不同而差一分钱。
+    从【数字】格式化，不照抄目录文本里的写法：文本是给模型读的措辞，不是契约。
+    取整规则可能和文本差一分钱（0.325 这种），可以接受 —— 价格是界面展示，本来就
+    该由 Marlo 按自己的规则从数字渲染。
     """
     try:
-        hundredth = Decimal(repr(float(value))).quantize(Decimal("0.01"), rounding=ROUND_HALF_EVEN)
+        return f"{float(value):.2f}"
     except (TypeError, ValueError):
         return None
-    return f"{hundredth:.2f}"
 
 
 def _model_price(model: dict[str, Any]) -> str:

@@ -75,6 +75,8 @@ def _both_paths(name: str, call):
     ("search_skills_video.json", lambda c: q.search("video", client=c)),
     ("search_skills_translated.json", lambda c: q.search("产品软广视频", client=c)),
     ("search_skills_browse.json", lambda c: q.search(client=c)),
+    # 结构化里还没有分组字段的那一份（抓于它们上线之前）：走回退，结果照样一致。
+    ("search_skills_no_group_fields.json", lambda c: q.search("video", client=c)),
 ])
 def test_search_is_the_same_with_and_without_structured_content(name, call):
     with_structured, text_only = _both_paths(name, call)
@@ -111,28 +113,47 @@ def test_search_takes_has_more_and_the_translation_from_structured():
 
 def test_missing_structured_content_falls_back_to_the_text_parser():
     """老版本 qumge：响应里没有 structuredContent —— 退回正则，结果照旧。"""
-    r = q.search("video", client=_Replay("search_skills_video.json", keep_structured=False))
+    r = q.search("video", client=_Replay("search_skills_no_group_fields.json", keep_structured=False))
 
     assert [x["name"] for x in r["results"]][:2] == ["video-use", "autowhisper"]
     assert r["results"][1]["needs"] == "autowhisper"
 
 
-def test_when_the_catalog_starts_sending_a_group_it_is_read_from_structured():
-    """分组字段（分类 key / qumge 精选）qumge 还没给，文本里有。
+def test_a_vetted_entry_that_also_carries_a_category_stays_in_the_vetted_group():
+    """【精选条目也带分类】—— 结构化比文本信息多，是有意为之。
 
-    给了就按结构化来 —— 按【字段】探测，不按版本号、不按日期。
+    先看 category 的话，我们审过的那些会被当成普通第三方技能，「Qumge 精选」这一
+    组就没了。浏览页的样本里正好有这么一条（也带分类的精选）。
     """
-    replay = _Replay("search_skills_video.json")
-    results = replay.structured["results"]
-    results[0]["category"] = "automation-workflow"   # 这一条文本里也是这个分类
-    results[1]["vetted"] = True                      # autowhisper，qumge 自己的
+    replay = _Replay("search_skills_browse.json")
+    slug = "xnjiang/autowhisper-skill/autowhisper"
+    captured = next(x for x in replay.structured["results"] if x["slug"] == slug)
+    # 样本本身要满足这条断言的前提：精选，且带着分类。
+    assert captured["vetted"] is True and captured.get("category")
 
-    r = q.search("video", client=replay)["results"]
+    r = q.search(client=replay)["results"]
+    vetted = [x for x in r if x["group"] == "__vetted__"]
 
-    assert r[0]["group"] == "automation-workflow"
-    assert r[0]["meta"].startswith("category: automation-workflow")
-    assert r[1]["group"] == "__vetted__"
-    assert "vetted by qumge" in r[1]["meta"]
+    assert vetted, "浏览页必须还有「Qumge 精选」这一组"
+    featured = vetted[0]
+    assert featured["slug"] == slug
+    assert featured["meta"].startswith("vetted by qumge · first-party")
+    # 分类不能把它从精选里挤出去。
+    assert "category:" not in featured["meta"]
+
+
+def test_a_category_from_the_structured_content_becomes_the_group():
+    """普通第三方技能：结构化里的分类就是分组，按【字段】探测（不看版本号）。"""
+    replay = _Replay("search_skills_browse.json")
+    first = replay.structured["results"][0]          # 精选那条
+    plain = next(x for x in replay.structured["results"] if not x.get("vetted"))
+    plain["category"] = "renamed-category"
+
+    r = {x["slug"]: x for x in q.search(client=replay)["results"]}
+
+    assert first["slug"] in {s for s, x in r.items() if x["group"] == "__vetted__"}
+    assert r[plain["slug"]]["group"] == "renamed-category"
+    assert r[plain["slug"]]["meta"].startswith("category: renamed-category")
 
 
 # ---------------------------------------------------------------- models
@@ -141,7 +162,14 @@ def test_when_the_catalog_starts_sending_a_group_it_is_read_from_structured():
 def test_models_is_the_same_with_and_without_structured_content():
     with_structured, text_only = _both_paths("list_models.json", lambda c: q.models(client=c))
 
-    assert with_structured == text_only
+    # 价格是展示：结构化那条路从数字按我们自己的规则渲染，不照抄文本的写法，所以
+    # 允许差一分钱（见 test_models_price_is_rendered_from_the_numbers）。
+    def columns(r):
+        return [{k: v for k, v in m.items() if k not in ("price", "label")} for m in r["models"]]
+
+    assert columns(with_structured) == columns(text_only)
+    assert with_structured["total"] == text_only["total"]
+    assert all("$" in m["price"] for m in with_structured["models"])
     assert len(with_structured["models"]) > 1
     assert with_structured["total"] == 292
 
@@ -165,16 +193,13 @@ def test_models_reads_the_structured_content_when_it_is_there():
     assert r["total"] == 7
 
 
-def test_models_price_keeps_the_wording_the_catalog_uses():
-    """$0.325 在文本里写成 "$0.32" —— 结构化那条路要还原【同一个样子】。
-
-    差一分钱就会让同一个模型因为数据来源不同而在界面上的价格不一样。
-    """
+def test_models_price_is_rendered_from_the_numbers():
+    """价格从【数字】格式化，不照抄文本里那串字（文本是给模型读的措辞，不是契约）。"""
     replay = _Replay("list_models.json")
     replay.structured["models"][0]["input_price_per_mtok_usd"] = 0.325
     replay.structured["models"][0]["output_price_per_mtok_usd"] = 1.95
 
-    assert q.models(client=replay)["models"][0]["price"] == "$0.32/$1.95 per Mtok"
+    assert q.models(client=replay)["models"][0]["price"] == "$0.33/$1.95 per Mtok"
 
 
 # ---------------------------------------------------------------- detail
