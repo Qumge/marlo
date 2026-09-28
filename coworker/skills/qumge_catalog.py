@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import re
+from decimal import ROUND_HALF_EVEN, Decimal
 from pathlib import Path
 from typing import Any, Optional
 
@@ -32,7 +33,18 @@ _OPEN = "=== BEGIN SKILL REFERENCE"
 _CLOSE = "=== END SKILL REFERENCE ==="
 
 
-def _call(tool: str, args: dict, *, client: Optional[httpx.Client] = None) -> str:
+def _call(
+    tool: str, args: dict, *, client: Optional[httpx.Client] = None
+) -> tuple[str, Optional[dict[str, Any]]]:
+    """调一次工具，返回 (文本, 结构化)。
+
+    结构化是 qumge 随文本一起给的 structuredContent（工具在 tools/list 里用
+    outputSchema 声明了它）。它给程序读，文本给模型读 —— 我们优先用结构化，只在
+    它【没有】时退回解析文本：老版本 qumge、或者某次返回没带上，都不该让我们瞎。
+
+    没有时返回 None。出错时（isError: true）qumge 本来就不带结构化，调用方照旧
+    按文本处理。
+    """
     owns = client is None
     client = client or httpx.Client(timeout=TIMEOUT)
     try:
@@ -50,7 +62,12 @@ def _call(tool: str, args: dict, *, client: Optional[httpx.Client] = None) -> st
         body = r.json()
         if "error" in body:
             raise RuntimeError(str(body["error"].get("message") or body["error"]))
-        return str(body["result"]["content"][0]["text"])
+        result = body["result"]
+        structured = result.get("structuredContent")
+        # 只认对象。qumge 以后换形状的话，这里退回文本，不会把别的类型当结构化用。
+        if not isinstance(structured, dict):
+            structured = None
+        return str(result["content"][0]["text"]), structured
     finally:
         if owns:
             client.close()
@@ -105,25 +122,83 @@ def _between_markers(text: str) -> str:
     return text[j + 1 : k].strip() if j != -1 and k != -1 else text
 
 
-def search(
-    query: str = "",
-    *,
-    limit: int = 0,
-    offset: int = 0,
-    client: Optional[httpx.Client] = None,
-) -> dict[str, Any]:
-    """搜目录；不给 query 就是【浏览】（按排名的前 N 条，界面用来铺默认列表）。
+def _skill_md(text: str, structured: Optional[dict[str, Any]]) -> str:
+    """get_skill 的 SKILL.md 正文：优先取结构化，没有就剥文本的框。
 
-    返回 {"results": [...], "has_more": bool}。has_more 由目录给——界面据此决定
-    显不显示"加载更多"，而不是自己猜。
+    两者是同一个东西 —— 同一个响应里的两个视图。用结构化只是不再依赖框的措辞。
     """
-    query = (query or "").strip()
-    args: dict[str, Any] = {"limit": limit or (8 if query else 30)}
-    if query:
-        args["query"] = query
-    if offset:
-        args["offset"] = offset
-    text = _call("search_skills", args, client=client)
+    if isinstance(structured, dict) and isinstance(structured.get("skill_md"), str):
+        return structured["skill_md"]
+    return _between_markers(text)
+
+
+def _repo_slug(url: Any) -> str:
+    """https://github.com/owner/repo -> owner/repo。拼展示文字时才用得到。"""
+    if not isinstance(url, str):
+        return ""
+    m = re.match(r"https?://github\.com/([^/]+/[^/]+?)/?$", url.strip())
+    return m.group(1) if m else ""
+
+
+def _stars_tail(repo: str, stars: Any) -> str:
+    """`N stars on owner/repo`（没有 repo 就只写星数）。拼 meta 时才用得到。"""
+    if not isinstance(stars, int):
+        return ""
+    return f"{stars} stars on {repo}" if repo else f"{stars} stars"
+
+
+def _search_meta_and_group(
+    item: dict[str, Any], fallback: dict[str, Any]
+) -> tuple[str, str]:
+    """一条结果的展示文字（meta）和分组。
+
+    分组（分类 key / 「qumge 精选」）的结构化字段 qumge 还没给，所以【现在】这一
+    行仍然取自文本。等 outputSchema 里出现 category / vetted，这里自动改读结构化
+    —— 按字段探测，不按版本号：哪次返回带了就用哪次，没带就用文本那行兜底。
+
+    返回值里的 group 是界面用来分栏的：分类 key、"__vetted__"，或者 "other"。
+    """
+    category = item.get("category")
+    if isinstance(category, str) and category:
+        repo = _repo_slug(item.get("source_url"))
+        meta = " · ".join(p for p in (f"category: {category}", _stars_tail(repo, item.get("stars"))) if p)
+        return meta, category
+    if item.get("vetted") is True:
+        repo = _repo_slug(item.get("source_url"))
+        return " · ".join(p for p in ("vetted by qumge · first-party", repo) if p), "__vetted__"
+    if fallback.get("meta"):
+        return str(fallback["meta"]), str(fallback.get("group") or "other")
+    # 连文本都没有（不该发生）：结构化里能拼多少拼多少，分组退到 other。
+    return _stars_tail(_repo_slug(item.get("source_url")), item.get("stars")), "other"
+
+
+def _search_result(item: dict[str, Any], fallback: dict[str, Any]) -> dict[str, Any]:
+    """一条结构化结果 -> Marlo 现有的返回形状（和文本解析那条路【逐字段一样】）。
+
+    界面不知道这次数据是从哪来的：两条路都得给出同一组键、同样的值。needs 在结构
+    化里是数组，这里 join 成文本里那种字符串（多条用逗号分隔）。
+    """
+    needs = item.get("needs")
+    if isinstance(needs, list):
+        needs = ", ".join(str(n) for n in needs)
+    else:
+        needs = str(fallback.get("needs", ""))
+    meta, group = _search_meta_and_group(item, fallback)
+    return {
+        "name": str(item.get("name") or fallback.get("name", "")).strip(),
+        "summary": " ".join(str(item.get("summary") or fallback.get("summary", "")).split()),
+        "slug": str(item.get("slug") or fallback.get("slug", "")).strip(),
+        "meta": meta,
+        "needs": needs,
+        "group": group,
+    }
+
+
+def _parse_search_text(text: str) -> list[dict[str, Any]]:
+    """从文本里抠出每一条（老版本 / 没带结构化时的唯一来源）。
+
+    结构化回来时这一份也照跑：分组字段还没有，而且它是结构化缺字段时逐条的兜底。
+    """
     out: list[dict[str, Any]] = []
     # 末尾补一个换行：_between_markers 的 strip() 去掉了它，而 rest 那一组
     # 要求每行以换行结尾 —— 不补的话【最后一条】的 meta 和 needs 会静悄悄丢掉。
@@ -156,12 +231,59 @@ def search(
             "needs": needs,
             "group": group,
         })
-    m = _TRANSLATED.search(text.split("\n", 1)[0])
+    return out
+
+
+def search(
+    query: str = "",
+    *,
+    limit: int = 0,
+    offset: int = 0,
+    client: Optional[httpx.Client] = None,
+) -> dict[str, Any]:
+    """搜目录；不给 query 就是【浏览】（按排名的前 N 条，界面用来铺默认列表）。
+
+    返回 {"results": [...], "has_more": bool}。has_more 由目录给——界面据此决定
+    显不显示"加载更多"，而不是自己猜。
+    """
+    query = (query or "").strip()
+    args: dict[str, Any] = {"limit": limit or (8 if query else 30)}
+    if query:
+        args["query"] = query
+    if offset:
+        args["offset"] = offset
+    text, structured = _call("search_skills", args, client=client)
+
+    parsed = _parse_search_text(text)
+    results = structured.get("results") if isinstance(structured, dict) else None
+    if isinstance(results, list):
+        # 文本那份按 slug 索引，供结构化里缺字段（分组、needs…）时逐条兜底。
+        by_slug = {r["slug"]: r for r in parsed}
+        out: list[dict[str, Any]] = []
+        for i, item in enumerate(results):
+            fallback = by_slug.get(str(item.get("slug", "")) if isinstance(item, dict) else "")
+            if fallback is None:
+                fallback = parsed[i] if i < len(parsed) else {}
+            out.append(_search_result(item, fallback) if isinstance(item, dict) else dict(fallback))
+    else:
+        out = parsed
+
+    # has_more / 翻译说明：结构化里有就照它的，没有就退回文本那一句。
+    if isinstance(structured, dict) and isinstance(structured.get("has_more"), bool):
+        has_more = structured["has_more"]
+    else:
+        has_more = "more available" in text
+    if isinstance(structured, dict) and "searched_in_english_as" in structured:
+        translated = structured.get("searched_in_english_as")
+        searched_as = translated if isinstance(translated, str) else ""
+    else:
+        m = _TRANSLATED.search(text.split("\n", 1)[0])
+        searched_as = m.group(1) if m else ""
     return {
         "results": out,
-        "has_more": "more available" in text,
+        "has_more": has_more,
         # 没翻就是空串，界面据此决定显不显示那行说明。
-        "searched_as": m.group(1) if m else "",
+        "searched_as": searched_as,
     }
 
 
@@ -191,6 +313,28 @@ def _vendor_slug(model_id: str) -> str:
     return tail.split("/", 1)[0] if "/" in tail else ""
 
 
+def _fmt_usd(value: Any) -> Optional[str]:
+    """每 Mtok 的价格 -> 目录文本里的写法（两位小数）。
+
+    【为什么不用 f"{x:.2f}"】目录那边把 0.325 写成 "$0.32"（对 0.325 这个二进制
+    数的"最近两位小数"是 0.33，但目录按十进制字面量做了四舍六入五成双）。要还原
+    【文本里那个样子】，就得按同一个规则来 —— 否则同一个模型在界面上的价格会因为
+    数据来源不同而差一分钱。
+    """
+    try:
+        hundredth = Decimal(repr(float(value))).quantize(Decimal("0.01"), rounding=ROUND_HALF_EVEN)
+    except (TypeError, ValueError):
+        return None
+    return f"{hundredth:.2f}"
+
+
+def _model_price(model: dict[str, Any]) -> str:
+    """结构化里的两个数字 -> "$5.00/$25.00 per Mtok"；缺一个就返回空串。"""
+    inp = _fmt_usd(model.get("input_price_per_mtok_usd"))
+    outp = _fmt_usd(model.get("output_price_per_mtok_usd"))
+    return f"${inp}/${outp} per Mtok" if inp is not None and outp is not None else ""
+
+
 def models(
     query: str = "",
     *,
@@ -212,16 +356,49 @@ def models(
     args: dict[str, Any] = {"limit": limit}
     if query.strip():
         args["query"] = query.strip()
-    text = _call("list_models", args, client=client)
-    rows = [(m.group(1), m.group(2)) for m in _MODEL.finditer(text)]
+    text, structured = _call("list_models", args, client=client)
 
-    # slug -> 好看的厂商名，从这一批 label 自己学出来。把 slug 首字母大写会得到
-    # "Openai"、"X-ai"、"Z-ai"，而目录里写的是 OpenAI / xAI / Z.ai。学出来的表
-    # 还能补上目录漏掉前缀的那几条，并且 qumge 以后加新厂商时不用我们跟着改表。
+    # 文本那份按 id 索引：老版本 / 没带结构化时它是唯一来源，结构化少了某个字段时
+    # 它也是逐条的兜底。
+    text_rows = [(m.group(1), m.group(2)) for m in _MODEL.finditer(text)]
+    by_id: dict[str, dict[str, Any]] = {}
+    for mid, label in text_rows:
+        parts = [p.strip() for p in label.split(" · ")]
+        by_id[mid] = {
+            "head": parts[0] if parts else label,
+            # 价格靠 $ 认，不靠位置：没有 vision 那一段的模型（60 条里有 13 条）
+            # 位置就错了一位，而错位的结果是把 "vision" 当成价格显示出去。
+            "price": next((p for p in parts[1:] if p.startswith("$")), ""),
+            "vision": "vision" in parts,
+            "label": label,
+        }
+
+    # 每行统一成 (id, 展示名, 厂商 slug, 价格, 是否支持图片, 原样 label)。
+    rows: list[tuple[str, str, str, str, bool, str]] = []
+    smodels = structured.get("models") if isinstance(structured, dict) else None
+    if isinstance(smodels, list):
+        for m in smodels:
+            if not isinstance(m, dict):
+                continue
+            mid = str(m.get("id") or "")
+            fb = by_id.get(mid, {})
+            slug = str(m.get("provider") or _vendor_slug(mid))
+            head = str(m.get("name") or fb.get("head") or "")
+            price = _model_price(m) or str(fb.get("price", ""))
+            vision = m.get("vision") if isinstance(m.get("vision"), bool) else bool(fb.get("vision"))
+            label = str(fb.get("label") or " · ".join(p for p in (head, price, "vision" if vision else "") if p))
+            rows.append((mid, head, slug, price, vision, label))
+    else:
+        for mid, label in text_rows:
+            fb = by_id[mid]
+            rows.append((mid, fb["head"], _vendor_slug(mid), fb["price"], fb["vision"], label))
+
+    # slug -> 好看的厂商名，从这一批（展示名，结构化里也带着厂商前缀）自己学出来。
+    # 把 slug 首字母大写会得到 "Openai"、"X-ai"、"Z-ai"，而目录里写的是
+    # OpenAI / xAI / Z.ai。学出来的表还能补上目录漏掉前缀的那几条，并且 qumge
+    # 以后加新厂商时不用我们跟着改表。
     vendors: dict[str, str] = {}
-    for mid, label in rows:
-        head = label.split(" · ", 1)[0]
-        slug = _vendor_slug(mid)
+    for mid, head, slug, _price, _vision, _label in rows:
         if slug and ": " in head:
             pre = head.split(": ", 1)[0].strip()
             # 【只认对得上 id 的那一段】靠"出现了冒号"来判断的话，一个叫
@@ -230,24 +407,24 @@ def models(
                 vendors.setdefault(slug, pre)
 
     out: list[dict[str, Any]] = []
-    for mid, label in rows:
-        slug = _vendor_slug(mid)
-        parts = [p.strip() for p in label.split(" · ")]
-        name = parts[0]
+    for mid, head, slug, price, vision, label in rows:
+        name = head
         if ": " in name and _norm(name.split(": ", 1)[0]) == _norm(slug):
             name = name.split(": ", 1)[1].strip()
         out.append({
             "id": mid,
             "name": name,
             "vendor": vendors.get(slug, slug),
-            # 价格靠 $ 认，不靠位置：没有 vision 那一段的模型（60 条里有 13 条）
-            # 位置就错了一位，而错位的结果是把 "vision" 当成价格显示出去。
-            "price": next((p for p in parts[1:] if p.startswith("$")), ""),
-            "vision": "vision" in parts,
+            "price": price,
+            "vision": vision,
             "label": label,
         })
-    m = _TOTAL.match(text)
-    return {"models": out, "total": int(m.group(1)) if m else None}
+    if isinstance(structured, dict) and isinstance(structured.get("total"), int):
+        total: Optional[int] = structured["total"]
+    else:
+        m = _TOTAL.match(text)
+        total = int(m.group(1)) if m else None
+    return {"models": out, "total": total}
 
 
 def detail(slug: str, *, client: Optional[httpx.Client] = None) -> str:
@@ -259,7 +436,10 @@ def detail(slug: str, *, client: Optional[httpx.Client] = None) -> str:
     """
     if not slug or slug.count("/") != 2:
         raise ValueError("slug 必须是 owner/repo/name 三段式")
-    body = _between_markers(_call("get_skill", {"slug": slug}, client=client))
+    text, structured = _call("get_skill", {"slug": slug}, client=client)
+    # 结构化里 skill_md 就是框内那段正文（和 _between_markers(text) 同一个东西）。
+    # 结构化没带时才剥文本。
+    body = _skill_md(text, structured)
     if not body.strip():
         raise RuntimeError("目录返回的正文是空的")
     return body
@@ -330,6 +510,32 @@ def _file_sections(text: str) -> list[tuple[str, str]]:
         pos = closing + len(_CLOSE)
 
 
+def _structured_file_sections(
+    structured: Optional[dict[str, Any]]
+) -> Optional[list[tuple[str, str]]]:
+    """结构化里的附带文件 -> [(path, 内容)]；没有 files 字段就返回 None。
+
+    content 为 null 的项跳过：不带 include_files 时 qumge 只列清单、不给全文，
+    那不是"一个空文件"。返回 None（而不是 []）是为了和"有 files 字段但一条都
+    没给全"区分开 —— 前者才退回解析文本。
+
+    路径和内容都来自公开仓库，和文本那条路一样【不可信】：这一步只做搬运，越界
+    路径、数量和体量上限由 _write_extra_files 照旧把关。
+    """
+    if not isinstance(structured, dict) or not isinstance(structured.get("files"), list):
+        return None
+    out: list[tuple[str, str]] = []
+    for f in structured["files"]:
+        if not isinstance(f, dict):
+            continue
+        path, content = f.get("path"), f.get("content")
+        if not isinstance(path, str) or not isinstance(content, str):
+            continue
+        # 和文本那条路同一个收尾，两条路写出来的字节才会一模一样。
+        out.append((path, content.rstrip("\n") + "\n"))
+    return out
+
+
 def _safe_parts(raw: str) -> Optional[list[str]]:
     """目录给的路径（不可信）→ 技能文件夹内的相对路径片段；可能越界的一律 None。
 
@@ -344,7 +550,7 @@ def _safe_parts(raw: str) -> Optional[list[str]]:
     return parts
 
 
-def _write_extra_files(folder: Path, text: str) -> tuple[list[str], list[str]]:
+def _write_extra_files(folder: Path, sections: list[tuple[str, str]]) -> tuple[list[str], list[str]]:
     """把附带文件写进刚建好的技能文件夹。返回 (写了的, 跳过的)。
 
     只写内容、不设执行位 —— 脚本要跑，照常走 run_shell 的审批。"""
@@ -352,7 +558,7 @@ def _write_extra_files(folder: Path, text: str) -> tuple[list[str], list[str]]:
     skipped: list[str] = []
     total = 0
     root = folder.resolve()
-    for index, (raw, content) in enumerate(_file_sections(text)):
+    for index, (raw, content) in enumerate(sections):
         parts = _safe_parts(raw)
         data = content.encode("utf-8")
         if parts is None or index >= MAX_EXTRA_FILES or total + len(data) > MAX_EXTRA_BYTES:
@@ -387,8 +593,8 @@ def install(slug: str, *, client: Optional[httpx.Client] = None) -> dict[str, An
 
     # include_files：附带文件的全文要显式要（qumge 默认只列清单 —— 通用 agent 调 get_skill
     # 的返回会进模型上下文）。这里是本地解析后写盘，不进上下文，所以要全量。
-    text = _call("get_skill", {"slug": slug, "include_files": True}, client=client)
-    body = _between_markers(text)
+    text, structured = _call("get_skill", {"slug": slug, "include_files": True}, client=client)
+    body = _skill_md(text, structured)
     if not body.strip():
         raise RuntimeError("目录返回的正文是空的")
 
@@ -409,7 +615,10 @@ def install(slug: str, *, client: Optional[httpx.Client] = None) -> dict[str, An
     )
     # 附带文件写在 SkillStore 建好的文件夹里（store.create 只写 SKILL.md，而 store 是上游的
     # 文件 —— 按 overlay 规矩，我们的东西放在自己的模块里）。
-    files, skipped = _write_extra_files(Path(res["path"]), text)
+    sections = _structured_file_sections(structured)
+    if sections is None:
+        sections = _file_sections(text)
+    files, skipped = _write_extra_files(Path(res["path"]), sections)
     # create 返回的是【文件夹】，我们的契约一直是 SKILL.md 本身（调用方拿它去读
     # 刚装的内容）。补上文件名，别让接口跟着内部实现走。
     return {
