@@ -20,3 +20,6 @@ surfaces/gui/src-tauri/gen/.iconset-build/
 .superpowers/
 
 .worktrees/
+
+# macOS Finder 垃圾文件
+.DS_Store
